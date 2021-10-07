@@ -19,15 +19,15 @@
 # fixed x_j; estimate variational parameters for each individual and 
 # calculate ELBO for sigma_beta optimization 
 cov_vsvb <- function(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmabeta_sq, 
-                     true_pi) 
-  {
+                     true_pi) {
+  # threshold for calculating the reverse logit of alpha
   thres <- 1e-7
+  lthres <- logit(thres)
+  uthres <- logit(1 - thres)
+  
+  # exit condition tolerance
   tol <- 1e-9
 
-  msg <- function(s, ...) {
-    time <- format(Sys.time(), "%X")
-    cat(sprintf("%s %s\n", time, s))
-  }
 
   change_alpha <- rep(0.001, n * p) # alpha_new - alpha_int
 
@@ -35,27 +35,23 @@ cov_vsvb <- function(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmabeta_sq,
   iter <- 1
   Mu_vec <- matrix(rep(mu, n), n * p, 1)
   
-  # do the optimization of the variational parameters
+  # loop to optimize variational parameters
   while (sqrt(sum(change_alpha^2)) > tol & iter < max_iter) { 
 
-    # The max_iter controls the max number of iterations until convergence
-
-    alpha_int <- alpha ## Initialization of inclusion probability parameter.
-
-    # i-th row is the j-th row of the i-th graph 
+    alpha_int <- alpha 
+    
     alpha_mat <- matrix(alpha, n, p, byrow = TRUE)
 
     alpha_vec <- matrix(alpha, n * p, 1, byrow = TRUE)
     
-    # update s
+    # S_sq update
     for (i in 1:n) {
-      S_sq[i, ] <- sigmasq * (t(DXtX_Big_ind) %*% D_long[, i] 
-                              + 1 / sigmabeta_sq)^(-1) ## variance parameter
+      S_sq[i, ] <- sigmasq * (t(DXtX_Big_ind) %*% D_long[, i] + 1 / sigmabeta_sq)^(-1) ## variance parameter
     }
 
     S_sq_vec <- matrix(t(S_sq), n * p, 1)
     
-    # update mu
+    # mu update
     for (i in 1:n) {
       y_XW <- y_long_vec * X_vec * D_long[, i]
       y_XW_mat <- matrix(y_XW, n, p, byrow = TRUE)
@@ -68,28 +64,23 @@ cov_vsvb <- function(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmabeta_sq,
     }
     Mu_vec <- matrix(t(mu_mat), n * p, 1)
     
-    # the alpha update formula
-    vec_1 <- log(true_pi / (1 - true_pi)) ## term 1 of the update of inclusion probability alpha
-
-    vec_2 <- as.matrix(0.5 * log(S_sq_vec / (sigmasq * sigmabeta_sq))) ## term 2 of update of alpha
-    vec_3 <- as.matrix(Mu_vec^2 / (2 * S_sq_vec)) ## term 3 of update of alpha
-    # (vec_1+vec_2+vec_3)[1:p]
+    # alpha update 
+    vec_1 <- log(true_pi / (1 - true_pi)) # first term of alpha update
+    vec_2 <- as.matrix(0.5 * log(S_sq_vec / (sigmasq * sigmabeta_sq))) # second term of alpha update    
+    vec_3 <- as.matrix(Mu_vec^2 / (2 * S_sq_vec)) # third term of alpha update
     
-    # this is the logit of alpha
-    unlogitalpha <- vec_1 + vec_2 + vec_3 # Sum of 3 terms for alpha update
-    # thres=10^{-9}
+    # logit of alpha is sum of 3 terms for alpha update
+    unlogitalpha <- vec_1 + vec_2 + vec_3
     
-    # useless?
-    lthres <- logit(thres)
-    uthres <- logit(1 - thres)
-    
-    # which logit-alpha are too big
+    # find values of alpha that are too large/ small and will pose an issue for
+    # the reverse logit formula; set them to the upperthreshold/ lower
+    # threshold values
     indlarge <- which(unlogitalpha > uthres)
     indsmall <- which(unlogitalpha < lthres)
     unlogitalpha[indlarge] <- uthres
     unlogitalpha[indsmall] <- lthres
     
-    # make sure that exp(unlogitalpha) is not inf
+    # 
     alpha[which(unlogitalpha > 9)] <- 1 # thresholding very large values to 1 for computational stability
     alpha[which(unlogitalpha <= 9)] <- 1 / (1 + exp(-unlogitalpha[which(unlogitalpha <= 9)])) ### ### CAVI updation of variational parameter alpha
 
@@ -118,6 +109,7 @@ cov_vsvb <- function(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmabeta_sq,
   
   # how has ELBO evolved?
   ELBO_LBit <- ELBO_LBit[1:(iter - 1)]
+  
   # return n times p - 1 of each of the variational parameters
   list(var.alpha = alpha, var.mu = mu_mat, var.S_sq = S_sq, var.elbo = ELBO_LB, var.elboit = ELBO_LBit)
 }
