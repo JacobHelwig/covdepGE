@@ -1,6 +1,7 @@
 set.seed(1)
 
 rm(list = ls())
+start_time <- Sys.time()
 
 
 ## This function returns the ELBO for a specific variational parameter (corresponding to a fixed individual in study)
@@ -73,6 +74,10 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
   
   iter <- 1
   
+  # S_sq update (WHY IS THERE A NEED FOR ITERATION FOR THIS PARAMETER?)
+  S_sq <- t(sigmasq * (t(X_mat^2) %*% D + 1 / sigmabeta_sq)^(-1))
+  S_sq_vec <- matrix(t(S_sq), n * p, 1)
+  
   # loop to optimize variational parameters
   while (sqrt(sum(change_alpha^2)) > tol & iter < max_iter) {
     alpha_int <- alpha
@@ -82,11 +87,11 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
     alpha_vec <- matrix(alpha, n * p, 1, byrow = TRUE)
     
     # S_sq update
-    for (i in 1:n) {
-      S_sq[i, ] <- sigmasq * (t(DXtX_Big_ind) %*% D_long[, i] + 1 / sigmabeta_sq)^(-1) ## variance parameter
-    }
-    
-    S_sq_vec <- matrix(t(S_sq), n * p, 1)
+    # for (i in 1:n) {
+    #   S_sq[i, ] <- sigmasq * (t(DXtX_Big_ind) %*% D_long[, i] + 1 / sigmabeta_sq)^(-1) ## variance parameter
+    # }
+    # S_sq <- t(sigmasq * (t(X_mat^2) %*% D + 1 / sigmabeta_sq)^(-1))
+    # S_sq_vec <- matrix(t(S_sq), n * p, 1)
     
     # mu update
     for (i in 1:n) {
@@ -134,11 +139,8 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
     # want to maximize this by optimizing sigma beta
     ELBO_LB <- e
     
-    
     alpha_new <- alpha
     change_alpha <- alpha_new - alpha_int
-    
-    
     
     ELBO_LBit[iter] <- ELBO_LB
     iter <- iter + 1
@@ -253,16 +255,7 @@ for (resp_index in 1:(p + 1)) {
     }
   }
   
-  ELBO_LBit <- rep(0, 10000)
-  
-  # big diag mat looks exactly the same as X, except it replaces all non-zero
-  # entries with 1
-  #Big_diag_mat <- (X != 0) * 1
-  
-  #q <- matrix(2, n, 1)
-  
-  sigmasq <- 1
-  #E <- rnorm(n, 0, sigmasq)
+  Xty <- t(X) %*% y
   
   # a block diagonal matrix; the j-th block is the transpose of the j-th row of
   # X times the j-th row of X; it is an n*p by n*p matrix
@@ -273,32 +266,20 @@ for (resp_index in 1:(p + 1)) {
   DXtX_mat <- matrix(DXtX_rep, n * p, p, byrow = FALSE)
   DXtX_Big_ind <- matrix(DXtX_rep, n * p, p, byrow = FALSE) * Big_ind
   
-  
   # XtX with its diagonal removed and replaced with 0
   Diff_mat <- XtX - diag(DXtX)
   
-  # Initialization of the inclusion probability matrix for a fixed variable
-  # with i-th row corresponding to i th subject.
   alpha <- rep(0.2, n * p)
-  
   sigmabeta_sq <- 3
+  sigmasq <- 1
+  S_sq <- matrix(sigmasq * (DXtX + 1 / sigmabeta_sq)^(-1), n, p)
   mu <- rep(0, p)
-  pi_est <- 0.5
+  mu_mat <- matrix(0, n, p, byrow = TRUE)
+  #pi_est <- 0.5
   
   # y_long_vec is each element of y repeated p times
   y_long_vec <- rep(y, each = p)
   
-  Xty <- t(X) %*% y
-  #  beta_mat <- matrix(0, n, p, byrow = TRUE)
-  mu_mat <- matrix(0, n, p, byrow = TRUE)
-  
-  S_sq <- matrix(sigmasq * (DXtX + 1 / sigmabeta_sq)^(-1), n, p)
-  
-  #candL <- seq(0.1, 0.9, .2) # Different values of hyperparameter pi_est
-  #elb <- rep(0, length(candL))
-  
-  #est_q <- rep(0, n)
-  #beta_matr <- matrix(0, n, p)
   
   #################### tuning hyperparameters ##################################
   
@@ -311,16 +292,13 @@ for (resp_index in 1:(p + 1)) {
   
   # vector for storing the ELBO for each value of sigma in sigmavec
   elb1 <- matrix(0, length(sigmavec), 1)
+  ELBO_LBit <- rep(0, 10000)
   
   # loop to optimize sigma
   for (j in 1:length(sigmavec)) {
     res <- cov_vsvb(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX, 
                     DXtX_Big_ind, D_long, Diff_mat, sigmasq, sigmavec[j], 
                     S_sq, pi_est, mu, mu_mat, alpha, Big_ind, ELBO_LBit)
-    # res <- cov_vsvb(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmavec[j],
-    #                 pi_est, X_vec, D_long, Big_ind, ELBO_LBit, DXtX_Big_ind, 
-    #                 alpha, y_long_vec, mu_mat)
-    #res <- cov_vsvb(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmavec[j], pi_est, X_vec)
     elb1[j] <- res$var.elbo
   }
   
@@ -331,11 +309,7 @@ for (resp_index in 1:(p + 1)) {
   result <- cov_vsvb(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX, 
                      DXtX_Big_ind, D_long, Diff_mat, sigmasq, sigmabeta_sq, 
                      S_sq, pi_est, mu, mu_mat, alpha, Big_ind, ELBO_LBit)
-  # result <- cov_vsvb(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmabeta_sq,
-  #                    pi_est, X_vec, D_long, Big_ind, ELBO_LBit, DXtX_Big_ind, 
-  #                    alpha, y_long_vec, mu_mat)
-  #result <- cov_vsvb(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmabeta_sq, pi_est)
-  
+
   # vector of length n * p of inclusion probabilities
   incl_prob <- result$var.alpha
   
@@ -357,5 +331,14 @@ for (j in 1:length(mylist)) {
 }
 same
 
-checkUsage(cov_vsvb)
-checkUsage(ELBO_calculator)
+# stop timer and see how much time has elapsed
+end_time <- Sys.time()
+end_time - start_time
+
+## History:
+  # Original:
+    # Time difference of 23.49625 secs
+    # Time difference of 23.76863 secs
+  # Modified the s_update:
+    # Time difference of 16.98189 secs
+    # Time difference of 15.27206 secs
