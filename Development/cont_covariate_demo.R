@@ -10,8 +10,11 @@ library(MASS)
 library(pracma)
 library(latex2exp)
 library(ks)
+library(varbvs)
 ###################################################################
 
+
+# function to compute the logit 
 logit <- function(x) {
   if ((x == 0) | (x == 1)) {
     return(0)
@@ -19,6 +22,8 @@ logit <- function(x) {
     return(log(x / (1 - x)))
   }
 }
+
+# ?
 Afunc <- function(x) {
   if (x == 0) {
     return(-.125)
@@ -26,27 +31,31 @@ Afunc <- function(x) {
     return(-tanh(x / 2) / (4 * x))
   }
 }
+
+# ? 
 Cfunc <- function(x) x / 2 - log(1 + exp(x)) + x * tanh(x / 2) / 4
+
 ##### FUNCTION DEFINITION#####
 #############################
 #############################
-
 #############################
 #############################
 #############################
 ######### Data generation ############
-n <- 180
-p <- 4
+
+n <- 180 # number of individuals
+p <- 4 # number of predictors
 MAXITER <- 1
 STR <- 1
 in_pr_13 <- matrix(0, MAXITER, n)
 in_pr_12 <- in_pr_13
+
 Var_cont <- function(z) {
   pr <- matrix(0, p + 1, p + 1)
-  diag(pr) <- 2
+  diag(pr) <- 2 # add 2 to the diagonal of pr
   #  pr[1,2]=STR*((z>0) && (z< .33)) + (STR - STR*((z-.33)/.33))*((z>0.33) && (z<0.66)) + (0)*((z>0.66) && (z<1))
   #  pr[1,3]=0*((z>0) && (z< .33)) + (STR*((z-.33)/.33))*((z>0.33) && (z<0.66)) + (STR)*((z>0.66) && (z<1))
-  pr[2, 3] <- STR
+  pr[2, 3] <- STR  
   pr[1, 2] <- STR * ((z > -1) && (z < -.33)) + (STR - STR * ((z + .23) / .56)) * ((z > -0.23) && (z < 0.33)) + (0) * ((z > 0.43) && (z < 1))
   pr[1, 3] <- 0 * ((z > -1) && (z < -.33)) + (STR * ((z + .23) / .56)) * ((z > -0.23) && (z < 0.33)) + (STR) * ((z > 0.43) && (z < 1))
 
@@ -58,17 +67,24 @@ Var_cont <- function(z) {
   Var <- solve(pr)
   return(Var)
 }
+
 sensitivity_20 <- matrix(0, MAXITER, 1)
 specificity_20 <- sensitivity_20
 sensitivity_90 <- sensitivity_20
 specificity_90 <- sensitivity_20
 sensitivity_160 <- sensitivity_20
 specificity_160 <- sensitivity_20
+
+
 for (overiter in 1:MAXITER) {
   # Z=c(runif(n/3,-1,-0.33),runif(n/3, -0.23,0.33),runif(n/3,0.43,1))
+  
+  # Z is the extraneous covariates
   Z <- c(seq(-0.99, -0.331, (-.331 + .99) / 59), seq(-0.229, 0.329, (.329 + .229) / 59), seq(0.431, .99, (.99 - .431) / 59))
   # Z=seq(0.01,.99,.98/(n-1))
   Z <- matrix(Z, n, 1)
+  
+  # X is an n by p+1 matrix of data   
   X <- matrix(0, n, p + 1)
   for (i in 1:n) {
     X[i, ] <- mvrnorm(1, rep(0, p + 1), Var_cont(Z[i]))

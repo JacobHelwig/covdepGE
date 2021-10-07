@@ -20,6 +20,7 @@ logit <- function(x) {
     return(log(x / (1 - x)))
   }
 }
+# don't need
 Afunc <- function(x) {
   if (x == 0) {
     return(-.125)
@@ -27,6 +28,7 @@ Afunc <- function(x) {
     return(-tanh(x / 2) / (4 * x))
   }
 }
+# don't need
 Cfunc <- function(x) x / 2 - log(1 + exp(x)) + x * tanh(x / 2) / 4
 
 ######### Data generation ############
@@ -45,7 +47,8 @@ p <- 10
 # setdiff1=sensitivity_1
 # setdiff100=setdiff1
 
-############################# generating the precision matrix.:Assume two discrete covariate levels
+############################# 
+# generating the precision matrix.:Assume two discrete covariate levels
 Lam1 <- matrix(0, p + 1, 1)
 Lam2 <- Lam1
 Lam1 <- c(3, 3, 3, 3, rep(0, p - 3)) * 5 # For Z[i]=-0.1
@@ -57,6 +60,7 @@ Var2 <- solve(Lam2 %*% t(Lam2) + diag(rep(10, p + 1))) # covariance matrix for c
 
 X1 <- mvrnorm(n / 2, rep(0, p + 1), Var1)
 X2 <- mvrnorm(n / 2, rep(0, p + 1), Var2)
+
 ######### Generating the covariates ##########
 
 
@@ -67,6 +71,8 @@ resp_index <- 1
 # The index we consider as response
 mylist <- rep(list(beta), p + 1) # The variable specific inclusion probability matrix:ith row corresponds to the dependence structure for the i th subject, j th matrix corresponds to
 # the j th variable as response and the remaining as predictors.
+
+# this is X
 data_mat <- rbind(X1, X2)
 
 
@@ -74,6 +80,7 @@ data_mat <- rbind(X1, X2)
 
 Adj_Mat_vb <- array(0, dim = c(p + 1, p + 1))
 ###############################################
+# create the true graph 
 for (resp_index in 1:(p + 1)) { # This loops over the p+1 variables
   for (i in 1:n) {
     beta[i, ] <- (t(Lam1[-resp_index]) > 0) * (i <= n / 2) + (t(Lam2[-resp_index]) > 0) * (i > n / 2) # Ground truth
@@ -191,7 +198,7 @@ for (resp_index in 1:(p + 1)) { # This loops over the p+1 variables
   est_q <- est_pi
   beta_matr <- matrix(0, n, p)
 
-  #################### tuning hyperparameters##################################
+  #################### tuning hyperparameters ##################################
   idmod <- varbvs(X_mat, y, Z = Z[, 1], verbose = FALSE) # Setting hyperparameter value as in Carbonetto Stephens model
   inprob <- idmod$pip
   rest_index_set <- setdiff(c(1:(p + 1)), resp_index)
@@ -200,9 +207,13 @@ for (resp_index in 1:(p + 1)) { # This loops over the p+1 variables
   pi_est <- mean(1 / (1 + exp(-idmod$logodds)))
   sigmavec <- c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10)
   elb1 <- matrix(0, length(sigmavec), 1)
+  
+  # lambda_mean lambda_var are useless
+  # we are choosing a value for sigmabeta 
   for (j in 1:length(sigmavec)) {
     res <- cov_vsvb(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmavec[j], pi_est)
     elb1[j] <- res$var.elbo
+    
   }
   sigmabeta_sq <- sigmavec[which.max(elb1)] # Choosing hyperparameter based on ELBO maximization
 
@@ -217,6 +228,9 @@ for (resp_index in 1:(p + 1)) { # This loops over the p+1 variables
   heat_alpha <- matrix(incl_prob, n, p, byrow = TRUE)
   mylist[[resp_index]] <- heat_alpha
 }
+
+# beyond here is demonstrations
+
 alph <- matrix(0, p + 1, p + 1)
 
 alph <- matrix(0, p + 1, p + 1)
@@ -304,6 +318,9 @@ data <- melt(t(beta))
 fig <- ggplot(data, aes(x = Var1, y = Var2, fill = value)) +
   geom_tile(color = "brown") +
   scale_fill_gradient(low = "white", high = "steelblue", breaks = c(1, 0), guide = "legend")
+
+
+
 
 fig <- fig + scale_x_continuous(expand = c(0, 0))
 fig <- fig + scale_y_continuous(expand = c(0, 0))

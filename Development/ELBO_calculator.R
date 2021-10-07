@@ -8,6 +8,10 @@
 ## W: the weights associated with the n individuals wrt the covariate of the fixed individual we are studying.
 ## n: no. of samples
 ## p: no. of variables in predictor (no. of variables - 1).
+
+## sigmasq, sigmabeta_sq, true_pi (HYPERPAREMTERS)
+## S_sq, mu, alpha (variational parameters)
+## W is weights 
 ELBO_calculator <- function(y, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, true_pi, W, n, p) {
   mu <- matrix(mu, p, 1)
   alpha <- matrix(alpha, p, 1)
@@ -17,6 +21,7 @@ ELBO_calculator <- function(y, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, tr
   t1 <- -sum(W * (y - X_mat %*% mu_alpha)^2) / (2 * sigmasq)
   t2 <- -sum(W * ((X_mat)^2 %*% (alpha * (mu^2 + s) - alpha^2 * mu^2))) / (2 * sigmasq)
   t3 <- sum(alpha * ((1 + log(s)))) / 2
+  # 0.0000001 to avoid division by zero since alpha = 1 often 
   t4 <- -sum(alpha * log((alpha + 0.000001) / true_pi) + (1 - alpha) * log((1 - alpha + 0.000001) / (1 - true_pi)))
   t5 <- -sum(alpha * ((mu^2 + s) / (2 * sigmasq * sigmabeta_sq) + log(sigmasq * sigmabeta_sq) / 2))
   t6 <- sum(0.5 * log(1 / (2 * pi * sigmasq)))
