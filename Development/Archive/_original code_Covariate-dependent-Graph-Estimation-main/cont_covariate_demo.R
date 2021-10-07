@@ -92,7 +92,7 @@ for (resp_index in 1:(p + 1)) {
   # X is a n by n*p matrix; it consists of rbinding n n by p matrices together
   # the j-th matrix is the j-th row of X_mat in the j-th row, and 0's o.w.
   X <- matrix(rep(0, n^2 * p), nrow = n, ncol = n * p)
-
+  
   for (i in 1:n) {
     for (j in 1:p) {
       k <- p * (i - 1) + 1
@@ -106,23 +106,23 @@ for (resp_index in 1:(p + 1)) {
   # big diag mat looks exactly the same as X, except it replaces all non-zero
   # entries with 1
   Big_diag_mat <- (X != 0) * 1
-
+  
   q <- matrix(2, n, 1)
-
+  
   sigmasq <- 1
   E <- rnorm(n, 0, sigmasq)
   
   # a block diagonal matrix; the j-th block is the transpose of the j-th row of
   # X times the j-th row of X; it is an n*p by n*p matrix
   XtX <- t(X) %*% X
-
+  
   DXtX <- diag(XtX)
   DXtX_rep <- rep(DXtX, p)
   DXtX_mat <- matrix(DXtX_rep, n * p, p, byrow = FALSE)
   
   # XtX with its diagonal removed and replaced with 0
   Diff_mat <- XtX - diag(DXtX)
-
+  
   # Initialization of the inclusion probability matrix for a fixed variable
   # with i-th row corresponding to i th subject.
   alpha <- rep(0.2, n * p)
@@ -130,26 +130,26 @@ for (resp_index in 1:(p + 1)) {
   sigmabeta_sq <- 3
   mu <- rep(0, p)
   true_pi <- 0.5
-
+  
   # y_long_vec is each element of y repeated p times
   y_long_vec <- rep(y, each = p)
   
   Xty <- t(X) %*% y
   beta_mat <- matrix(0, n, p, byrow = TRUE)
   mu_mat <- beta_mat
-
+  
   S_sq <- matrix(sigmasq * (DXtX + 1 / sigmabeta_sq)^(-1), n, p)
-
+  
   iter <- 1
-
+  
   DXtX_Big_ind <- DXtX_mat * Big_ind
-
+  
   candL <- seq(0.1, 0.9, .2) # Different values of hyperparameter true_pi
   elb <- rep(0, length(candL))
-
+  
   est_q <- rep(0, n)
   beta_matr <- matrix(0, n, p)
-
+  
   #################### tuning hyperparameters ##################################
   
   # Setting hyperparameter value as in Carbonetto Stephens model
@@ -176,7 +176,7 @@ for (resp_index in 1:(p + 1)) {
   
   # vector of length n * p of inclusion probabilities
   incl_prob <- result$var.alpha
-
+  
   # n by p matrix; the i,j-th entry is the probability of inclusion for the
   # i-th individual for the j-th variable according to the regression on y
   heat_alpha <- matrix(incl_prob, n, p, byrow = TRUE)

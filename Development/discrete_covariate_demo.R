@@ -1,8 +1,7 @@
-set.seed(1)
-
 rm(list = ls())
 source("cov_vsvb.R")
 source("ELBO_calculator.R")
+source("generate_data.R")
 library(reshape2)
 library(MASS)
 library(varbvs)
@@ -16,39 +15,14 @@ logit <- function(x) {
   }
 }
 
-# Data generation 
+# generate data and covariates
+dat <- generate_discrete()
+data_mat <- dat$data
+Z <- dat$covts
+
+# Data generation
 n <- 100
 p <- 10
-
-# generating the precision matrix: Assume two discrete covariate levels
-Lam1 <- c(3, 3, 3, 3, rep(0, p - 3)) * 5 # For Z[i]=-0.1
-
-# Same lambda for both covariate levels, corresponds to covariate 
-Lam2 <- Lam1 
-
-# covariance matrix for covariate level 1
-Var1 <- solve(Lam1 %*% t(Lam1) + diag(rep(10, p + 1))) 
-
-# covariance matrix for covariate level 2
-Var2 <- solve(Lam2 %*% t(Lam2) + diag(rep(10, p + 1))) 
-
-# Initializing the covariate matrix
-Z <- matrix(-1, n, p) 
-
-# covariate creation; half the individuals get a 0.1, while the others get -0.1
-for (i in 1:n) {
-  for (j in 1:p) {
-    Z[i, j] <- -.1 * (i <= n / 2) + .1 * (i > n / 2)
-  }
-}
-
-# create the data matrix; half of the individuals are generated from a MVN with 
-# 0 mean vector and covariance matrix corresponding to covariate level 1, while 
-# the other are from an MVN with covariance matrix corresponding to covariate 
-# level 2
-X1 <- mvrnorm(n / 2, rep(0, p + 1), Var1)
-X2 <- mvrnorm(n / 2, rep(0, p + 1), Var2)
-data_mat <- rbind(X1, X2)
 
 # D is an n by n matrix of weights
 D <- matrix(1, n, n)
@@ -113,7 +87,7 @@ for (resp_index in 1:(p + 1)) {
   q <- matrix(2, n, 1)
 
   sigmasq <- 1 
-  E <- rnorm(n, 0, sigmasq)
+  E <- rnorm(n, 0, sigmasq) # removing this causes discrepency
 
   # a block diagonal matrix; the j-th block is the transpose of the j-th row of
   # X times the j-th row of X; it is an n*p by n*p matrix

@@ -122,7 +122,6 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
     unlogitalpha[indlarge] <- uthres
     unlogitalpha[indsmall] <- lthres
     
-    #
     alpha[which(unlogitalpha > 9)] <- 1 # thresholding very large values to 1 for computational stability
     alpha[which(unlogitalpha <= 9)] <- 1 / (1 + exp(-unlogitalpha[which(unlogitalpha <= 9)])) ### ### CAVI updation of variational parameter alpha
     
@@ -155,6 +154,7 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
 
 # source("cov_vsvb.R")
 # source("ELBO_calculator.R")
+source("generate_data.R")
 library(reshape2)
 library(MASS)
 library(varbvs)
@@ -167,47 +167,28 @@ logit <- function(x) {
     return(log(x / (1 - x)))
   }
 }
-
-# Data generation
-n <- 180
-p <- 4
-
-# function to create sigma matrix for a p-dimensional gaussian given the value
-# of an extraneous covariate
-Var_cont <- function(z) {
-  STR <- 1
-  pr <- matrix(0, p + 1, p + 1)
-  diag(pr) <- 2
-  pr[2, 3] <- STR
-  pr[1, 2] <- STR * ((z > -1) && (z < -.33)) + (STR - STR * ((z + .23) / .56)) * ((z > -0.23) && (z < 0.33)) + (0) * ((z > 0.43) && (z < 1))
-  pr[1, 3] <- 0 * ((z > -1) && (z < -.33)) + (STR * ((z + .23) / .56)) * ((z > -0.23) && (z < 0.33)) + (STR) * ((z > 0.43) && (z < 1))
-  pr[2, 1] <- pr[1, 2]
-  pr[3, 1] <- pr[1, 3]
-  pr[3, 2] <- pr[2, 3]
-  Var <- solve(pr)
-  return(Var)
+# generate data and covariates
+discrete_data <- T # true if discrete example is desired
+if (discrete_data) {
+  dat <- generate_discrete()
+  n <- 100
+  p <- 10
+  tau <- 0.1 # the bandwidth parameter
+}else{
+  dat <- generate_continuous() 
+  n <- 180
+  p <- 4
+  tau <- 0.56
 }
+data_mat <- dat$data
+Z <- dat$covts
 
-# creation of covariate
-Z <- c(
-  seq(-0.99, -0.331, (-.331 + .99) / 59),
-  seq(-0.229, 0.329, (.329 + .229) / 59),
-  seq(0.431, .99, (.99 - .431) / 59)
-)
-Z <- matrix(Z, n, 1)
-
-# creation the data matrix; each individual is generated from a MVN with 0 mean
-# and covariance matrix determined by their corresponding extraneous covariate
-data_mat <- matrix(0, n, p + 1)
-for (i in 1:n) {
-  data_mat[i, ] <- mvrnorm(1, rep(0, p + 1), Var_cont(Z[i]))
-}
-
-# D is an n by n matrix of weights
+# D is an n by n matrix of weights; the i, j entry is the similarity between
+# individuals i and j
 D <- matrix(1, n, n)
 for (i in 1:n) {
   for (j in 1:n) {
-    D[j, i] <- dnorm(norm(Z[i, ] - Z[j, ], "2"), 0, 0.56)
+    D[j, i] <- dnorm(norm(Z[i, ] - Z[j, ], "2"), 0, tau)
   }
 }
 
@@ -245,7 +226,7 @@ for (resp_index in 1:(p + 1)) {
   
   # X is a n by n*p matrix; it consists of rbinding n n by p matrices together
   # the j-th matrix is the j-th row of X_mat in the j-th row, and 0's o.w.
-  X <- matrix(rep(0, n^2 * p), nrow = n, ncol = n * p)
+  X <- matrix(0, nrow = n, ncol = n * p)
   
   for (i in 1:n) {
     for (j in 1:p) {
@@ -272,6 +253,7 @@ for (resp_index in 1:(p + 1)) {
   alpha <- rep(0.2, n * p)
   sigmabeta_sq <- 3
   sigmasq <- 1
+  E <- rnorm(n, 0, sigmasq) # removing this causes discrepency in discrete case
   S_sq <- matrix(sigmasq * (DXtX + 1 / sigmabeta_sq)^(-1), n, p)
   mu <- rep(0, p)
   mu_mat <- matrix(0, n, p, byrow = TRUE)
@@ -319,9 +301,15 @@ for (resp_index in 1:(p + 1)) {
   mylist[[resp_index]] <- heat_alpha
 }
 
+ 
 # check to see that this modified code produces the same results as the original code
 mylist2 <- mylist
-load("original_continuous_alpha_matrices.Rdata")
+if (discrete_data){
+  load("original_discrete_alpha_matrices.Rdata")
+}else{
+  load("original_continuous_alpha_matrices.Rdata")
+}
+
 same <- T
 for (j in 1:length(mylist)) {
   if (all.equal(mylist[[j]], mylist2[[j]]) != T) {
@@ -335,7 +323,7 @@ same
 end_time <- Sys.time()
 end_time - start_time
 
-## History:
+## History (continuous data):
   # Original:
     # Time difference of 23.49625 secs
     # Time difference of 23.76863 secs

@@ -5,7 +5,9 @@ library(microbenchmark)
 #-------------------------------------------------------------------------------
 rm(list = ls())
 
-library(reshape2)
+source("generate_data.R")
+
+#library(reshape2)
 library(MASS)
 library(varbvs)
 library(ks)
@@ -18,46 +20,29 @@ logit <- function(x) {
   }
 }
 
-# Data generation
-n <- 180
-p <- 4
-
-# function to create sigma matrix for a p-dimensional gaussian given the value
-# of an extraneous covariate
-Var_cont <- function(z) {
-  STR <- 1
-  pr <- matrix(0, p + 1, p + 1)
-  diag(pr) <- 2
-  pr[2, 3] <- STR
-  pr[1, 2] <- STR * ((z > -1) && (z < -.33)) + (STR - STR * ((z + .23) / .56)) * ((z > -0.23) && (z < 0.33)) + (0) * ((z > 0.43) && (z < 1))
-  pr[1, 3] <- 0 * ((z > -1) && (z < -.33)) + (STR * ((z + .23) / .56)) * ((z > -0.23) && (z < 0.33)) + (STR) * ((z > 0.43) && (z < 1))
-  pr[2, 1] <- pr[1, 2]
-  pr[3, 1] <- pr[1, 3]
-  pr[3, 2] <- pr[2, 3]
-  Var <- solve(pr)
-  return(Var)
+# generate data and covariates
+discrete_data <- F # true if discrete example is desired
+if (discrete_data) {
+  dat <- generate_discrete()
+  n <- 100
+  p <- 10
+  tau <- 0.1 # the bandwidth parameter
+}else{
+  dat <- generate_continuous() 
+  n <- 180
+  p <- 4
+  tau <- 0.56
 }
 
-# creation of covariate
-Z <- c(
-  seq(-0.99, -0.331, (-.331 + .99) / 59),
-  seq(-0.229, 0.329, (.329 + .229) / 59),
-  seq(0.431, .99, (.99 - .431) / 59)
-)
-Z <- matrix(Z, n, 1)
+data_mat <- dat$data
+Z <- dat$covts
 
-# creation the data matrix; each individual is generated from a MVN with 0 mean
-# and covariance matrix determined by their corresponding extraneous covariate
-data_mat <- matrix(0, n, p + 1)
-for (i in 1:n) {
-  data_mat[i, ] <- mvrnorm(1, rep(0, p + 1), Var_cont(Z[i]))
-}
 
 # D is an n by n matrix of weights
 D <- matrix(1, n, n)
 for (i in 1:n) {
   for (j in 1:n) {
-    D[j, i] <- dnorm(norm(Z[i, ] - Z[j, ], "2"), 0, 0.56)
+    D[j, i] <- dnorm(norm(Z[i, ] - Z[j, ], "2"), 0, tau)
   }
 }
 
@@ -184,15 +169,50 @@ microbenchmark(S_sq_orig(),
 #--------------------------mu UPDATE OPTIMIZATION-----------------------------
 #-------------------------------------------------------------------------------
 
-## mu update - original 
+## mu update - original
+Mu_vec <- matrix(alpha, n * p, 1)
+alpha_vec <- matrix(alpha, n * p, 1, byrow = TRUE)
+
 for (i in 1:n) {
+  # y_long_vec is each element of y repeated p times
+  # X_vec is a vector of length n*p that is the rows of X_mat "unravelled" by row;
+  # that is, the first element of X_vec is the 1,1 of X_mat; the second element
+  # is the 1,2; third is 1,3, ect.
+  # the i-th column of D_long is the i-th column of D with the elements repeated
+  # p times
+
   y_XW <- y_long_vec * X_vec * D_long[, i]
   y_XW_mat <- matrix(y_XW, n, p, byrow = TRUE)
   
   X_mu_alpha <- X_vec * Mu_vec * alpha_vec
   xmualpha_mat <- t(matrix(X_mu_alpha, p, n)) %*% (matrix(1, p, p) - diag(rep(1, p)))
   XW_mat <- matrix(X_vec * D_long[, i], n, p, byrow = TRUE) * xmualpha_mat
-  
+  # mu mat is n by p
   mu_mat[i, ] <- (t(y_XW_mat) %*% matrix(1, n, 1) - (t(XW_mat) %*% matrix(1, n, 1))) * (S_sq[i, ] / sigmasq) ### ### CAVI updation of mean variational parameter mu
 }
 Mu_vec <- matrix(t(mu_mat), n * p, 1)
+
+## Mu update - modified 1
+
+alpha_mat <- matrix(alpha, n, p, byrow = TRUE)
+
+mu_mat[1, 1] - (S_sq[1,1] / sigmasq) * sum(D[ , 1] * X_mat[ , 1] * y)
+
+mu_mat2 <- matrix(alpha, n, p)
+
+for (l in 1:n){
+  for (k in 1:p){
+    #mu_mat2[l, k] <- (S_sq[l, k] / sigmasq) * sum(D[ , l] * X_mat[ , k] * y)
+    mu_mat2[l, k] <- ((S_sq[l, k] / sigmasq) * sum((D[ , l] * X_mat[ , k]) * (y - rowSums(X_mat[ , ] * mu_mat2[ , ] * alpha_mat[ , ]))))
+  }
+}
+
+mu_mat
+mu_mat2
+mu_mat3 <- matrix(0, n, p)
+
+for (l in 1:n){
+  mu_mat3[l , ] <- (S_sq[l, ] / sigmasq) * colSums(matrix(D[ , l], n, p) * X_mat * y)
+}
+
+all.equal(mu_mat3, mu_mat2)
