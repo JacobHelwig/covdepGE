@@ -1,18 +1,16 @@
 rm(list = ls())
 source("cov_vsvb.R")
 source("ELBO_calculator.R")
-library(Matrix)
-library(magic)
-library(psych)
+#library(Matrix)
+#library(magic)
+#library(psych)
 library(ggplot2)
-library(reshape2)
-library(MASS)
-library(pracma)
+#library(reshape2)
+#library(MASS)
+#library(pracma)
 library(latex2exp)
 library(ks)
 library(varbvs)
-###################################################################
-
 
 # function to compute the logit 
 logit <- function(x) {
@@ -23,7 +21,6 @@ logit <- function(x) {
   }
 }
 
-# ?
 Afunc <- function(x) {
   if (x == 0) {
     return(-.125)
@@ -32,15 +29,8 @@ Afunc <- function(x) {
   }
 }
 
-# ? 
 Cfunc <- function(x) x / 2 - log(1 + exp(x)) + x * tanh(x / 2) / 4
 
-##### FUNCTION DEFINITION#####
-#############################
-#############################
-#############################
-#############################
-#############################
 ######### Data generation ############
 
 n <- 180 # number of individuals
@@ -52,12 +42,14 @@ in_pr_12 <- in_pr_13
 
 Var_cont <- function(z) {
   pr <- matrix(0, p + 1, p + 1)
-  diag(pr) <- 2 # add 2 to the diagonal of pr
+  diag(pr) <- 2
   #  pr[1,2]=STR*((z>0) && (z< .33)) + (STR - STR*((z-.33)/.33))*((z>0.33) && (z<0.66)) + (0)*((z>0.66) && (z<1))
   #  pr[1,3]=0*((z>0) && (z< .33)) + (STR*((z-.33)/.33))*((z>0.33) && (z<0.66)) + (STR)*((z>0.66) && (z<1))
   pr[2, 3] <- STR  
-  pr[1, 2] <- STR * ((z > -1) && (z < -.33)) + (STR - STR * ((z + .23) / .56)) * ((z > -0.23) && (z < 0.33)) + (0) * ((z > 0.43) && (z < 1))
-  pr[1, 3] <- 0 * ((z > -1) && (z < -.33)) + (STR * ((z + .23) / .56)) * ((z > -0.23) && (z < 0.33)) + (STR) * ((z > 0.43) && (z < 1))
+  pr[1, 2] <- STR * ((z > -1) && (z < -.33)) + (STR - STR * ((z + .23) / .56)) * 
+    ((z > -0.23) && (z < 0.33)) + (0) * ((z > 0.43) && (z < 1))
+  pr[1, 3] <- 0 * ((z > -1) && (z < -.33)) + (STR * ((z + .23) / .56)) * 
+    ((z > -0.23) && (z < 0.33)) + (STR) * ((z > 0.43) && (z < 1))
 
   pr[2, 1] <- pr[1, 2]
   pr[3, 1] <- pr[1, 3]
@@ -80,7 +72,8 @@ for (overiter in 1:MAXITER) {
   # Z=c(runif(n/3,-1,-0.33),runif(n/3, -0.23,0.33),runif(n/3,0.43,1))
   
   # Z is the extraneous covariates
-  Z <- c(seq(-0.99, -0.331, (-.331 + .99) / 59), seq(-0.229, 0.329, (.329 + .229) / 59), seq(0.431, .99, (.99 - .431) / 59))
+  Z <- c(seq(-0.99, -0.331, (-.331 + .99) / 59), 
+         seq(-0.229, 0.329, (.329 + .229) / 59), seq(0.431, .99, (.99 - .431) / 59))
   # Z=seq(0.01,.99,.98/(n-1))
   Z <- matrix(Z, n, 1)
   
@@ -91,22 +84,14 @@ for (overiter in 1:MAXITER) {
   }
 
   ######### Generating the covariates ##########
-
-
+  
   beta <- matrix(0, n, p)
   resp_index <- 1 # The index we consider as response
   mylist <- rep(list(beta), p + 1)
   data_mat <- X
 
-
-
-
-
-  ###############################################
   for (resp_index in 1:(p + 1)) {
-
-
-    ##############
+  
     y <- data_mat[, resp_index]
 
     X_mat <- data_mat[, -resp_index]
@@ -185,31 +170,20 @@ for (overiter in 1:MAXITER) {
     mu <- rep(0, p)
     true_pi <- 0.5
 
-
-    ###########
-
-
-
     y_long_vec <- as.vector(t(y %*% matrix(1, 1, p)))
     Xty <- t(X) %*% as.vector(y)
     beta_mat <- matrix(beta, n, p, byrow = TRUE)
     mu_mat <- beta_mat
-
 
     D_long <- matrix(0, n * p, n)
     for (i in 1:n) {
       D_long[, i] <- matrix(t(D[, i] %*% matrix(1, 1, p)), n * p, 1)
     }
 
-
     S_sq <- matrix(sigmasq * (DXtX + 1 / sigmabeta_sq)^(-1), n, p)
     Sigma_xi <- diag(p)
     S0 <- solve(lambda_var)
     iter <- 1
-    ###############################################
-
-
-
 
     ind_vec <- seq(0, (n - 1) * p, by = p)
     Ind_mat <- matrix(0, n, p)
@@ -224,7 +198,7 @@ for (overiter in 1:MAXITER) {
     }
 
     DXtX_Big_ind <- DXtX_mat * Big_ind
-    ###################################################
+
     candL <- seq(0.1, 0.9, .2) # Different values of hyperparameter true_pi
     # candL=0.5
     like <- rep(0, length(candL))
@@ -234,25 +208,23 @@ for (overiter in 1:MAXITER) {
     est_q <- est_pi
     beta_matr <- matrix(0, n, p)
 
-    #################### tuning hyperparameters using Carbonetto Stephens##################################
+    #################### tuning hyperparameters using Carbonetto Stephens 
     idmod <- varbvs(X_mat, y, Z = Z[, 1], verbose = FALSE)
     sigmasq <- mean(idmod$sigma)
     pi_est <- mean(1 / (1 + exp(-idmod$logodds)))
     sigmavec <- c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10)
     elb1 <- matrix(0, length(sigmavec), 1)
     for (j in 1:length(sigmavec)) {
-      res <- cov_vsvb(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmavec[j], pi_est)
+      res <- cov_vsvb(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmavec[j], 
+                      pi_est)
       elb1[j] <- res$var.elbo
     }
     sigmabeta_sq <- sigmavec[which.max(elb1)]
 
-    result <- cov_vsvb(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmabeta_sq, pi_est)
+    result <- cov_vsvb(y, X, Z, XtX, DXtX, Diff_mat, Xty, sigmasq, sigmabeta_sq, 
+                       pi_est)
     incl_prob <- result$var.alpha
     mu0_val <- result$var.mu0_lambda
-
-    #
-
-
 
     heat_alpha <- matrix(incl_prob, n, p, byrow = TRUE)
     mylist[[resp_index]] <- heat_alpha
@@ -361,6 +333,7 @@ for (overiter in 1:MAXITER) {
     in_pr_12[overiter, SUBJECT] <- alph[1, 2]
   }
 }
+
 ################# BELOW IS FOR VISUALIZATION#####################
 
 SUBJECT <- 20
@@ -483,7 +456,7 @@ fig <- fig + theme(
 fig <- fig + coord_equal()
 
 fig
-###########
+
 SUBJECT <- 90
 for (i in 1:(p + 1)) {
   alph[i, -i] <- mylist[[i]][SUBJECT, ]
@@ -606,7 +579,7 @@ fig <- fig + coord_equal()
 fig
 
 
-###########
+
 SUBJECT <- 160
 
 for (i in 1:(p + 1)) {
