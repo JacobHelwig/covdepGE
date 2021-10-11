@@ -1,5 +1,5 @@
 set.seed(1)
-
+setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development")
 rm(list = ls())
 start_time <- Sys.time()
 
@@ -51,69 +51,69 @@ ELBO_calculator <- function(y, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi
 
 # fixed x_j; estimate variational parameters for each individual and
 # calculate ELBO for sigma_beta optimization
-cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX, 
-                     DXtX_Big_ind, D_long, Diff_mat, sigmasq, sigmabeta_sq, 
+cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
+                     DXtX_Big_ind, D_long, Diff_mat, sigmasq, sigmabeta_sq,
                      S_sq, pi_est, mu, mu_mat, alpha, Big_ind, ELBO_LBit) {
-  
+
   n <- nrow(X_mat); p <- ncol(X_mat)
-  
+
   # threshold for calculating the reverse logit of alpha
   thres <- 1e-7
   lthres <- logit(thres)
   uthres <- logit(1 - thres)
-  
+
   # exit condition tolerance
   tol <- 1e-9
-  
-  
+
+
   change_alpha <- rep(0.001, n * p) # alpha_new - alpha_int
-  
+
   max_iter <- 100
   iter <- 1
   Mu_vec <- matrix(rep(mu, n), n * p, 1)
-  
+
   iter <- 1
-  
+
   # S_sq update (WHY IS THERE A NEED FOR ITERATION FOR THIS PARAMETER?)
   S_sq <- t(sigmasq * (t(X_mat^2) %*% D + 1 / sigmabeta_sq)^(-1))
   S_sq_vec <- matrix(t(S_sq), n * p, 1)
-  
+
   # loop to optimize variational parameters
   while (sqrt(sum(change_alpha^2)) > tol & iter < max_iter) {
     alpha_int <- alpha
-    
+
     alpha_mat <- matrix(alpha, n, p, byrow = TRUE)
-    
+
     alpha_vec <- matrix(alpha, n * p, 1, byrow = TRUE)
-    
+
     # S_sq update
     # for (i in 1:n) {
     #   S_sq[i, ] <- sigmasq * (t(DXtX_Big_ind) %*% D_long[, i] + 1 / sigmabeta_sq)^(-1) ## variance parameter
     # }
     # S_sq <- t(sigmasq * (t(X_mat^2) %*% D + 1 / sigmabeta_sq)^(-1))
     # S_sq_vec <- matrix(t(S_sq), n * p, 1)
-    
+
     # mu update
     for (i in 1:n) {
       y_XW <- y_long_vec * X_vec * D_long[, i]
       y_XW_mat <- matrix(y_XW, n, p, byrow = TRUE)
-      
+
       X_mu_alpha <- X_vec * Mu_vec * alpha_vec
       xmualpha_mat <- t(matrix(X_mu_alpha, p, n)) %*% (matrix(1, p, p) - diag(rep(1, p)))
       XW_mat <- matrix(X_vec * D_long[, i], n, p, byrow = TRUE) * xmualpha_mat
-      
+
       mu_mat[i, ] <- (t(y_XW_mat) %*% matrix(1, n, 1) - (t(XW_mat) %*% matrix(1, n, 1))) * (S_sq[i, ] / sigmasq) ### ### CAVI updation of mean variational parameter mu
     }
     Mu_vec <- matrix(t(mu_mat), n * p, 1)
-    
+
     # alpha update
     vec_1 <- log(pi_est / (1 - pi_est)) # first term of alpha update
     vec_2 <- as.matrix(0.5 * log(S_sq_vec / (sigmasq * sigmabeta_sq))) # second term of alpha update
     vec_3 <- as.matrix(Mu_vec^2 / (2 * S_sq_vec)) # third term of alpha update
-    
+
     # logit of alpha is sum of 3 terms for alpha update
     unlogitalpha <- vec_1 + vec_2 + vec_3
-    
+
     # find values of alpha that are too large/ small and will pose an issue for
     # the reverse logit formula; set them to the upperthreshold/ lower
     # threshold values
@@ -121,33 +121,33 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
     indsmall <- which(unlogitalpha < lthres)
     unlogitalpha[indlarge] <- uthres
     unlogitalpha[indsmall] <- lthres
-    
+
     alpha[which(unlogitalpha > 9)] <- 1 # thresholding very large values to 1 for computational stability
     alpha[which(unlogitalpha <= 9)] <- 1 / (1 + exp(-unlogitalpha[which(unlogitalpha <= 9)])) ### ### CAVI updation of variational parameter alpha
-    
+
     # calculate ELBO across n individuals
     e <- 0
-    
+
     for (i in 1:n) { ## calculates ELBO for the j th variable by adding the contribution of the parameter
       ## corresponding to every individual in study. i th iteration takes the contribution of the variational
       ## parameters corresponding to  the i th individual in study, but the information is borrowed from
       ## all the n individuals depending on the weights coded in D[,i]
       e <- e + ELBO_calculator(y, X_mat, S_sq[i, ], mu_mat[i, ], alpha_mat[i, ], sigmasq, sigmabeta_sq, pi_est, D[, i], n, p)
     }
-    
+
     # want to maximize this by optimizing sigma beta
     ELBO_LB <- e
-    
+
     alpha_new <- alpha
     change_alpha <- alpha_new - alpha_int
-    
+
     ELBO_LBit[iter] <- ELBO_LB
     iter <- iter + 1
   }
-  
+
   # how has ELBO evolved?
   ELBO_LBit <- ELBO_LBit[1:(iter - 1)]
-  
+
   # return n times p - 1 of each of the variational parameters
   list(var.alpha = alpha, var.mu = mu_mat, var.S_sq = S_sq, var.elbo = ELBO_LB, var.elboit = ELBO_LBit)
 }
@@ -167,15 +167,16 @@ logit <- function(x) {
     return(log(x / (1 - x)))
   }
 }
+
 # generate data and covariates
-discrete_data <- T # true if discrete example is desired
+discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   n <- 100
   p <- 10
   tau <- 0.1 # the bandwidth parameter
 }else{
-  dat <- generate_continuous() 
+  dat <- generate_continuous()
   n <- 180
   p <- 4
   tau <- 0.56
@@ -207,27 +208,27 @@ D_long <- matrix(rep(D, each = p), n * p)
 # predictors.
 mylist <- vector("list", p + 1)
 
-# big ind matrix is a matrix of p stacked I_p identities
-Big_ind <- matrix(rep(diag(p), p), n * p, p, T)
+# big ind matrix is a matrix of n stacked I_p identities
+Big_ind <- matrix(rep(diag(p), n), n * p, p, T)
 
 # main loop
 for (resp_index in 1:(p + 1)) {
-  
+
   # Set variable number `resp_index` as the response
   y <- data_mat[, resp_index]
-  
+
   # Set the remaining p variables as predictor
   X_mat <- data_mat[, -resp_index]
-  
+
   # X_vec is a vector of length n*p that is the rows of X_mat "unravelled" by row;
   # that is, the first element of X_vec is the 1,1 of X_mat; the second element
   # is the 1,2; third is 1,3, ect.
   X_vec <- matrix(0, n * p, 1)
-  
+
   # X is a n by n*p matrix; it consists of rbinding n n by p matrices together
   # the j-th matrix is the j-th row of X_mat in the j-th row, and 0's o.w.
   X <- matrix(0, nrow = n, ncol = n * p)
-  
+
   for (i in 1:n) {
     for (j in 1:p) {
       k <- p * (i - 1) + 1
@@ -235,21 +236,21 @@ for (resp_index in 1:(p + 1)) {
       X_vec[k + j - 1] <- X[i, k + j - 1]
     }
   }
-  
+
   Xty <- t(X) %*% y
-  
+
   # a block diagonal matrix; the j-th block is the transpose of the j-th row of
   # X times the j-th row of X; it is an n*p by n*p matrix
   XtX <- t(X) %*% X
-  
+
   DXtX <- diag(XtX)
   DXtX_rep <- rep(DXtX, p)
   DXtX_mat <- matrix(DXtX_rep, n * p, p, byrow = FALSE)
   DXtX_Big_ind <- matrix(DXtX_rep, n * p, p, byrow = FALSE) * Big_ind
-  
+
   # XtX with its diagonal removed and replaced with 0
   Diff_mat <- XtX - diag(DXtX)
-  
+
   alpha <- rep(0.2, n * p)
   sigmabeta_sq <- 3
   sigmasq <- 1
@@ -258,50 +259,50 @@ for (resp_index in 1:(p + 1)) {
   mu <- rep(0, p)
   mu_mat <- matrix(0, n, p, byrow = TRUE)
   #pi_est <- 0.5
-  
+
   # y_long_vec is each element of y repeated p times
   y_long_vec <- rep(y, each = p)
-  
-  
+
+
   #################### tuning hyperparameters ##################################
-  
+
   # Setting hyperparameter value as in Carbonetto Stephens model
   idmod <- varbvs(X_mat, y, Z = Z[, 1], verbose = FALSE)
   sigmasq <- mean(idmod$sigma)
-  
+
   pi_est <- mean(1 / (1 + exp(-idmod$logodds)))
   sigmavec <- c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10)
-  
+
   # vector for storing the ELBO for each value of sigma in sigmavec
   elb1 <- matrix(0, length(sigmavec), 1)
   ELBO_LBit <- rep(0, 10000)
-  
+
   # loop to optimize sigma
   for (j in 1:length(sigmavec)) {
-    res <- cov_vsvb(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX, 
-                    DXtX_Big_ind, D_long, Diff_mat, sigmasq, sigmavec[j], 
+    res <- cov_vsvb(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
+                    DXtX_Big_ind, D_long, Diff_mat, sigmasq, sigmavec[j],
                     S_sq, pi_est, mu, mu_mat, alpha, Big_ind, ELBO_LBit)
     elb1[j] <- res$var.elbo
   }
-  
+
   # Select the value of sigma_beta that maximizes the elbo
   sigmabeta_sq <- sigmavec[which.max(elb1)]
-  
+
   # fit another model using this value of sigma_beta
-  result <- cov_vsvb(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX, 
-                     DXtX_Big_ind, D_long, Diff_mat, sigmasq, sigmabeta_sq, 
+  result <- cov_vsvb(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
+                     DXtX_Big_ind, D_long, Diff_mat, sigmasq, sigmabeta_sq,
                      S_sq, pi_est, mu, mu_mat, alpha, Big_ind, ELBO_LBit)
 
   # vector of length n * p of inclusion probabilities
   incl_prob <- result$var.alpha
-  
+
   # n by p matrix; the i,j-th entry is the probability of inclusion for the
   # i-th individual for the j-th variable according to the regression on y
   heat_alpha <- matrix(incl_prob, n, p, byrow = TRUE)
   mylist[[resp_index]] <- heat_alpha
 }
 
- 
+
 # check to see that this modified code produces the same results as the original code
 mylist2 <- mylist
 if (discrete_data){

@@ -1,4 +1,4 @@
-library(microbenchmark)
+setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development")
 
 #-------------------------------------------------------------------------------
 #--------------------------------DATA CREATION----------------------------------
@@ -6,11 +6,10 @@ library(microbenchmark)
 rm(list = ls())
 
 source("generate_data.R")
-
-#library(reshape2)
+library(microbenchmark)
 library(MASS)
 library(varbvs)
-library(ks)
+#library(ks)
 
 logit <- function(x) {
   if ((x == 0) | (x == 1)) {
@@ -28,7 +27,7 @@ if (discrete_data) {
   p <- 10
   tau <- 0.1 # the bandwidth parameter
 }else{
-  dat <- generate_continuous() 
+  dat <- generate_continuous()
   n <- 180
   p <- 4
   tau <- 0.56
@@ -37,6 +36,15 @@ if (discrete_data) {
 data_mat <- dat$data
 Z <- dat$covts
 
+# if a toy example is desired, data_mat and Z are replaced here
+toy <- T
+if (toy) {
+  set.seed(3)
+  n <- 5
+  p <- 3
+  data_mat <- matrix(sample(-3:3, n * (p + 1), T), n, p + 1)
+  Z <- matrix(sample(1:n, n), n, 1)
+}
 
 # D is an n by n matrix of weights
 D <- matrix(1, n, n)
@@ -51,6 +59,13 @@ for (i in 1:n) {
   D[, i] <- n * (D[, i] / sum(D[, i]))
 }
 
+# if a toy example is desired, make D nicer numbers
+if (toy){
+  set.seed(1)
+  D <- matrix(sample(1:5, n * n, T), n, n)
+  D <- round(n * D / rowSums(D), 1)
+}
+
 # the i-th column of D_long is the i-th column of D with the elements repeated
 # p times
 D_long <- matrix(rep(D, each = p), n * p)
@@ -61,12 +76,12 @@ D_long <- matrix(rep(D, each = p), n * p)
 # predictors.
 mylist <- vector("list", p + 1)
 
-# big ind matrix is a matrix of p stacked I_p identities
-Big_ind <- matrix(rep(diag(p), p), n * p, p, T)
+# big ind matrix is a matrix of n stacked I_p identities
+Big_ind <- matrix(rep(diag(p), n), n * p, p, T)
 
 # main loop
 resp_index <- 1
-  
+
 # Set variable number `resp_index` as the response
 y <- data_mat[, resp_index]
 
@@ -183,7 +198,7 @@ for (i in 1:n) {
 
   y_XW <- y_long_vec * X_vec * D_long[, i]
   y_XW_mat <- matrix(y_XW, n, p, byrow = TRUE)
-  
+
   X_mu_alpha <- X_vec * Mu_vec * alpha_vec
   xmualpha_mat <- t(matrix(X_mu_alpha, p, n)) %*% (matrix(1, p, p) - diag(rep(1, p)))
   XW_mat <- matrix(X_vec * D_long[, i], n, p, byrow = TRUE) * xmualpha_mat
@@ -202,17 +217,21 @@ mu_mat2 <- matrix(alpha, n, p)
 
 for (l in 1:n){
   for (k in 1:p){
+    ind_mat <- c(rep(1, k - 1), 0, rep(1, p - k))
+    mu__ <- matrix(mu_mat2[l, ] * ind_mat, n, p, T)
+    alpha__ <- matrix(alpha_mat[l, ] * ind_mat, n, p, T)
     #mu_mat2[l, k] <- (S_sq[l, k] / sigmasq) * sum(D[ , l] * X_mat[ , k] * y)
-    mu_mat2[l, k] <- ((S_sq[l, k] / sigmasq) * sum((D[ , l] * X_mat[ , k]) * (y - rowSums(X_mat[ , ] * mu_mat2[ , ] * alpha_mat[ , ]))))
+    mu_mat2[l, k] <- ((S_sq[l, k] / sigmasq) * sum((D[ , l] * X_mat[ , k]) * (y - rowSums(X_mat * mu__ * alpha__))))
   }
 }
 
-mu_mat
-mu_mat2
+mu_mat - mu_mat2
+
+
 mu_mat3 <- matrix(0, n, p)
 
 for (l in 1:n){
   mu_mat3[l , ] <- (S_sq[l, ] / sigmasq) * colSums(matrix(D[ , l], n, p) * X_mat * y)
 }
 
-all.equal(mu_mat3, mu_mat2)
+all.equal(mu_mat3, mu_mat)

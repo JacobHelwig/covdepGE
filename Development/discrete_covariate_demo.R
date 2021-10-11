@@ -49,8 +49,8 @@ mylist <- vector("list", p + 1)
 
 Adj_Mat_vb <- array(0, dim = c(p + 1, p + 1))
 
-# big ind matrix is a matrix of p stacked I_p identities
-Big_ind <- matrix(rep(diag(p), p), n * p, p, T)
+# big ind matrix is a matrix of n stacked I_p identities
+Big_ind <- matrix(rep(diag(p), n), n * p, p, T)
 
 # main loop
 for (resp_index in 1:(p + 1)) {
@@ -60,16 +60,16 @@ for (resp_index in 1:(p + 1)) {
 
   # Set the remaining p variables as predictor
   X_mat <- data_mat[, -resp_index]
-  
+
   # X_vec is a vector of length n*p that is the rows of X_mat "unravelled" by row;
   # that is, the first element of X_vec is the 1,1 of X_mat; the second element
   # is the 1,2; third is 1,3, ect.
   X_vec <- matrix(0, n * p, 1)
-  
+
   # X is a n by n*p matrix; it consists of rbinding n n by p matrices together
   # the j-th matrix is the j-th row of X_mat in the j-th row, and 0's o.w.
   X <- matrix(0, nrow = n, ncol = n * p)
-  
+
   for (i in 1:n) {
     for (j in 1:p) {
       k <- p * (i - 1) + 1
@@ -77,7 +77,7 @@ for (resp_index in 1:(p + 1)) {
       X_vec[k + j - 1] <- X[i, k + j - 1]
     }
   }
-  
+
   ELBO_LBit <- rep(0, 10000)
 
   # big diag mat looks exactly the same as X, except it replaces all non-zero
@@ -86,7 +86,7 @@ for (resp_index in 1:(p + 1)) {
 
   q <- matrix(2, n, 1)
 
-  sigmasq <- 1 
+  sigmasq <- 1
   E <- rnorm(n, 0, sigmasq) # removing this causes discrepency
 
   # a block diagonal matrix; the j-th block is the transpose of the j-th row of
@@ -104,8 +104,8 @@ for (resp_index in 1:(p + 1)) {
   # with i-th row corresponding to i th subject.
   alpha <- rep(0.2, n * p)
 
-  sigmabeta_sq <- 3 
-  mu <- rep(0, p) 
+  sigmabeta_sq <- 3
+  mu <- rep(0, p)
   true_pi <- 0.5
 
   # y_long_vec is each element of y repeated p times
