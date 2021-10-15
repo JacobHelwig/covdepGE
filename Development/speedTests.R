@@ -37,7 +37,7 @@ data_mat <- dat$data
 Z <- dat$covts
 
 # if a toy example is desired, data_mat and Z are replaced here
-toy <- T
+toy <- F
 if (toy) {
   set.seed(3)
   n <- 5
@@ -80,7 +80,7 @@ mylist <- vector("list", p + 1)
 Big_ind <- matrix(rep(diag(p), n), n * p, p, T)
 
 # main loop
-resp_index <- 1
+resp_index <- 2
 
 # Set variable number `resp_index` as the response
 y <- data_mat[, resp_index]
@@ -185,53 +185,98 @@ microbenchmark(S_sq_orig(),
 #-------------------------------------------------------------------------------
 
 ## mu update - original
-Mu_vec <- matrix(alpha, n * p, 1)
-alpha_vec <- matrix(alpha, n * p, 1, byrow = TRUE)
+original_mupdate <- function(){
+  Mu_vec <- matrix(alpha, n * p, 1)
+  alpha_vec <- matrix(alpha, n * p, 1, byrow = TRUE)
 
-for (i in 1:n) {
-  # y_long_vec is each element of y repeated p times
-  # X_vec is a vector of length n*p that is the rows of X_mat "unravelled" by row;
-  # that is, the first element of X_vec is the 1,1 of X_mat; the second element
-  # is the 1,2; third is 1,3, ect.
-  # the i-th column of D_long is the i-th column of D with the elements repeated
-  # p times
+  for (i in 1:n) {
+    y_XW <- y_long_vec * X_vec * D_long[, i]
+    y_XW_mat <- matrix(y_XW, n, p, byrow = TRUE)
 
-  y_XW <- y_long_vec * X_vec * D_long[, i]
-  y_XW_mat <- matrix(y_XW, n, p, byrow = TRUE)
+    X_mu_alpha <- X_vec * Mu_vec * alpha_vec
+    xmualpha_mat <- t(matrix(X_mu_alpha, p, n)) %*% (matrix(1, p, p) - diag(rep(1, p)))
+    XW_mat <- matrix(X_vec * D_long[, i], n, p, byrow = TRUE) * xmualpha_mat
 
-  X_mu_alpha <- X_vec * Mu_vec * alpha_vec
-  xmualpha_mat <- t(matrix(X_mu_alpha, p, n)) %*% (matrix(1, p, p) - diag(rep(1, p)))
-  XW_mat <- matrix(X_vec * D_long[, i], n, p, byrow = TRUE) * xmualpha_mat
-  # mu mat is n by p
-  mu_mat[i, ] <- (t(y_XW_mat) %*% matrix(1, n, 1) - (t(XW_mat) %*% matrix(1, n, 1))) * (S_sq[i, ] / sigmasq) ### ### CAVI updation of mean variational parameter mu
+    mu_mat[i, ] <- (t(y_XW_mat) %*% matrix(1, n, 1) - (t(XW_mat) %*% matrix(1, n, 1))) * (S_sq[i, ] / sigmasq) ### ### CAVI updation of mean variational parameter mu
+  }
+  Mu_vec <- matrix(t(mu_mat), n * p, 1)
+  mu_mat
 }
-Mu_vec <- matrix(t(mu_mat), n * p, 1)
 
 ## Mu update - modified 1
 
-alpha_mat <- matrix(alpha, n, p, byrow = TRUE)
+modified_mupdate <- function(){
+  alpha_mat <- matrix(alpha, n, p, byrow = TRUE)
+  mu_mat2 <- matrix(alpha, n, p)
 
-mu_mat[1, 1] - (S_sq[1,1] / sigmasq) * sum(D[ , 1] * X_mat[ , 1] * y)
+  mu_mat2.copy <- mu_mat2
 
-mu_mat2 <- matrix(alpha, n, p)
+  for (l in 1:n){
 
-for (l in 1:n){
-  for (k in 1:p){
-    ind_mat <- c(rep(1, k - 1), 0, rep(1, p - k))
-    mu__ <- matrix(mu_mat2[l, ] * ind_mat, n, p, T)
-    alpha__ <- matrix(alpha_mat[l, ] * ind_mat, n, p, T)
-    #mu_mat2[l, k] <- (S_sq[l, k] / sigmasq) * sum(D[ , l] * X_mat[ , k] * y)
-    mu_mat2[l, k] <- ((S_sq[l, k] / sigmasq) * sum((D[ , l] * X_mat[ , k]) * (y - rowSums(X_mat * mu__ * alpha__))))
+    # vector to ensure that the k-th entry of the l-th row of mu_mat and alpha
+    # mat are not summed
+    ind0 <- rep(1, p)
+
+    # update the l, k entry of mu
+    for (k in 1:p){
+
+      # put a 0 in the k-th position of ind0 to 0 out the k-th entry of mu_stack
+      # and alpha_stack
+      ind0.k <- ind0; ind0.k[k] <- 0
+
+      # the l-th row of mu_mat, alpha_mat with the k-th entry 0'd, stacked n times
+      mu_stack <- matrix(mu_mat2.copy[l, ] * ind0.k, n, p, T)
+      alpha_stack <- matrix(alpha_mat[l, ] * ind0.k, n, p, T)
+
+      # update mu
+      mu_mat2[l, k] <- ((S_sq[l, k] / sigmasq) *
+                          sum((D[ , l] * X_mat[ , k]) *
+                                (y - rowSums(X_mat * mu_stack * alpha_stack))))
+    }
   }
+  mu_mat2
 }
 
-mu_mat - mu_mat2
+## Mu update - modified 2
 
+modified_mupdate2 <- function(){
+  alpha_mat <- matrix(alpha, n, p, byrow = TRUE)
+  mu_mat3 <- matrix(alpha, n, p)
 
-mu_mat3 <- matrix(0, n, p)
+  mu_mat3.copy <- mu_mat3
 
-for (l in 1:n){
-  mu_mat3[l , ] <- (S_sq[l, ] / sigmasq) * colSums(matrix(D[ , l], n, p) * X_mat * y)
+  for (l in 1:n){
+
+    # the l-th row of mu_mat, alpha_mat stacked n times
+    mu_stack <- matrix(mu_mat3.copy[l, ], n, p, T)
+    alpha_stack <- matrix(alpha_mat[l, ], n, p, T)
+
+    # the element-wise product of X_mat, mu_stack, and alpha stack;
+    # the i,j entry is x_i,j * mu_l,j * alpha_l,j
+    X_mu_alpha <- X_mat * mu_stack * alpha_stack
+
+    # the k-th column is the rowSums of X_mu_alpha minus the k-th column of
+    # X_mu_alpha (accounts for m \neq k in summation)
+    X_mu_alpha_k <- matrix(rowSums(X_mu_alpha), n, p) - X_mu_alpha
+
+    # the k-th column is y minus the k-th column of X_mu_alpha_k
+    y_k <- matrix(y, n, p) - X_mu_alpha_k
+
+    # the k-th column is d_:,l * x_:,k * y_k_:,k
+    d_x_y <- D[ , l] * X_mat * y_k
+
+    # the update of the l-th row of mu
+    mu_mat3[l, ] <- S_sq[l, ] / sigmasq * colSums(d_x_y)
+
+  }
+  mu_mat3
 }
 
-all.equal(mu_mat3, mu_mat)
+all.equal(original_mupdate(), modified_mupdate2())
+all.equal(modified_mupdate2(), modified_mupdate())
+
+
+microbenchmark::microbenchmark(original_mupdate(),
+                               modified_mupdate(),
+                               modified_mupdate2(), times = 500)
+
