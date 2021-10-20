@@ -45,18 +45,47 @@ cov_vsvb= function(y,X,Z,XtX,DXtX,Diff_mat,Xty,sigmasq,sigmabeta_sq,true_pi){
 
     S_sq_vec=matrix(t(S_sq),n*p,1)
 
-    for(i in 1:n){
+    # for(i in 1:n){
+    #
+    #   y_XW=y_long_vec*X_vec*D_long[,i]
+    #   y_XW_mat=matrix(y_XW,n,p,byrow=TRUE)
+    #
+    #   X_mu_alpha=X_vec*Mu_vec*alpha_vec
+    #   xmualpha_mat=t(matrix(X_mu_alpha,p,n))%*%(matrix(1,p,p)-diag(rep(1,p)))
+    #   XW_mat=matrix(X_vec*D_long[,i],n,p,byrow=TRUE)*xmualpha_mat
+    #
+    #   mu_mat[i,]=(t(y_XW_mat)%*%matrix(1,n,1)-(t(XW_mat)%*%matrix(1,n,1)))*(S_sq[i,]/sigmasq) ### ### CAVI updation of mean variational parameter mu
+    # }
+    # Mu_vec=matrix(t(mu_mat),n*p,1)
 
-      y_XW=y_long_vec*X_vec*D_long[,i]
-      y_XW_mat=matrix(y_XW,n,p,byrow=TRUE)
+    mu_mat.copy <- mu_mat
 
-      X_mu_alpha=X_vec*Mu_vec*alpha_vec
-      xmualpha_mat=t(matrix(X_mu_alpha,p,n))%*%(matrix(1,p,p)-diag(rep(1,p)))
-      XW_mat=matrix(X_vec*D_long[,i],n,p,byrow=TRUE)*xmualpha_mat
+    for (l in 1:n){
 
-      mu_mat[i,]=(t(y_XW_mat)%*%matrix(1,n,1)-(t(XW_mat)%*%matrix(1,n,1)))*(S_sq[i,]/sigmasq) ### ### CAVI updation of mean variational parameter mu
+      # the l-th row of mu_mat, alpha_mat stacked n times
+      mu_stack <- matrix(mu_mat.copy[l, ], n, p, T)
+      alpha_stack <- matrix(alpha_mat[l, ], n, p, T)
+
+      # the element-wise product of X_mat, mu_stack, and alpha stack;
+      # the i,j entry is x_i,j * mu_l,j * alpha_l,j
+      X_mu_alpha <- X_mat * mu_stack * alpha_stack
+
+      # the k-th column is the rowSums of X_mu_alpha minus the k-th column of
+      # X_mu_alpha (accounts for m \neq k in summation)
+      X_mu_alpha_k <- matrix(rowSums(X_mu_alpha), n, p) - X_mu_alpha
+
+      # the k-th column is y minus the k-th column of X_mu_alpha_k
+      y_k <- matrix(y, n, p) - X_mu_alpha_k
+
+      # the k-th column is d_:,l * x_:,k * y_k_:,k
+      d_x_y <- D[ , l] * X_mat * y_k
+
+      # the update of the l-th row of mu
+      mu_mat[l, ] <- S_sq[l, ] / sigmasq * colSums(d_x_y)
+
     }
-    Mu_vec=matrix(t(mu_mat),n*p,1)
+    Mu_vec <- matrix(t(mu_mat), n * p, 1)
+
 
     vec_1=log(true_pi/(1-true_pi)) ##term 1 of the update of inclusion probability alpha
 

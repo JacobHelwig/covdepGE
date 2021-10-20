@@ -80,40 +80,17 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
 
   # loop to optimize variational parameters
   while (sqrt(sum(change_alpha^2)) > tol & iter < max_iter) {
+
     alpha_int <- alpha
 
     alpha_mat <- matrix(alpha, n, p, byrow = TRUE)
 
     alpha_vec <- matrix(alpha, n * p, 1, byrow = TRUE)
 
-    print(list(alpha.int = alpha_int, alpha.mat = alpha_mat, alpha.vec = alpha_vec))
-    if (iter == 2) break
-    # S_sq update
-    # for (i in 1:n) {
-    #   S_sq[i, ] <- sigmasq * (t(DXtX_Big_ind) %*% D_long[, i] + 1 / sigmabeta_sq)^(-1) ## variance parameter
-    # }
-    # S_sq <- t(sigmasq * (t(X_mat^2) %*% D + 1 / sigmabeta_sq)^(-1))
-    # S_sq_vec <- matrix(t(S_sq), n * p, 1)
-
-    # mu update
-    # for (i in 1:n) {
-    #   y_XW <- y_long_vec * X_vec * D_long[, i]
-    #   y_XW_mat <- matrix(y_XW, n, p, byrow = TRUE)
-    #
-    #   X_mu_alpha <- X_vec * Mu_vec * alpha_vec
-    #   xmualpha_mat <- t(matrix(X_mu_alpha, p, n)) %*% (matrix(1, p, p) - diag(rep(1, p)))
-    #   XW_mat <- matrix(X_vec * D_long[, i], n, p, byrow = TRUE) * xmualpha_mat
-    #
-    #   mu_mat[i, ] <- (t(y_XW_mat) %*% matrix(1, n, 1) - (t(XW_mat) %*% matrix(1, n, 1))) * (S_sq[i, ] / sigmasq) ### ### CAVI updation of mean variational parameter mu
-    # }
-    # Mu_vec <- matrix(t(mu_mat), n * p, 1)
-
-    mu_mat.copy <- mu_mat
-
     for (l in 1:n){
 
       # the l-th row of mu_mat, alpha_mat stacked n times
-      mu_stack <- matrix(mu_mat.copy[l, ], n, p, T)
+      mu_stack <- matrix(mu_mat[l, ], n, p, T)
       alpha_stack <- matrix(alpha_mat[l, ], n, p, T)
 
       # the element-wise product of X_mat, mu_stack, and alpha stack;
@@ -134,6 +111,9 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
       mu_mat[l, ] <- S_sq[l, ] / sigmasq * colSums(d_x_y)
 
     }
+
+    # unravel mu_mat into a vector
+    Mu_vec <- matrix(t(mu_mat), n * p, 1)
 
     # alpha update
     vec_1 <- log(pi_est / (1 - pi_est)) # first term of alpha update
@@ -174,15 +154,13 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
     iter <- iter + 1
   }
 
-  # how has ELBO evolved?
+  # keep track of the evolution of ELBO
   ELBO_LBit <- ELBO_LBit[1:(iter - 1)]
 
   # return n times p - 1 of each of the variational parameters
   list(var.alpha = alpha, var.mu = mu_mat, var.S_sq = S_sq, var.elbo = ELBO_LB, var.elboit = ELBO_LBit)
 }
 
-# source("cov_vsvb.R")
-# source("ELBO_calculator.R")
 source("generate_data.R")
 library(reshape2)
 library(MASS)
@@ -360,3 +338,6 @@ end_time - start_time
   # Modified the s_update:
     # Time difference of 16.98189 secs
     # Time difference of 15.27206 secs
+  # Modified the mu update:
+    # Time difference of 14.16393 secs
+    # Time difference of 14.3205 secs

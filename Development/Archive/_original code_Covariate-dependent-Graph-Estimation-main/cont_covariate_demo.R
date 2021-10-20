@@ -1,5 +1,5 @@
 setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development/Archive/_original code_Covariate-dependent-Graph-Estimation-main")
-
+set.seed(1)
 rm(list=ls())
 
 st <- Sys.time()
@@ -341,8 +341,11 @@ for(overiter in 1:MAXITER){
 
 }
 
+save(mylist, file = "original_continuous_alpha_matrices.Rdata")
+
 et <- Sys.time()
 elapsed <- et - st
+elapsed
 #################BELOW IS FOR VISUALIZATION#####################
 
 SUBJECT=20
