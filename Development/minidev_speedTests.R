@@ -36,7 +36,7 @@ data_mat <- dat$data
 Z <- dat$covts
 
 # if a toy example is desired, data_mat and Z are replaced here
-toy <- F
+toy <- T
 if (toy) {
   set.seed(3)
   n <- 5
@@ -330,4 +330,29 @@ all.equal(alpha_mat2, alpha_mt)
 #--------------------------------ELBO CALCULATION-------------------------------
 #-------------------------------------------------------------------------------
 
-ELBO_calculator(y, X_mat, S_sq[i, ], mu_mat[i, ], alpha_mat[i, ], sigmasq, sigmabeta_sq, true_pi, D[, i], n, p)
+set.seed(1)
+mu_mat <- matrix(rnorm(n * p), n, p)
+alpha_mat <- matrix(runif(n * p), n, p)
+
+
+# original calculation
+ELBO_calculator <- function(y, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est, W, n, p) {
+  mu <- matrix(mu, p, 1) # the l-th row of mu_mat
+  alpha <- matrix(alpha, p, 1) # the l-th row of alpha_mat
+  s <- matrix(S_sq, p, 1) # the l-th row of S_sq
+  mu_alpha <- matrix(mu * alpha, p, 1) # the l_th row of mu times the l-th row of alpha
+  W <- matrix(W, n, 1) # the l-th column of the weight matrix
+  t1 <- -sum(W * (y - X_mat %*% mu_alpha)^2) / (2 * sigmasq)
+  t2 <- -sum(W * ((X_mat)^2 %*% (alpha * (mu^2 + s) - alpha^2 * mu^2))) / (2 * sigmasq)
+  t3 <- sum(alpha * ((1 + log(s)))) / 2
+  t4 <- -sum(alpha * log((alpha + 0.000001) / pi_est) + (1 - alpha) * log((1 - alpha + 0.000001) / (1 - pi_est)))
+  t5 <- -sum(alpha * ((mu^2 + s) / (2 * sigmasq * sigmabeta_sq) + log(sigmasq * sigmabeta_sq) / 2))
+  t6 <- sum(0.5 * log(1 / (2 * pi * sigmasq)))
+  t <- t1 + t2 + t3 + t4 + t5 + t6
+  return(t)
+}
+
+ELBO_calculator(y, X_mat, S_sq[i, ], mu_mat[i, ], alpha_mat[i, ], sigmasq, sigmabeta_sq, pi_est, D[, i], n, p)
+
+
+# modified calculation

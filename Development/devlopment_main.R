@@ -32,28 +32,19 @@ ELBO_calculator <- function(y, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi
 
 
 ## The core function that calculates the variational parameter updates and
-## returns the final variational estimates
-## for a single regression. So in the arguments, y plays the role of the
-## response, i.e the j th variable whose
-## conditional distribution given the remaining variables is being calculated.
-
-## This calls the ELBO_calculator function
-
-## X: the data matrix except the j th variable
-## XtX is x transpose times x.
-## DXtX:diagonal elements of XtX
-## Diff_mat: XtX-diag(DXtX)
-## Xty: x transpose times y
+## returns the final variational estimates for a single regression.
+## Arguments:
+## y: n by 1 response, i.e the j th variable whose conditional distribution given the
+## remaining variables is being calculated.
+## X_mat: n by p data matrix with the j-th variable removed
 ## sigmasq: variance of response given the parameters (homoscedastic part,
 ## actual variance sigma_sq/w_i)
 ## sigmabeta_sq: prior variance of coefficient parameter
 ## pi_est: estimate of spike and slab mixture proportion.
-
-# fixed x_j; estimate variational parameters for each individual and
-# calculate ELBO for sigma_beta optimization
-cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
-                     DXtX_Big_ind, D_long, Diff_mat, sigmasq, sigmabeta_sq,
-                     S_sq, pi_est, mu, mu_mat, alpha, Big_ind, ELBO_LBit) {
+## S_sq, mu_mat, alpha_mat: n by p matrices of variational parameters; the
+## i,j-th entry corresponds to the j-th paramter for the i-th individual
+cov_vsvb <- function(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
+                     alpha_mat) {
 
   n <- nrow(X_mat); p <- ncol(X_mat)
 
@@ -63,11 +54,10 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
   # exit condition tolerance
   tol <- 1e-9
 
-  change_alpha <- rep(0.001, n * p) # alpha_new - alpha_int
+  change_alpha <- matrix(Inf, n, p)#rep(0.001, n * p) # alpha_new - alpha_int
 
   max_iter <- 100
   iter <- 1
-  Mu_vec <- matrix(rep(mu, n), n * p, 1)
 
   iter <- 1
 
@@ -83,11 +73,7 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
   # loop to optimize variational parameters
   while (sqrt(sum(change_alpha^2)) > tol & iter < max_iter) {
 
-    alpha_int <- alpha
-
-    alpha_mat <- matrix(alpha, n, p, byrow = TRUE)
-
-    alpha_vec <- matrix(alpha, n * p, 1, byrow = TRUE)
+    # mu update
 
     for (l in 1:n){
 
@@ -114,10 +100,10 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
 
     }
 
-    # unravel mu_mat into a vector
-    Mu_vec <- matrix(t(mu_mat), n * p, 1)
-
     # alpha update
+
+    # save the last value of alpha
+    alpha_last <- alpha_mat
 
     # calculate the logit of alpha
     alpha_logit <- (alpha_logit_term1 +
@@ -133,8 +119,8 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
     #alpha_mat[is.infinite(exp_logit)] <- 1
     alpha_mat[alpha_logit > upper_limit] <- 1
 
-    # unravel alpha_mat into alpha
-    alpha <- as.vector(t(alpha_mat))
+    # calculate change in alpha
+    change_alpha <- alpha_mat - alpha_last
 
     # calculate ELBO across n individuals
     e <- 0
@@ -148,26 +134,16 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
 
     # want to maximize this by optimizing sigma beta
     ELBO_LB <- e
-
-    alpha_new <- alpha
-    change_alpha <- alpha_new - alpha_int
-
-    ELBO_LBit[iter] <- ELBO_LB
     iter <- iter + 1
   }
 
-  # keep track of the evolution of ELBO
-  ELBO_LBit <- ELBO_LBit[1:(iter - 1)]
-
   # return n times p - 1 of each of the variational parameters
-  list(var.alpha = alpha, var.mu = mu_mat, var.S_sq = S_sq, var.elbo = ELBO_LB, var.elboit = ELBO_LBit)
+  list(var.alpha = alpha_mat, var.mu = mu_mat, var.S_sq = S_sq, var.elbo = ELBO_LB)
 }
 
 source("generate_data.R")
-library(reshape2)
 library(MASS)
 library(varbvs)
-library(ks)
 
 logit <- function(x) {
   if ((x == 0) | (x == 1)) {
@@ -178,7 +154,7 @@ logit <- function(x) {
 }
 
 # generate data and covariates
-discrete_data <- T # true if discrete example is desired
+discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   n <- 100
@@ -190,6 +166,7 @@ if (discrete_data) {
   p <- 4
   tau <- 0.56
 }
+
 data_mat <- dat$data
 Z <- dat$covts
 
@@ -207,20 +184,13 @@ for (i in 1:n) {
   D[, i] <- n * (D[, i] / sum(D[, i]))
 }
 
-# the i-th column of D_long is the i-th column of D with the elements repeated
-# p times
-D_long <- matrix(rep(D, each = p), n * p)
+# List for the variable-specific inclusion probability matrix; the i-th element
+# in the list is a n by p matrix corresponding to the i-th predictor;
+# in this matrix, the j-th row corresponds to the dependence structure for the
+# j-th subject, with the i-th predictor fixed as the response
+graph_list <- vector("list", p + 1)
 
-# The variable specific inclusion probability matrix:
-# i-th row corresponds to the dependence structure for the i-th subject,
-# j-th matrix corresponds to the j th variable as response and the remaining as
-# predictors.
-mylist <- vector("list", p + 1)
-
-# big ind matrix is a matrix of n stacked I_p identities
-Big_ind <- matrix(rep(diag(p), n), n * p, p, T)
-
-# main loop
+# main loop over the predictors
 for (resp_index in 1:(p + 1)) {
 
   # Set variable number `resp_index` as the response
@@ -229,68 +199,31 @@ for (resp_index in 1:(p + 1)) {
   # Set the remaining p variables as predictor
   X_mat <- data_mat[, -resp_index]
 
-  # X_vec is a vector of length n*p that is the rows of X_mat "unravelled" by row;
-  # that is, the first element of X_vec is the 1,1 of X_mat; the second element
-  # is the 1,2; third is 1,3, ect.
-  X_vec <- matrix(0, n * p, 1)
-
-  # X is a n by n*p matrix; it consists of rbinding n n by p matrices together
-  # the j-th matrix is the j-th row of X_mat in the j-th row, and 0's o.w.
-  X <- matrix(0, nrow = n, ncol = n * p)
-
-  for (i in 1:n) {
-    for (j in 1:p) {
-      k <- p * (i - 1) + 1
-      X[i, k + j - 1] <- X_mat[i, j]
-      X_vec[k + j - 1] <- X[i, k + j - 1]
-    }
-  }
-
-  Xty <- t(X) %*% y
-
-  # a block diagonal matrix; the j-th block is the transpose of the j-th row of
-  # X times the j-th row of X; it is an n*p by n*p matrix
-  XtX <- t(X) %*% X
-
-  DXtX <- diag(XtX)
-  DXtX_rep <- rep(DXtX, p)
-  DXtX_mat <- matrix(DXtX_rep, n * p, p, byrow = FALSE)
-  DXtX_Big_ind <- matrix(DXtX_rep, n * p, p, byrow = FALSE) * Big_ind
-
-  # XtX with its diagonal removed and replaced with 0
-  Diff_mat <- XtX - diag(DXtX)
-
-  alpha <- rep(0.2, n * p)
+  # instantiate initial values of variational parameters
+  alpha_mat <- matrix(0.2, n, p)
   sigmabeta_sq <- 3
   sigmasq <- 1
   E <- rnorm(n, 0, sigmasq) # removing this causes discrepency in discrete case
-  S_sq <- matrix(sigmasq * (DXtX + 1 / sigmabeta_sq)^(-1), n, p)
-  mu <- rep(0, p)
+  # dont delete S_sq <- matrix(sigmasq * (DXtX + 1 / sigmabeta_sq)^(-1), n, p) # should be byrow = T?
+  S_sq <- sigmasq * (t(X_mat^2) + 1 / sigmabeta_sq)^(-1)
   mu_mat <- matrix(0, n, p, byrow = TRUE)
-  #pi_est <- 0.5
 
-  # y_long_vec is each element of y repeated p times
-  y_long_vec <- rep(y, each = p)
-
-
-  #################### tuning hyperparameters ##################################
-
-  # Setting hyperparameter value as in Carbonetto Stephens model
+  # Setting hyperparameter values for sigmasq and the probability of inclusion
+  # according to the Carbonetto Stephens model
   idmod <- varbvs(X_mat, y, Z = Z[, 1], verbose = FALSE)
   sigmasq <- mean(idmod$sigma)
-
   pi_est <- mean(1 / (1 + exp(-idmod$logodds)))
+
+  # values of sigmabeta_sq to optimize according to ELBO
   sigmavec <- c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10)
 
   # vector for storing the ELBO for each value of sigma in sigmavec
   elb1 <- matrix(0, length(sigmavec), 1)
-  ELBO_LBit <- rep(0, 10000)
 
   # loop to optimize sigma
   for (j in 1:length(sigmavec)) {
-    res <- cov_vsvb(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
-                    DXtX_Big_ind, D_long, Diff_mat, sigmasq, sigmavec[j],
-                    S_sq, pi_est, mu, mu_mat, alpha, Big_ind, ELBO_LBit)
+    res <- cov_vsvb(y, Z, X_mat, sigmasq, sigmavec[j], S_sq, pi_est, mu_mat,
+                    alpha_mat)
     elb1[j] <- res$var.elbo
   }
 
@@ -298,22 +231,16 @@ for (resp_index in 1:(p + 1)) {
   sigmabeta_sq <- sigmavec[which.max(elb1)]
 
   # fit another model using this value of sigma_beta
-  result <- cov_vsvb(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
-                     DXtX_Big_ind, D_long, Diff_mat, sigmasq, sigmabeta_sq,
-                     S_sq, pi_est, mu, mu_mat, alpha, Big_ind, ELBO_LBit)
-
-  # vector of length n * p of inclusion probabilities
-  incl_prob <- result$var.alpha
+  result <- cov_vsvb(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
+                     alpha_mat)
 
   # n by p matrix; the i,j-th entry is the probability of inclusion for the
   # i-th individual for the j-th variable according to the regression on y
-  heat_alpha <- matrix(incl_prob, n, p, byrow = TRUE)
-  mylist[[resp_index]] <- heat_alpha
+  graph_list[[resp_index]] <- result$var.alpha
 }
 
 
 # check to see that this modified code produces the same results as the original code
-mylist2 <- mylist
 if (discrete_data){
   load("original_discrete_alpha_matrices.Rdata")
 }else{
@@ -321,8 +248,8 @@ if (discrete_data){
 }
 
 same <- T
-for (j in 1:length(mylist)) {
-  if (all.equal(mylist[[j]], mylist2[[j]]) != T) {
+for (j in 1:length(graph_list)) {
+  if (all.equal(graph_list[[j]], mylist[[j]]) != T) {
     same <- F
     break
   }
@@ -346,3 +273,6 @@ end_time - start_time
   # Modified the alpha_update:
     # Time difference of 11.38467 secs
     # Time difference of 11.68092 secs
+  # Re-organization (removing unnecessary variables)
+    # Time difference of 10.42546 secs
+    # Time difference of 10.87398 secs
