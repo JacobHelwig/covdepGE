@@ -1,6 +1,9 @@
 set.seed(1)
 setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development")
 rm(list = ls())
+library(Rcpp)
+source("generate_data.R")
+sourceCpp("c_dev.cpp")
 start_time <- Sys.time()
 
 
@@ -14,7 +17,7 @@ start_time <- Sys.time()
 ## W: the weights associated with the n individuals wrt the covariate of the fixed individual we are studying.
 ## n: no. of samples
 ## p: no. of variables in predictor (no. of variables - 1).
-ELBO_calculator <- function(y, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est, W, n, p) {
+ELBO_calculator <- function(y, W, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est) {
   mu <- matrix(mu, p, 1)
   alpha <- matrix(alpha, p, 1)
   s <- matrix(S_sq, p, 1)
@@ -123,17 +126,18 @@ cov_vsvb <- function(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
     change_alpha <- alpha_mat - alpha_last
 
     # calculate ELBO across n individuals
-    e <- 0
-
-    for (i in 1:n) { ## calculates ELBO for the j th variable by adding the contribution of the parameter
-      ## corresponding to every individual in study. i th iteration takes the contribution of the variational
-      ## parameters corresponding to  the i th individual in study, but the information is borrowed from
-      ## all the n individuals depending on the weights coded in D[,i]
-      e <- e + ELBO_calculator(y, X_mat, S_sq[i, ], mu_mat[i, ], alpha_mat[i, ], sigmasq, sigmabeta_sq, pi_est, D[, i], n, p)
-    }
+    # e <- 0
+    #
+    # for (i in 1:n) { ## calculates ELBO for the j th variable by adding the contribution of the parameter
+    #   ## corresponding to every individual in study. i th iteration takes the contribution of the variational
+    #   ## parameters corresponding to  the i th individual in study, but the information is borrowed from
+    #   ## all the n individuals depending on the weights coded in D[,i]
+    #   e <- e + ELBO_calculator(y, D[, i], X_mat, S_sq[i, ], mu_mat[i, ], alpha_mat[i, ], sigmasq, sigmabeta_sq, pi_est)
+    # }
 
     # want to maximize this by optimizing sigma beta
-    ELBO_LB <- e
+    ELBO_LB <- total_ELBO_c(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
+                            sigmabeta_sq, pi_est)
     iter <- iter + 1
   }
 
@@ -154,7 +158,7 @@ logit <- function(x) {
 }
 
 # generate data and covariates
-discrete_data <- F # true if discrete example is desired
+discrete_data <- T # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   n <- 100
@@ -205,7 +209,7 @@ for (resp_index in 1:(p + 1)) {
   sigmasq <- 1
   E <- rnorm(n, 0, sigmasq) # removing this causes discrepency in discrete case
   # dont delete S_sq <- matrix(sigmasq * (DXtX + 1 / sigmabeta_sq)^(-1), n, p) # should be byrow = T?
-  S_sq <- sigmasq * (t(X_mat^2) + 1 / sigmabeta_sq)^(-1)
+  S_sq <- t(sigmasq * (t(X_mat^2) + 1 / sigmabeta_sq)^(-1))
   mu_mat <- matrix(0, n, p, byrow = TRUE)
 
   # Setting hyperparameter values for sigmasq and the probability of inclusion
@@ -276,3 +280,6 @@ end_time - start_time
   # Re-organization (removing unnecessary variables)
     # Time difference of 10.42546 secs
     # Time difference of 10.87398 secs
+  # ELBO calculation in C++
+    # Time difference of 9.042475 secs
+    # Time difference of 9.159554 secs
