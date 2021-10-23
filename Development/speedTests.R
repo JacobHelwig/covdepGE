@@ -9,7 +9,6 @@ source("generate_data.R")
 library(microbenchmark)
 library(MASS)
 library(varbvs)
-#library(ks)
 
 logit <- function(x) {
   if ((x == 0) | (x == 1)) {
@@ -37,7 +36,7 @@ data_mat <- dat$data
 Z <- dat$covts
 
 # if a toy example is desired, data_mat and Z are replaced here
-toy <- T
+toy <- F
 if (toy) {
   set.seed(3)
   n <- 5
@@ -181,7 +180,7 @@ microbenchmark(S_sq_orig(),
                S_sq3_update())
 
 #-------------------------------------------------------------------------------
-#--------------------------mu UPDATE OPTIMIZATION-----------------------------
+#--------------------------mu UPDATE OPTIMIZATION-------------------------------
 #-------------------------------------------------------------------------------
 
 ## mu update - original
@@ -280,3 +279,55 @@ microbenchmark::microbenchmark(original_mupdate(),
                                modified_mupdate(),
                                modified_mupdate2(), times = 500)
 
+#-------------------------------------------------------------------------------
+#--------------------------alpha UPDATE OPTIMIZATION----------------------------
+#-------------------------------------------------------------------------------
+
+
+# alpha update - original
+
+# create necessary variables
+mu_mat <- matrix(1:(n * p), n, p)
+Mu_vec <- matrix(t(mu_mat), n * p, 1)
+S_sq_vec <- matrix(t(S_sq), n * p, 1)
+thres <- 1e-7
+lthres <- logit(thres)
+uthres <- logit(1 - thres)
+
+vec_1 <- log(pi_est / (1 - pi_est)) # first term of alpha update
+vec_2 <- as.matrix(0.5 * log(S_sq_vec / (sigmasq * sigmabeta_sq))) # second term of alpha update
+vec_3 <- as.matrix(Mu_vec^2 / (2 * S_sq_vec)) # third term of alpha update
+
+# logit of alpha is sum of 3 terms for alpha update
+unlogitalpha <- vec_1 + vec_2 + vec_3
+
+# find values of alpha that are too large/ small and will pose an issue for
+# the reverse logit formula; set them to the upperthreshold/ lower
+# threshold values
+indlarge <- which(unlogitalpha > uthres)
+indsmall <- which(unlogitalpha < lthres)
+unlogitalpha[indlarge] <- uthres
+unlogitalpha[indsmall] <- lthres
+
+alpha[which(unlogitalpha > 9)] <- 1 # thresholding very large values to 1 for computational stability
+alpha[which(unlogitalpha <= 9)] <- 1 / (1 + exp(-unlogitalpha[which(unlogitalpha <= 9)])) ### ### CAVI updation of variational parameter alpha
+
+
+# modified alpha update
+alpha_mt <- matrix(alpha, n, p, T)
+
+
+logit_ <- logit(pi_est) + (mu_mat^2 / (2 * S_sq)) + 0.5 * log(S_sq / (sigmasq * sigmabeta_sq))
+logit2 <- logit(pi_est) + (mu_mat^2 / (2 * S_sq)) + log(sqrt(S_sq / (sigmasq * sigmabeta_sq)))
+all(logit_ == logit2)
+exp_logit <- exp(logit)
+alpha_mat2 <- exp_logit / (1 + exp_logit)
+alpha_mat2[is.infinite(exp_logit)] <- 1
+all.equal(alpha_mat2, alpha_mt)
+
+
+#-------------------------------------------------------------------------------
+#--------------------------------ELBO CALCULATION-------------------------------
+#-------------------------------------------------------------------------------
+
+ELBO_calculator(y, X_mat, S_sq[i, ], mu_mat[i, ], alpha_mat[i, ], sigmasq, sigmabeta_sq, true_pi, D[, i], n, p)

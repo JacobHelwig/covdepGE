@@ -58,13 +58,10 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
   n <- nrow(X_mat); p <- ncol(X_mat)
 
   # threshold for calculating the reverse logit of alpha
-  thres <- 1e-7
-  lthres <- logit(thres)
-  uthres <- logit(1 - thres)
+  upper_limit <- 9
 
   # exit condition tolerance
   tol <- 1e-9
-
 
   change_alpha <- rep(0.001, n * p) # alpha_new - alpha_int
 
@@ -74,9 +71,14 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
 
   iter <- 1
 
-  # S_sq update (WHY IS THERE A NEED FOR ITERATION FOR THIS PARAMETER?)
+  # S_sq update
   S_sq <- t(sigmasq * (t(X_mat^2) %*% D + 1 / sigmabeta_sq)^(-1))
   S_sq_vec <- matrix(t(S_sq), n * p, 1)
+
+  # 1st and 3rd term of the alpha update, denominator of the second term
+  alpha_logit_term1 <- logit(pi_est)
+  alpha_logit_term3 <- log(sqrt(S_sq / (sigmasq * sigmabeta_sq)))
+  alpha_logit_term2_denom <- (2 * S_sq)
 
   # loop to optimize variational parameters
   while (sqrt(sum(change_alpha^2)) > tol & iter < max_iter) {
@@ -116,23 +118,23 @@ cov_vsvb <- function(y, y_long_vec, Z, X, X_mat, XtX, X_vec, Xty, DXtX,
     Mu_vec <- matrix(t(mu_mat), n * p, 1)
 
     # alpha update
-    vec_1 <- log(pi_est / (1 - pi_est)) # first term of alpha update
-    vec_2 <- as.matrix(0.5 * log(S_sq_vec / (sigmasq * sigmabeta_sq))) # second term of alpha update
-    vec_3 <- as.matrix(Mu_vec^2 / (2 * S_sq_vec)) # third term of alpha update
 
-    # logit of alpha is sum of 3 terms for alpha update
-    unlogitalpha <- vec_1 + vec_2 + vec_3
+    # calculate the logit of alpha
+    alpha_logit <- (alpha_logit_term1 +
+                      (mu_mat^2 / alpha_logit_term2_denom) +
+                      alpha_logit_term3)
 
-    # find values of alpha that are too large/ small and will pose an issue for
-    # the reverse logit formula; set them to the upperthreshold/ lower
-    # threshold values
-    indlarge <- which(unlogitalpha > uthres)
-    indsmall <- which(unlogitalpha < lthres)
-    unlogitalpha[indlarge] <- uthres
-    unlogitalpha[indsmall] <- lthres
+    # transform from logit to probabilities of inclusion; update alpha_mat
+    exp_logit <- exp(alpha_logit)
+    alpha_mat <- exp_logit / (1 + exp_logit)
 
-    alpha[which(unlogitalpha > 9)] <- 1 # thresholding very large values to 1 for computational stability
-    alpha[which(unlogitalpha <= 9)] <- 1 / (1 + exp(-unlogitalpha[which(unlogitalpha <= 9)])) ### ### CAVI updation of variational parameter alpha
+    # handle NA's due to division by infinity resulting from exponentiation of
+    # large values; these probabilities are indescernible from 1
+    #alpha_mat[is.infinite(exp_logit)] <- 1
+    alpha_mat[alpha_logit > upper_limit] <- 1
+
+    # unravel alpha_mat into alpha
+    alpha <- as.vector(t(alpha_mat))
 
     # calculate ELBO across n individuals
     e <- 0
@@ -176,7 +178,7 @@ logit <- function(x) {
 }
 
 # generate data and covariates
-discrete_data <- F # true if discrete example is desired
+discrete_data <- T # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   n <- 100
@@ -341,3 +343,6 @@ end_time - start_time
   # Modified the mu update:
     # Time difference of 14.16393 secs
     # Time difference of 14.3205 secs
+  # Modified the alpha_update:
+    # Time difference of 11.38467 secs
+    # Time difference of 11.68092 secs
