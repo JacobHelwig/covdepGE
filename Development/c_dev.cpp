@@ -191,6 +191,41 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 }
 
 
+// For a fixed response, find the graph for each individual across a range
+// of sigmabeta_sq values to choose the value of sigmabeta_sq that maximizes
+// the ELBO
+// [[Rcpp::export]]
+arma::colvec sigma_loop_c(const arma::colvec& y, const arma::mat& D,
+                          const arma::mat& X_mat, const arma::mat& mu_mat,
+                          const arma::mat& alpha_mat, double sigmasq,
+                          const arma::colvec& sigmabeta_sq_vec, double pi_est,
+                          double tolerance = 1e-9, int max_iter = 100,
+                          double upper_limit = 9){
+
+  // get the number of sigmas that are being tried
+  int n_sigma = sigmabeta_sq_vec.n_rows;
+
+  // instantiate a vector for storing the ELBO corresponding to each sigma
+  arma::colvec elbo_sigma(n_sigma, arma::fill::zeros);
+
+  // store the ELBO of the estimated graphs for each sigma
+  double elbo_graph;
+
+  // loop over each of the sigmas, estimate n graphs for each sigma and
+  // record the total ELBO across these n graphs for each sigma
+  for (int j = 0; j < n_sigma; j++){
+
+    // get the ELBO for the graph
+    elbo_graph = cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
+                              sigmabeta_sq_vec(j), pi_est, tolerance,
+                              max_iter, upper_limit)["var.elbo"];
+
+    // add the ELBO to the vector of ELBOs
+    elbo_sigma(j) = elbo_graph;
+  }
+
+  return elbo_sigma;
+}
 
 /*** R
 source("generate_data.R")

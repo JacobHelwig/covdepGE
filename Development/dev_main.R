@@ -6,85 +6,12 @@ source("generate_data.R")
 sourceCpp("c_dev.cpp")
 start_time <- Sys.time()
 
-## The core function that calculates the variational parameter updates and
-## returns the final variational estimates for a single regression.
-## Arguments:
-## y: n by 1 response, i.e the j th variable whose conditional distribution given the
-## remaining variables is being calculated.
-## X_mat: n by p data matrix with the j-th variable removed
-## sigmasq: variance of response given the parameters (homoscedastic part,
-## actual variance sigma_sq/w_i)
-## sigmabeta_sq: prior variance of coefficient parameter
-## pi_est: estimate of spike and slab mixture proportion.
-## S_sq, mu_mat, alpha_mat: n by p matrices of variational parameters; the
-## i,j-th entry corresponds to the j-th parameter for the i-th individual
-cov_vsvb <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi_est) {
-
-  n <- nrow(X_mat); p <- ncol(X_mat)
-
-  # threshold for calculating the reverse logit of alpha
-  upper_limit <- 9
-
-  # exit condition tolerance
-  tol <- 1e-9
-
-  change_alpha <- matrix(Inf, n, p)#rep(0.001, n * p) # alpha_new - alpha_int
-
-  max_iter <- 100
-  iter <- 1
-
-  iter <- 1
-
-  # S_sq update
-  S_sq <- t(sigmasq * (t(X_mat^2) %*% D + 1 / sigmabeta_sq)^(-1))
-
-  # 1st and 3rd term of the alpha update, denominator of the second term
-  alpha_logit_term1 <- log(pi_est / (1 - pi_est))
-  alpha_logit_term3 <- log(sqrt(S_sq / (sigmasq * sigmabeta_sq)))
-  alpha_logit_term2_denom <- (2 * S_sq)
-
-  # loop to optimize variational parameters
-  while (sqrt(sum(change_alpha^2)) > tol & iter < max_iter) {
-
-    # mu update
-    mu_update_c(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq)
-
-    # alpha update
-
-    # save the last value of alpha
-    alpha_last <- rlang::duplicate(alpha_mat)
-    alpha_update_c(mu_mat, alpha_mat, alpha_logit_term1,
-                   alpha_logit_term2_denom, alpha_logit_term3)
-
-    # calculate change in alpha
-    change_alpha <- alpha_mat - alpha_last
-
-    iter <- iter + 1
-  }
-
-  # calculate ELBO across n individuals
-  # want to maximize this by optimizing sigma beta
-  ELBO_LB <- total_ELBO_c(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
-                          sigmabeta_sq, pi_est)
-
-  # return matrices of variational parameters and the ELBO
-  list(var.alpha = alpha_mat, var.mu = mu_mat, var.S_sq = S_sq, var.elbo = ELBO_LB)
-}
-
 source("generate_data.R")
 library(MASS)
 library(varbvs)
 
-logit <- function(x) {
-  if ((x == 0) | (x == 1)) {
-    return(0)
-  } else {
-    return(log(x / (1 - x)))
-  }
-}
-
 # generate data and covariates
-discrete_data <- T # true if discrete example is desired
+discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   n <- 100
@@ -121,7 +48,6 @@ for (i in 1:n) {
 graph_list <- vector("list", p + 1)
 
 # main loop over the predictors
-alphas <- vector("list", p + 1)
 for (resp_index in 1:(p + 1)) {
 
   # Set variable number `resp_index` as the response
@@ -130,7 +56,7 @@ for (resp_index in 1:(p + 1)) {
   # Set the remaining p variables as predictor
   X_mat <- data_mat[, -resp_index]
 
-  # instantiate initial values of variational parameters
+  # instantiate initial values of variational parameters and hyperparmeters
   alpha_mat <- matrix(0.2, n, p)
   sigmabeta_sq <- 3
   sigmasq <- 1
@@ -148,17 +74,12 @@ for (resp_index in 1:(p + 1)) {
   # values of sigmabeta_sq to optimize according to ELBO
   sigmavec <- c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10)
 
-  # vector for storing the ELBO for each value of sigma in sigmavec
-  elb1 <- matrix(0, length(sigmavec), 1)
-
-  # loop to optimize sigma
-  for (j in 1:length(sigmavec)) {
-    res <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmavec[j], pi_est)
-    elb1[j] <- res$var.elbo
-  }
+  # loop to optimize sigma; for each value of sigma in sigmavec, store the
+  # resulting ELBO from fitting n graphs using that value as sigmabeta_sq
+  elbo_sigma <- sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmavec, pi_est)
 
   # Select the value of sigma_beta that maximizes the elbo
-  sigmabeta_sq <- sigmavec[which.max(elb1)]
+  sigmabeta_sq <- sigmavec[which.max(elbo_sigma)]
 
   # fit another model using this value of sigma_beta
   result <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi_est)
@@ -167,7 +88,6 @@ for (resp_index in 1:(p + 1)) {
   # i-th individual for the j-th variable according to the regression on y
   graph_list[[resp_index]] <- result$var.alpha
 }
-
 
 # check to see that this modified code produces the same results as the original code
 if (discrete_data){
@@ -220,3 +140,6 @@ end_time - start_time
   # Variational update loop (cov_vsvb function) to C++
     # Time difference of 1.907178 secs
     # Time difference of 1.922939 secs
+  # Sigma loop to C++
+    # Time difference of 1.895749 secs
+    # Time difference of 1.865739 secs
