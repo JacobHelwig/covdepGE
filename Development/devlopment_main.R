@@ -41,7 +41,7 @@ cov_vsvb <- function(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
   S_sq_vec <- matrix(t(S_sq), n * p, 1)
 
   # 1st and 3rd term of the alpha update, denominator of the second term
-  alpha_logit_term1 <- logit(pi_est)
+  alpha_logit_term1 <- log(pi_est / (1 - pi_est))
   alpha_logit_term3 <- log(sqrt(S_sq / (sigmasq * sigmabeta_sq)))
   alpha_logit_term2_denom <- (2 * S_sq)
 
@@ -54,21 +54,23 @@ cov_vsvb <- function(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
     # alpha update
 
     # save the last value of alpha
-    alpha_last <- alpha_mat
+    alpha_last <- rlang::duplicate(alpha_mat)
+    alpha_update_c(mu_mat, alpha_mat, alpha_logit_term1,
+                   alpha_logit_term2_denom, alpha_logit_term3)
 
-    # calculate the logit of alpha
-    alpha_logit <- (alpha_logit_term1 +
-                      (mu_mat^2 / alpha_logit_term2_denom) +
-                      alpha_logit_term3)
-
-    # transform from logit to probabilities of inclusion; update alpha_mat
-    exp_logit <- exp(alpha_logit)
-    alpha_mat <- exp_logit / (1 + exp_logit)
-
-    # handle NA's due to division by infinity resulting from exponentiation of
-    # large values; these probabilities are indescernible from 1
-    #alpha_mat[is.infinite(exp_logit)] <- 1
-    alpha_mat[alpha_logit > upper_limit] <- 1
+    # # calculate the logit of alpha
+    # alpha_logit <- (alpha_logit_term1 +
+    #                   (mu_mat^2 / alpha_logit_term2_denom) +
+    #                   alpha_logit_term3)
+    #
+    # # transform from logit to probabilities of inclusion; update alpha_mat
+    # exp_logit <- exp(alpha_logit)
+    # alpha_mat <- exp_logit / (1 + exp_logit)
+    #
+    # # handle NA's due to division by infinity resulting from exponentiation of
+    # # large values; these probabilities are indescernible from 1
+    # #alpha_mat[is.infinite(exp_logit)] <- 1
+    # alpha_mat[alpha_logit > upper_limit] <- 1
 
     # calculate change in alpha
     change_alpha <- alpha_mat - alpha_last
@@ -225,3 +227,6 @@ end_time - start_time
   # Mu update in C++
     # Time difference of 4.533927 secs
     # Time difference of 4.517517 secs
+  # Alpha update in C++
+    # Time difference of 4.118175 secs
+    # Time difference of 4.188726 secs
