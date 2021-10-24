@@ -2,16 +2,14 @@ set.seed(1)
 setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development")
 rm(list = ls())
 library(Rcpp)
+library(MASS)
+library(varbvs)
 source("generate_data.R")
 sourceCpp("c_dev.cpp")
 start_time <- Sys.time()
 
-source("generate_data.R")
-library(MASS)
-library(varbvs)
-
 # generate data and covariates
-discrete_data <- F # true if discrete example is desired
+discrete_data <- T # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   n <- 100
@@ -28,18 +26,17 @@ data_mat <- dat$data
 Z <- dat$covts
 
 # D is an n by n matrix of weights; the i, j entry is the similarity between
-# individuals i and j
-D <- matrix(1, n, n)
+# individuals i and j; D is symmetric
+D <- matrix(NA, n, n)
 for (i in 1:n) {
-  for (j in 1:n) {
+  for (j in i:n) {
     D[j, i] <- dnorm(norm(Z[i, ] - Z[j, ], "2"), 0, tau)
+    D[i, j] <- D[j, i]
   }
 }
 
 # Scale weights to sum to n
-for (i in 1:n) {
-  D[, i] <- n * (D[, i] / sum(D[, i]))
-}
+D <- n * (D) * matrix(1 / colSums(D), n, n, T)
 
 # List for the variable-specific inclusion probability matrix; the i-th element
 # in the list is a n by p matrix corresponding to the i-th predictor;
@@ -143,3 +140,6 @@ end_time - start_time
   # Sigma loop to C++
     # Time difference of 1.895749 secs
     # Time difference of 1.865739 secs
+  # Modified calculation of weights
+    # Time difference of 1.521307 secs
+    # Time difference of 1.511709 secs
