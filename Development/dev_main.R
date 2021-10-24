@@ -18,8 +18,7 @@ start_time <- Sys.time()
 ## pi_est: estimate of spike and slab mixture proportion.
 ## S_sq, mu_mat, alpha_mat: n by p matrices of variational parameters; the
 ## i,j-th entry corresponds to the j-th parameter for the i-th individual
-cov_vsvb <- function(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
-                     alpha_mat) {
+cov_vsvb <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi_est) {
 
   n <- nrow(X_mat); p <- ncol(X_mat)
 
@@ -85,7 +84,7 @@ logit <- function(x) {
 }
 
 # generate data and covariates
-discrete_data <- F # true if discrete example is desired
+discrete_data <- T # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   n <- 100
@@ -122,6 +121,7 @@ for (i in 1:n) {
 graph_list <- vector("list", p + 1)
 
 # main loop over the predictors
+alphas <- vector("list", p + 1)
 for (resp_index in 1:(p + 1)) {
 
   # Set variable number `resp_index` as the response
@@ -153,8 +153,7 @@ for (resp_index in 1:(p + 1)) {
 
   # loop to optimize sigma
   for (j in 1:length(sigmavec)) {
-    res <- cov_vsvb(y, Z, X_mat, sigmasq, sigmavec[j], S_sq, pi_est, mu_mat,
-                    alpha_mat)
+    res <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmavec[j], pi_est)
     elb1[j] <- res$var.elbo
   }
 
@@ -162,8 +161,7 @@ for (resp_index in 1:(p + 1)) {
   sigmabeta_sq <- sigmavec[which.max(elb1)]
 
   # fit another model using this value of sigma_beta
-  result <- cov_vsvb(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
-                     alpha_mat)
+  result <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi_est)
 
   # n by p matrix; the i,j-th entry is the probability of inclusion for the
   # i-th individual for the j-th variable according to the regression on y
@@ -219,3 +217,6 @@ end_time - start_time
   # Move ELBO calculation outside the variational update loop
     # Time difference of 2.080118 secs
     # Time difference of 1.93863 secs
+  # Variational update loop (cov_vsvb function) to C++
+    # Time difference of 1.907178 secs
+    # Time difference of 1.922939 secs
