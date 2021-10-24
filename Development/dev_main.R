@@ -17,7 +17,7 @@ start_time <- Sys.time()
 ## sigmabeta_sq: prior variance of coefficient parameter
 ## pi_est: estimate of spike and slab mixture proportion.
 ## S_sq, mu_mat, alpha_mat: n by p matrices of variational parameters; the
-## i,j-th entry corresponds to the j-th paramter for the i-th individual
+## i,j-th entry corresponds to the j-th parameter for the i-th individual
 cov_vsvb <- function(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
                      alpha_mat) {
 
@@ -38,7 +38,6 @@ cov_vsvb <- function(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
 
   # S_sq update
   S_sq <- t(sigmasq * (t(X_mat^2) %*% D + 1 / sigmabeta_sq)^(-1))
-  S_sq_vec <- matrix(t(S_sq), n * p, 1)
 
   # 1st and 3rd term of the alpha update, denominator of the second term
   alpha_logit_term1 <- log(pi_est / (1 - pi_est))
@@ -58,31 +57,18 @@ cov_vsvb <- function(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
     alpha_update_c(mu_mat, alpha_mat, alpha_logit_term1,
                    alpha_logit_term2_denom, alpha_logit_term3)
 
-    # # calculate the logit of alpha
-    # alpha_logit <- (alpha_logit_term1 +
-    #                   (mu_mat^2 / alpha_logit_term2_denom) +
-    #                   alpha_logit_term3)
-    #
-    # # transform from logit to probabilities of inclusion; update alpha_mat
-    # exp_logit <- exp(alpha_logit)
-    # alpha_mat <- exp_logit / (1 + exp_logit)
-    #
-    # # handle NA's due to division by infinity resulting from exponentiation of
-    # # large values; these probabilities are indescernible from 1
-    # #alpha_mat[is.infinite(exp_logit)] <- 1
-    # alpha_mat[alpha_logit > upper_limit] <- 1
-
     # calculate change in alpha
     change_alpha <- alpha_mat - alpha_last
 
-    # calculate ELBO across n individuals
-    # want to maximize this by optimizing sigma beta
-    ELBO_LB <- total_ELBO_c(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
-                            sigmabeta_sq, pi_est)
     iter <- iter + 1
   }
 
-  # return n times p - 1 of each of the variational parameters
+  # calculate ELBO across n individuals
+  # want to maximize this by optimizing sigma beta
+  ELBO_LB <- total_ELBO_c(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
+                          sigmabeta_sq, pi_est)
+
+  # return matrices of variational parameters and the ELBO
   list(var.alpha = alpha_mat, var.mu = mu_mat, var.S_sq = S_sq, var.elbo = ELBO_LB)
 }
 
@@ -230,3 +216,6 @@ end_time - start_time
   # Alpha update in C++
     # Time difference of 4.118175 secs
     # Time difference of 4.188726 secs
+  # Move ELBO calculation outside the variational update loop
+    # Time difference of 2.080118 secs
+    # Time difference of 1.93863 secs
