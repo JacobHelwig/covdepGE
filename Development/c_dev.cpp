@@ -39,7 +39,7 @@ double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
                    double sigmasq, double sigmabeta_sq, double pi_est){
 
   // get sample size
-  double n = X_mat.n_rows;
+  int n = X_mat.n_rows;
 
   // instantiate variable to store the total ELBO
   double elbo_tot = 0;
@@ -55,6 +55,49 @@ double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
 
   return elbo_tot;
 
+}
+
+// mu update: for a fixed response, update mu matrix
+//[[Rcpp::export]]
+void mu_update_c (const arma::colvec& y, const arma::mat& W,
+                  const arma::mat& X_mat, const arma::mat& S_sq, arma::mat& mu,
+                  const arma::mat& alpha, const double sigmasq){
+
+  // get sample size and number of parameters
+  int n = X_mat.n_rows;
+  int p = X_mat.n_cols;
+
+  // instantiate matrices for the update loop
+  arma::mat mu_stack(n, p);
+  arma::mat alpha_stack(n, p);
+  arma::mat X_mu_alpha(n, p);
+  arma::mat X_mu_alpha_k(n, p);
+  arma::mat y_k(n, p);
+  arma::mat d_x_y(n, p);
+
+  // loop over the individuals to update mu row by row
+  for (int l = 0; l < n; l++){
+
+    // l-th row of mu_mat, alpha_mat stacked n times
+    mu_stack = arma::repmat(mu.row(l), n, 1);
+    alpha_stack = arma::repmat(alpha.row(l), n ,1);
+
+    // take the element-wise product of X_mat, mu_stack, and alpha stack
+    X_mu_alpha = X_mat % mu_stack % alpha_stack;
+
+    // the k-th column is the rowSums of X_mu_alpha minus the k-th column of
+    // X_mu_alpha (accounts for m \neq k in summation)
+    X_mu_alpha_k = arma::repmat(arma::sum(X_mu_alpha, 1), 1, p) - X_mu_alpha;
+
+    // the k-th column is y minus the k-th column of X_mu_alpha_k
+    y_k = arma::repmat(y, 1, p) - X_mu_alpha_k;
+
+    // the k-th column is d_:,l * x_:,k * y_k_:,k
+    d_x_y = arma::repmat(W.col(l), 1, p) % X_mat % y_k;
+
+    // the update of the l-th row of mu
+    mu.row(l) = S_sq.row(l) % sum(d_x_y, 0) / sigmasq;
+  }
 }
 
 /*** R
@@ -89,17 +132,22 @@ y <- data_mat[, resp_index]
 X_mat <- data_mat[, -resp_index]
 
 # instantiate initial values of variational parameters
-alpha_mat <- matrix(0.2, n, p)
+set.seed(1)
+alpha_mat <- matrix(runif(n * p), n, p)
 sigmabeta_sq <- 3
 sigmasq <- 1
 S_sq <- t(sigmasq * (t(X_mat^2) + 1 / sigmabeta_sq)^(-1))
-mu_mat <- matrix(0, n, p, byrow = TRUE)
+mu_mat <- matrix(rnorm(n * p), n, p)
 
 # Setting hyperparameter values for sigmasq and the probability of inclusion
 # according to the Carbonetto Stephens model
 idmod <- varbvs(X_mat, y, Z = Z[, 1], verbose = FALSE)
 sigmasq <- mean(idmod$sigma)
 pi_est <- mean(1 / (1 + exp(-idmod$logodds)))
+
+#-------------------------------------------------------------------------------
+#------------------------------ELBO CALCULATION---------------------------------
+#-------------------------------------------------------------------------------
 
 ELBO_calculator <- function(y, W, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est) {
   n <- nrow(X_mat)
@@ -138,8 +186,51 @@ tot_ELBO_R <- function(){
   }
 }
 
-microbenchmark::microbenchmark(total_ELBO(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi_est),
+total_ELBO_c(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi_est) == elbo_R
+
+microbenchmark::microbenchmark(total_ELBO_c(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi_est),
                                tot_ELBO_R())
 
+
+#-------------------------------------------------------------------------------
+#----------------------------------MU UPDATE------------------------------------
+#-------------------------------------------------------------------------------
+
+# original mu update
+R_mupdate <- function(){
+  mu_mat2 <- matrix(NA, n, p)
+  for (l in 1:n){
+
+    # the l-th row of mu_mat, alpha_mat stacked n times
+    mu_stack <- matrix(mu_mat[l, ], n, p, T)
+    alpha_stack <- matrix(alpha_mat[l, ], n, p, T)
+
+    # the element-wise product of X_mat, mu_stack, and alpha stack;
+    # the i,j entry is x_i,j * mu_l,j * alpha_l,j
+    X_mu_alpha <- X_mat * mu_stack * alpha_stack
+
+    # the k-th column is the rowSums of X_mu_alpha minus the k-th column of
+    # X_mu_alpha (accounts for m \neq k in summation)
+    X_mu_alpha_k <- matrix(rowSums(X_mu_alpha), n, p) - X_mu_alpha
+
+    # the k-th column is y minus the k-th column of X_mu_alpha_k
+    y_k <- matrix(y, n, p) - X_mu_alpha_k
+
+    # the k-th column is d_:,l * x_:,k * y_k_:,k
+    d_x_y <- D[ , l] * X_mat * y_k
+
+    # the update of the l-th row of mu
+    mu_mat2[l, ] <- S_sq[l, ] / sigmasq * colSums(d_x_y)
+
+  }
+  mu_mat2
+}
+
+
+# c update
+mu_update_c(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq)
+
+microbenchmark::microbenchmark(mu_update_c(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq),
+                               R_mupdate())
 */
 

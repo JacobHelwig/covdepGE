@@ -6,34 +6,6 @@ source("generate_data.R")
 sourceCpp("c_dev.cpp")
 start_time <- Sys.time()
 
-
-## This function returns the ELBO for a specific variational parameter (corresponding to a fixed individual in study)
-## y: response
-## X_mat: data matrix except the response variable
-## S_sq: variance parameter for the individual
-## mu: mean parameter for that individual
-## sigmasq and sigmabeta_sq: hyperparameter settings
-## pi_est: hyperparameter of spike and slab mixture proportion
-## W: the weights associated with the n individuals wrt the covariate of the fixed individual we are studying.
-## n: no. of samples
-## p: no. of variables in predictor (no. of variables - 1).
-ELBO_calculator <- function(y, W, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est) {
-  mu <- matrix(mu, p, 1)
-  alpha <- matrix(alpha, p, 1)
-  s <- matrix(S_sq, p, 1)
-  mu_alpha <- matrix(mu * alpha, p, 1)
-  W <- matrix(W, n, 1)
-  t1 <- -sum(W * (y - X_mat %*% mu_alpha)^2) / (2 * sigmasq)
-  t2 <- -sum(W * ((X_mat)^2 %*% (alpha * (mu^2 + s) - alpha^2 * mu^2))) / (2 * sigmasq)
-  t3 <- sum(alpha * ((1 + log(s)))) / 2
-  t4 <- -sum(alpha * log((alpha + 0.000001) / pi_est) + (1 - alpha) * log((1 - alpha + 0.000001) / (1 - pi_est)))
-  t5 <- -sum(alpha * ((mu^2 + s) / (2 * sigmasq * sigmabeta_sq) + log(sigmasq * sigmabeta_sq) / 2))
-  t6 <- sum(0.5 * log(1 / (2 * pi * sigmasq)))
-  t <- t1 + t2 + t3 + t4 + t5 + t6
-  return(t)
-}
-
-
 ## The core function that calculates the variational parameter updates and
 ## returns the final variational estimates for a single regression.
 ## Arguments:
@@ -77,31 +49,7 @@ cov_vsvb <- function(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
   while (sqrt(sum(change_alpha^2)) > tol & iter < max_iter) {
 
     # mu update
-
-    for (l in 1:n){
-
-      # the l-th row of mu_mat, alpha_mat stacked n times
-      mu_stack <- matrix(mu_mat[l, ], n, p, T)
-      alpha_stack <- matrix(alpha_mat[l, ], n, p, T)
-
-      # the element-wise product of X_mat, mu_stack, and alpha stack;
-      # the i,j entry is x_i,j * mu_l,j * alpha_l,j
-      X_mu_alpha <- X_mat * mu_stack * alpha_stack
-
-      # the k-th column is the rowSums of X_mu_alpha minus the k-th column of
-      # X_mu_alpha (accounts for m \neq k in summation)
-      X_mu_alpha_k <- matrix(rowSums(X_mu_alpha), n, p) - X_mu_alpha
-
-      # the k-th column is y minus the k-th column of X_mu_alpha_k
-      y_k <- matrix(y, n, p) - X_mu_alpha_k
-
-      # the k-th column is d_:,l * x_:,k * y_k_:,k
-      d_x_y <- D[ , l] * X_mat * y_k
-
-      # the update of the l-th row of mu
-      mu_mat[l, ] <- S_sq[l, ] / sigmasq * colSums(d_x_y)
-
-    }
+    mu_update_c(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq)
 
     # alpha update
 
@@ -126,15 +74,6 @@ cov_vsvb <- function(y, Z, X_mat, sigmasq, sigmabeta_sq, S_sq, pi_est, mu_mat,
     change_alpha <- alpha_mat - alpha_last
 
     # calculate ELBO across n individuals
-    # e <- 0
-    #
-    # for (i in 1:n) { ## calculates ELBO for the j th variable by adding the contribution of the parameter
-    #   ## corresponding to every individual in study. i th iteration takes the contribution of the variational
-    #   ## parameters corresponding to  the i th individual in study, but the information is borrowed from
-    #   ## all the n individuals depending on the weights coded in D[,i]
-    #   e <- e + ELBO_calculator(y, D[, i], X_mat, S_sq[i, ], mu_mat[i, ], alpha_mat[i, ], sigmasq, sigmabeta_sq, pi_est)
-    # }
-
     # want to maximize this by optimizing sigma beta
     ELBO_LB <- total_ELBO_c(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
                             sigmabeta_sq, pi_est)
@@ -158,7 +97,7 @@ logit <- function(x) {
 }
 
 # generate data and covariates
-discrete_data <- T # true if discrete example is desired
+discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   n <- 100
@@ -283,3 +222,6 @@ end_time - start_time
   # ELBO calculation in C++
     # Time difference of 9.042475 secs
     # Time difference of 9.159554 secs
+  # Mu update in C++
+    # Time difference of 4.533927 secs
+    # Time difference of 4.517517 secs
