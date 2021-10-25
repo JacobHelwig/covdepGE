@@ -1,10 +1,3 @@
-setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development")
-rm(list = ls())
-library(Rcpp)
-library(varbvs)
-source("generate_data.R")
-sourceCpp("c_dev.cpp")
-
 ## _____________________________________________________________________________
 ## _____________________________covdepGE________________________________________
 ## _____________________________________________________________________________
@@ -28,7 +21,20 @@ sourceCpp("c_dev.cpp")
 ## -----------------------------RETURNS-----------------------------------------
 ## TBD
 ## _____________________________________________________________________________
-covdepGE1 <- function(data_mat, Z, tau = 0.1,
+#' covdepGE
+#'
+#' @param data_mat
+#' @param Z
+#' @param tau
+#' @param sigmavec
+#' @param tolerance
+#' @param max_iter
+#'
+#' @return
+#' @export
+#'
+#' @examples
+covdepGE <- function(data_mat, Z, tau = 0.1,
                      sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
                      tolerance = 1e-9, max_iter = 100){
 
@@ -104,72 +110,3 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1,
 
   return(graph_list)
 }
-
-# generate data and covariates
-discrete_data <- T # true if discrete example is desired
-if (discrete_data) {
-  dat <- generate_discrete()
-  tau_ <- 0.1 # the bandwidth parameter
-}else{
-  dat <- generate_continuous()
-  tau_ <- 0.56
-}
-
-data_mat <- dat$data
-Z.cov <- dat$covts
-library(covdepGE)
-graphs <- covdepGE(data_mat, Z.cov, tau_)
-
-# check to see that this modified code produces the same results as the original code
-if (discrete_data){
-  load("original_discrete_alpha_matrices.Rdata")
-}else{
-  load("original_continuous_alpha_matrices.Rdata")
-}
-
-same <- T
-for (j in 1:length(graphs)) {
-  if (all.equal(graphs[[j]], mylist[[j]]) != T) {
-    same <- F
-    break
-  }
-}
-same
-
-## History (continuous data):
-  # Original:
-    # Time difference of 23.49625 secs
-    # Time difference of 23.76863 secs
-  # Modified the s_update:
-    # Time difference of 16.98189 secs
-    # Time difference of 15.27206 secs
-  # Modified the mu update:
-    # Time difference of 14.16393 secs
-    # Time difference of 14.3205 secs
-  # Modified the alpha_update:
-    # Time difference of 11.38467 secs
-    # Time difference of 11.68092 secs
-  # Re-organization (removing unnecessary variables)
-    # Time difference of 10.42546 secs
-    # Time difference of 10.87398 secs
-  # ELBO calculation in C++
-    # Time difference of 9.042475 secs
-    # Time difference of 9.159554 secs
-  # Mu update in C++
-    # Time difference of 4.533927 secs
-    # Time difference of 4.517517 secs
-  # Alpha update in C++
-    # Time difference of 4.118175 secs
-    # Time difference of 4.188726 secs
-  # Move ELBO calculation outside the variational update loop
-    # Time difference of 2.080118 secs
-    # Time difference of 1.93863 secs
-  # Variational update loop (cov_vsvb function) to C++
-    # Time difference of 1.907178 secs
-    # Time difference of 1.922939 secs
-  # Sigma loop to C++
-    # Time difference of 1.895749 secs
-    # Time difference of 1.865739 secs
-  # Modified calculation of weights
-    # Time difference of 1.521307 secs
-    # Time difference of 1.511709 secs
