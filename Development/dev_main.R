@@ -1,9 +1,6 @@
-set.seed(1)
 setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development")
 rm(list = ls())
 library(Rcpp)
-library(MASS)
-library(varbvs)
 source("generate_data.R")
 sourceCpp("c_dev.cpp")
 
@@ -23,11 +20,16 @@ sourceCpp("c_dev.cpp")
 ## individual. 0.1 by default.
 ## default
 ## sigmavec: candidate values of sigmabeta_sq
+## tolerance: end the variational update loop when the square root of the sum of
+## squared changes to the elements of the alpha matrix are within tolerance
+## max_iter: if the tolerance criteria has not been met by max_iter iterations,
+## end the variational update loop
 ## -----------------------------RETURNS-----------------------------------------
 ## TBD
 ## _____________________________________________________________________________
 covdepGE <- function(data_mat, Z, tau = 0.1,
-                     sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10)){
+                     sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
+                     tolerance = 1e-9, max_iter = 100){
 
   start_time <- Sys.time()
 
@@ -79,13 +81,15 @@ covdepGE <- function(data_mat, Z, tau = 0.1,
 
     # loop to optimize sigma; for each value of sigma in sigmavec, store the
     # resulting ELBO
-    elbo_sigma <- sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmavec, pi_est)
+    elbo_sigma <- sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmavec,
+                               pi_est, tolerance, max_iter)
 
     # Select the value of sigma_beta that maximizes the ELBO
     sigmabeta_sq <- sigmavec[which.max(elbo_sigma)]
 
     # fit another model using this value of sigma_beta
-    result <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi_est)
+    result <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
+                         pi_est, tolerance, max_iter)
 
     # n by p matrix; the i,j-th entry is the probability of inclusion for the
     # i-th individual for the j-th variable according to the regression on y
