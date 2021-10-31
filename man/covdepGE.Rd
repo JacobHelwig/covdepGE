@@ -10,7 +10,8 @@ covdepGE(
   tau = 0.1,
   sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
   tolerance = 1e-09,
-  max_iter = 100
+  max_iter = 100,
+  print_time = F
 )
 }
 \arguments{

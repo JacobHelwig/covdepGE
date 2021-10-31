@@ -36,7 +36,7 @@
 #' @examples
 covdepGE <- function(data_mat, Z, tau = 0.1,
                      sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                     tolerance = 1e-9, max_iter = 100){
+                     tolerance = 1e-9, max_iter = 100, print_time = F){
 
   start_time <- Sys.time()
 
@@ -106,7 +106,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1,
 
   # stop timer and see how much time has elapsed
   end_time <- Sys.time()
-  print(end_time - start_time)
+  if (print_time) print(end_time - start_time)
 
   return(graph_list)
 }

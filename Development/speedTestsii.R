@@ -1,3 +1,13 @@
+---
+  title: "Speed tests"
+output: pdf_document
+---
+  ```{r, include = F}
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+knitr::opts_knit$set(root.dir = "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development")
+```
+
+```{Rcpp}
 #include <RcppArmadillo.h>
 #include <math.h>
 // [[Rcpp::depends(RcppArmadillo)]]
@@ -7,9 +17,9 @@ using namespace Rcpp;
 // _____________________________ELBO_calculator_c_______________________________
 // _____________________________________________________________________________
 // -----------------------------DESCRIPTION-------------------------------------
-// Calculates ELBO for a fixed response j and individual l
+  // Calculates ELBO for a fixed response j and individual l
 // -----------------------------ARGUMENTS---------------------------------------
-// y: n by 1 vector of responses (j-th column of the data)
+  // y: n by 1 vector of responses (j-th column of the data)
 // D: n by 1 vector of weights; i-th entry is the weight of the i-th
 // individual with respect to the l-th individual
 // X_mat: n by (p - 1) data matrix X with the j-th column removed
@@ -18,7 +28,7 @@ using namespace Rcpp;
 // sigmasq, sigmabeta_sq: scaler; spike and slab variance hyperparameters
 // pi_est: spike and slab probability of inclusion
 // -----------------------------RETURNS-----------------------------------------
-// Returns: double; ELBO for the l-th individual and j-th column fixed as the
+  // Returns: double; ELBO for the l-th individual and j-th column fixed as the
 // response
 // _____________________________________________________________________________
 double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
@@ -36,13 +46,13 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
   // calculate each of the terms that sum to ELBO
   double t1 = -sum(D % y_Xmualpha_sq) / (2 * sigmasq);
   double t2 = (-sum(D % (arma::pow(X_mat, 2) *
-               (alpha % (mu_sq + S_sq) - arma::pow(alpha, 2) % mu_sq))) /
-               (2 * sigmasq));
+                           (alpha % (mu_sq + S_sq) - arma::pow(alpha, 2) % mu_sq))) /
+                 (2 * sigmasq));
   double t3 = sum(alpha % (1 + arma::log(S_sq))) / 2;
   double t4 = (-sum(alpha % arma::log((alpha + 0.000001) / pi_est) +
-               (1 - alpha) % log((1 - alpha + 0.000001) / (1 - pi_est))));
+                      (1 - alpha) % log((1 - alpha + 0.000001) / (1 - pi_est))));
   double t5 = (-sum(alpha % ((mu_sq + S_sq) / (2 * sigmasq * sigmabeta_sq) +
-               log(sigmasq * sigmabeta_sq) / 2)));
+                               log(sigmasq * sigmabeta_sq) / 2)));
   double t6 = 0.5 * log(1 / (2 *  + M_PI * sigmasq));
 
   return(t1 + t2 + t3 + t4 + t5 + t6);
@@ -52,24 +62,24 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
 // _____________________________total_elbo_c____________________________________
 // _____________________________________________________________________________
 // -----------------------------DESCRIPTION-------------------------------------
-// for a fixed response, calculate and sum the ELBO for all individuals in the
+  // for a fixed response, calculate and sum the ELBO for all individuals in the
 // data
 // -----------------------------ARGUMENTS---------------------------------------
-// y: n by 1 vector of responses (j-th column of the data)
+  // y: n by 1 vector of responses (j-th column of the data)
 // D: n by n symmetric matrix of weights (l,k entry is the weight of the k-th
-// individual with respect to the l-th individual)
+                                          // individual with respect to the l-th individual)
 // X_mat: n by (p - 1) data matrix X with the j-th column removed
 // S_sq, mu, alpha: n by (p - 1) matrices of variational parameters; the l, k
 // entry is the k-th parameter for the l-th individual
 // sigmasq, sigmabeta_sq: scaler; spike and slab variance hyperparameters
 // pi_est: spike and slab probability of inclusion
 // -----------------------------RETURNS-----------------------------------------
-// double; ELBO for the l-th individual and j-th column fixed as the response
+  // double; ELBO for the l-th individual and j-th column fixed as the response
 // _____________________________________________________________________________
 double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
-                   const arma::mat& X_mat, const arma::mat& S_sq,
-                   const arma::mat& mu_mat, const arma::mat& alpha_mat,
-                   double sigmasq, double sigmabeta_sq, double pi_est){
+                     const arma::mat& X_mat, const arma::mat& S_sq,
+                     const arma::mat& mu_mat, const arma::mat& alpha_mat,
+                     double sigmasq, double sigmabeta_sq, double pi_est){
 
   // get sample size
   int n = X_mat.n_rows;
@@ -94,11 +104,11 @@ double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
 // _____________________________mu_update_c____________________________________
 // _____________________________________________________________________________
 // -----------------------------DESCRIPTION-------------------------------------
-// for a fixed response, update mu matrix
+  // for a fixed response, update mu matrix
 // -----------------------------ARGUMENTS---------------------------------------
-// y: n by 1 vector of responses (j-th column of the data)
+  // y: n by 1 vector of responses (j-th column of the data)
 // D: n by n symmetric matrix of weights (l,k entry is the weight of the k-th
-// individual with respect to the l-th individual)
+                                          // individual with respect to the l-th individual)
 // X_mat: n by (p - 1) data matrix X with the j-th column removed
 // S_sq, mu, alpha: n by (p - 1) matrices of variational parameters; the l, k
 // entry is the k-th parameter for the l-th individual
@@ -149,9 +159,9 @@ void mu_update_c (const arma::colvec& y, const arma::mat& D,
 // _____________________________alpha_update_c__________________________________
 // _____________________________________________________________________________
 // -----------------------------DESCRIPTION-------------------------------------
-// for a fixed response, update alpha matrix
+  // for a fixed response, update alpha matrix
 // -----------------------------ARGUMENTS---------------------------------------
-// mu_mat, alpha_mat: n by (p - 1) matrices of variational parameters; the l, k
+  // mu_mat, alpha_mat: n by (p - 1) matrices of variational parameters; the l, k
 // entry is the k-th parameter for the l-th individual
 // alpha_logit_term 1,2,3: terms used to calculate the logit of alpha
 // upper_limit: double, during the alpha update, values of logit(alpha) greater
@@ -165,8 +175,8 @@ void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
 
   // calculate the logit of alpha
   arma::mat alpha_logit = (alpha_logit_term1
-                   + (arma::pow(mu, 2) / alpha_logit_term2_denom)
-                   + alpha_logit_term3);
+                           + (arma::pow(mu, 2) / alpha_logit_term2_denom)
+                           + alpha_logit_term3);
 
   // transform from logit to probabilities of inclusion; update alpha_mat
   arma::mat exp_logit = arma::exp(alpha_logit);
@@ -317,3 +327,101 @@ arma::colvec sigma_loop_c_(const arma::colvec& y, const arma::mat& D,
 
   return elbo_sigma;
 }
+```
+
+
+```{r}
+# setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development")
+# Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development/c_dev.cpp")
+covdepGE1 <- function(data_mat, Z, tau = 0.1,
+                     sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
+                     tolerance = 1e-9, max_iter = 100, print_time = F){
+
+  start_time <- Sys.time()
+
+  # get sample size and number of parameters
+  n <- nrow(data_mat); p <- ncol(data_mat) - 1
+
+  # D is a symmetric n by n matrix of weights; the i, j entry is the similarity
+  # between individuals i and j
+  D <- matrix(NA, n, n)
+  for (i in 1:n) {
+    for (j in i:n) {
+      # this is the spectral norm
+      D[j, i] <- stats::dnorm(norm(Z[i, ] - Z[j, ], "2"), 0, tau)
+      D[i, j] <- D[j, i]
+    }
+  }
+
+  # Scale weights to sum to n
+  D <- n * (D) * matrix(1 / colSums(D), n, n, T)
+
+  # List for the variable-specific inclusion probability matrix; the j-th element
+  # in the list is a n by p matrix corresponding to the k-th predictor;
+  # in this matrix, the l-th row corresponds to the dependence structure for the
+  # l-th individual, with the j-th predictor fixed as the response
+  graph_list <- vector("list", p + 1)
+
+  # main loop over the predictors
+  for (resp_index in 1:(p + 1)) {
+
+    # Set variable number `resp_index` as the response
+    y <- data_mat[, resp_index]
+
+    # Set the remaining p variables as predictors
+    X_mat <- data_mat[, -resp_index]
+
+    # instantiate initial values of variational parameters and hyperparmeters
+    alpha_mat <- matrix(0.2, n, p) # argument?
+    sigmabeta_sq <- 3 # argument?
+    sigmasq <- 1 # argument?
+    E <- rnorm(n, 0, sigmasq) # removing this causes discrepency in discrete case
+    # dont delete S_sq <- matrix(sigmasq * (DXtX + 1 / sigmabeta_sq)^(-1), n, p) # should be byrow = T?
+    S_sq <- t(sigmasq * (t(X_mat^2) + 1 / sigmabeta_sq)^(-1))
+    mu_mat <- matrix(0, n, p, byrow = TRUE) # argument?
+
+    # Setting hyperparameter values for sigmasq and the probability of inclusion
+    # according to the Carbonetto Stephens model
+    idmod <- varbvs::varbvs(X_mat, y, Z = Z[, 1], verbose = FALSE)
+    sigmasq <- mean(idmod$sigma)
+    pi_est <- mean(1 / (1 + exp(-idmod$logodds)))
+
+    # loop to optimize sigma; for each value of sigma in sigmavec, store the
+    # resulting ELBO
+    elbo_sigma <- sigma_loop_c_(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmavec,
+                               pi_est, tolerance, max_iter)
+
+    # Select the value of sigma_beta that maximizes the ELBO
+    sigmabeta_sq <- sigmavec[which.max(elbo_sigma)]
+
+    # fit another model using this value of sigma_beta
+    result <- cov_vsvb_c_(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
+                         pi_est, tolerance, max_iter)
+
+    # n by p matrix; the i,j-th entry is the probability of inclusion for the
+    # i-th individual for the j-th variable according to the regression on y
+    graph_list[[resp_index]] <- result$var.alpha
+  }
+
+  # stop timer and see how much time has elapsed
+  end_time <- Sys.time()
+  if (print_time) print(end_time - start_time)
+
+  return(graph_list)
+}
+```
+
+```{r}
+n <- 100; p <- 10
+
+for (j in 1:5){
+  n_j <- n * j; p_j <- p * j;
+  set.seed(1)
+  X <- mvtnorm::rmvnorm(n_j, rep(0, p_j), diag(p_j))
+  Z <- matrix(rnorm(n_j))
+  print(paste0("n: ", n_j))
+  print(paste0("p: ", p_j))
+  print(microbenchmark::microbenchmark(covdepGE1(X, Z), covdepGE::covdepGE(X, Z, print_time = T), times = 5))
+  cat("\n\n")
+}
+```

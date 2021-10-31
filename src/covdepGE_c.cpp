@@ -285,7 +285,7 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 // -----------------------------RETURNS-----------------------------------------
 // vector of n_sigma ELBOs
 // _____________________________________________________________________________
-// [[Rcpp::export]]
+//[[Rcpp::export]]
 arma::colvec sigma_loop_c(const arma::colvec& y, const arma::mat& D,
                           const arma::mat& X_mat, const arma::mat& mu_mat,
                           const arma::mat& alpha_mat, double sigmasq,

@@ -354,5 +354,43 @@ ELBO_calculator <- function(y, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi
 
 ELBO_calculator(y, X_mat, S_sq[i, ], mu_mat[i, ], alpha_mat[i, ], sigmasq, sigmabeta_sq, pi_est, D[, i], n, p)
 
+#-------------------------------------------------------------------------------
+#-------------------From p alpha matrices to n graphs---------------------------
+#-------------------------------------------------------------------------------
 
-# modified calculation
+n <- 4
+p <- 2
+edge_threshold <- 0.5
+set.seed(1)
+X <- mvtnorm::rmvnorm(n, rep(0, p + 1))
+Z <- matrix(rnorm(n))
+out <- covdepGE::covdepGE(X, Z) # returns p (n x p - 1) matrices
+# the l, k entry of the j-th matrix is the probability of an edge between
+# the j,k variables for the l-th individual
+
+# create n p + 1 by p + 1 matrices
+# the j, k entry in the l-th matrix is the probability of an inclusion of an edge
+# between the j, k variables for the l-th individual
+incl_probs <- replicate(n, matrix(0, p + 1, p + 1), simplify = F)
+
+# iterate over the p matrices
+for (j in 1:(p + 1)){
+  alpha_mat_j <- out[[j]]
+
+  # iterate over the rows of alpha_mat_j
+  for (l in 1:n){
+
+    # the j-th row of the l-th individual's graph is the l-th row of
+    # alpha_mat_j with a 0 in the j-th position
+    incl_probs[[l]][j, -j] <- alpha_mat_j[l,]
+  }
+}
+
+# symmetrize the inclusion matrices
+# microbenchmark::microbenchmark(lapply(incl_probs, function(mat) (mat + t(mat)) / 2),
+#                                for (l in 1:n) (incl_probs[[l]] + t(incl_probs[[l]])) / 2)
+incl_probs <- lapply(incl_probs, function(mat) (mat + t(mat)) / 2)
+
+# if the probability of an edge is greater than edge_threshold, denote an
+# edge by a 1; otherwise, 0
+graphs <- lapply(incl_probs, function(mat) ifelse(mat > edge_threshold, 1, 0))
