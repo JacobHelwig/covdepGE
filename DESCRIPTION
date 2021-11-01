@@ -16,4 +16,5 @@ LinkingTo:
     RcppArmadillo
 Imports: 
     varbvs,
+    Rcpp,
     stats

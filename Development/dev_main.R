@@ -1,8 +1,6 @@
 setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development")
 rm(list = ls())
-library(Rcpp)
 source("generate_data.R")
-sourceCpp("c_dev.cpp")
 
 ## _____________________________________________________________________________
 ## _____________________________covdepGE________________________________________
@@ -152,8 +150,14 @@ if (discrete_data) {
 
 data_mat <- dat$data
 Z.cov <- dat$covts
-out <- covdepGE1(data_mat, Z.cov, tau_, print_time = T)
 
+package <- T # true if the package version is desired
+if (package){
+  out <- covdepGE::covdepGE(data_mat, Z.cov, tau_, print_time = T)
+}else{
+  Rcpp::sourceCpp("c_dev.cpp")
+  out <- covdepGE1(data_mat, Z.cov, tau_, print_time = T)
+}
 # check to see that this modified code produces the same results as the original code
 if (discrete_data){
   load("original_discrete_alpha_matrices.Rdata")

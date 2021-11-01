@@ -1,0 +1,54 @@
+---
+title: "covdepGE demo"
+date: "10/31/2021"
+output: pdf_document
+---
+
+```{r, include = F}
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 65), tidy = TRUE)
+```
+
+```{r}
+library(covdepGE)
+library(ggplot2)
+library(latex2exp)
+?covdepGE()
+source("generate_data.R") # script for generating the data for the discrete and 
+# continuous covariate model
+cont <- generate_continuous()
+disc <- generate_discrete()
+
+# apply to the discrete data 
+out.disc <- covdepGE(disc$data, disc$covts)
+
+# get the probabilities of inclusion
+incl.probs.disc <- out.disc$inclusion_probs
+
+# get the graphs
+graphs.disc <- out.disc$graphs
+
+# visualize the probabilities of inclusion for the first individual (covariate level 1)
+round(incl.probs1 <- incl.probs.disc[[1]], 2)
+
+(ggplot(reshape2::melt(incl.probs1), aes(x=Var1, y=Var2, fill=value)) + geom_tile(color = "brown") + scale_fill_gradient(low = "white", high = "steelblue", breaks = c(1, 0)) + labs(fill="Probability of Inclusion") + theme_classic() + xlab("Variable") + ylab("Variable") + scale_x_continuous(breaks = seq(1, ncol(disc$data), 2)) + scale_y_continuous(breaks = seq(1, ncol(disc$data), 2)) + ggtitle("Inclusion probability for covariate level 1") + theme(plot.title = element_text(hjust = 0.5)))
+
+# visualize the graph for the last individual (covariate level 2)
+(graph100 <- graphs.disc[[length(graphs.disc)]])
+
+(ggplot(reshape2::melt(graph100), aes(x=Var1, y=Var2, fill=value)) + geom_tile(color = "brown") + scale_fill_gradient(low = "white", high = "steelblue", breaks = c(1, 0)) + guides(fill=guide_legend(title="")) + theme_classic() + xlab("Variable") + ylab("Variable") + scale_x_continuous(breaks = seq(1, ncol(disc$data), 2)) + scale_y_continuous(breaks = seq(1, ncol(disc$data), 2)) + ggtitle("Graph for covariate level 2") + theme(plot.title = element_text(hjust = 0.5)))
+
+# apply to the continuous data
+out.cont <- covdepGE(cont$data, cont$covts)
+
+# get the continuous probabilities of inclusion 
+incl.probs.cont <- out.cont$inclusion_probs
+
+# get probabilities of inclusion for x_1 to x_2 and x_1 to x_3
+probs12 <- unlist(lapply(incl.probs.cont, function(x) x[1, 2]))
+probs13 <- unlist(lapply(out.cont$inclusion_probs, function(x) x[1, 3]))
+
+# visualize them
+(ggplot(data.frame(subj = 1:length(probs12), prob = probs12), aes(subj, prob)) + geom_line() + geom_point(color = "dodgerblue", fill = "white", shape = 21)  + theme_classic() + xlab("Subject Index") + ylab("Inclusion Probability") + ggtitle(TeX("Inclusion probability of an edge between $x_1$ and $x_2$")) + theme(plot.title = element_text(hjust = 0.5)))
+
+(ggplot(data.frame(subj = 1:length(probs13), prob = probs13), aes(subj, prob)) + geom_line() + geom_point(color = "tomato2", fill = "white", shape = 21)  + theme_classic() + xlab("Subject Index") + ylab("Inclusion Probability") + ggtitle(TeX("Inclusion probability of an edge between $x_1$ and $x_3$")) + theme(plot.title = element_text(hjust = 0.5)))
+```
