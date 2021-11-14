@@ -51,7 +51,7 @@ generate_continuous <- function(seed = 1){
 #-------------------FUNCTION TO GENERATE DISCRETE DATA--------------------------
 #-------------------------------------------------------------------------------
 
-generate_discrete <- function(seed = 1){
+generate_discrete <- function(seed = 1, same = T){
 
   set.seed(seed)
 
@@ -64,6 +64,7 @@ generate_discrete <- function(seed = 1){
 
   # Same lambda for both covariate levels, corresponds to covariate
   Lam2 <- Lam1
+  if (!same) Lam2 <- c(0, 0, 0, 0, rep(3, p - 3)) * 5
 
   # covariance matrix for covariate level 1
   Var1 <- solve(Lam1 %*% t(Lam1) + diag(rep(10, p + 1)))
@@ -89,6 +90,6 @@ generate_discrete <- function(seed = 1){
   X2 <- mvrnorm(n / 2, rep(0, p + 1), Var2)
   data_mat <- rbind(X1, X2)
 
-  return(list(data = data_mat, covts = Z))
+  return(list(data = data_mat, covts = Z, true_covariance = list(Var1, Var2)))
 
 }
