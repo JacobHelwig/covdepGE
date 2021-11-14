@@ -75,14 +75,11 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1,
     # Set the remaining p variables as predictors
     X_mat <- data_mat[, -resp_index]
 
-    # instantiate initial values of variational parameters and hyperparmeters
+    # instantiate initial values of variational parameters
     alpha_mat <- matrix(0.8, n, p) # argument?
-    sigmabeta_sq <- 3 # argument?
-    sigmasq <- 1 # argument?
-    E <- rnorm(n, 0, sigmasq) # removing this causes discrepency in discrete case
-    # dont delete S_sq <- matrix(sigmasq * (DXtX + 1 / sigmabeta_sq)^(-1), n, p) # should be byrow = T?
-    S_sq <- t(sigmasq * (t(X_mat^2) + 1 / sigmabeta_sq)^(-1))
     mu_mat <- matrix(0, n, p, byrow = TRUE) # argument?
+
+    E <- rnorm(n, 0, 1) # removing this causes discrepency in discrete case
 
     # Setting hyperparameter values for sigmasq and the probability of inclusion
     # according to the Carbonetto-Stephens model
@@ -154,7 +151,7 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1,
 }
 
 # generate data and covariates
-discrete_data <- T # true if discrete example is desired
+discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter
