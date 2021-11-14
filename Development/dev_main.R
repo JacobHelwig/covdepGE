@@ -23,6 +23,8 @@ source("generate_data.R")
 ## (approximates regression coefficients)
 ## sigmavec: candidate values of sigmabeta_sq
 ## pivec: candidate values of pi. If NULL, uses varsbvs to generate scaler pi
+## scale: boolean that dictates whether the extraneous covariates should be
+## centered and scaled prior to calculating the weights
 ## tolerance: end the variational update loop when the square root of the sum of
 ## squared changes to the elements of the alpha matrix are within tolerance
 ## max_iter: if the tolerance criteria has not been met by max_iter iterations,
@@ -32,7 +34,7 @@ source("generate_data.R")
 ## _____________________________________________________________________________
 covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
                       sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                      pi_vec = seq(0.1, 0.9, 0.1),
+                      pi_vec = seq(0.1, 0.9, 0.1), scale = T,
                       tolerance = 1e-9, max_iter = 100, edge_threshold = 0.5,
                       print_time = F){
 
@@ -40,6 +42,9 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
 
   # get sample size and number of parameters
   n <- nrow(data_mat); p <- ncol(data_mat) - 1
+
+  # if the covariates should be centered and scaled, do so
+  if (scale) Z <- matrix(scale(Z)[ , ], n)
 
   # D is a symmetric n by n matrix of weights; the i, j entry is the similarity
   # between individuals i and j
@@ -154,7 +159,7 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
 }
 
 # generate data and covariates
-discrete_data <- T # true if discrete example is desired
+discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter
@@ -168,12 +173,14 @@ Z.cov <- dat$covts
 
 package <- F # true if the package version is desired
 if (package){
-  out <- covdepGE::covdepGE(data_mat, Z.cov, tau_, print_time = T)
+  out <- covdepGE::covdepGE(data_mat, Z.cov, tau_, print_time = T,
+                            pi_vec = NULL, scale = discrete_data)
 }else{
   Rcpp::sourceCpp("c_dev.cpp")
-  out <- covdepGE1(data_mat, Z.cov, tau_, print_time = T, pi_vec = NULL)
+  out <- covdepGE1(data_mat, Z.cov, tau_, print_time = T, pi_vec = NULL,
+                   scale = discrete_data)
 }
-out$ELBO
+
 # check to see that this modified code produces the same results as the original code
 if (discrete_data){
   load("original_discrete_alpha_matrices.Rdata")
