@@ -17,6 +17,10 @@ source("generate_data.R")
 ## tau: bandwidth parameter; greater values allow for more information to be
 ## shared from other individuals when estimating the graph for a fixed
 ## individual. 0.1 by default.
+## alpha: global initialization value for the variational parameter alpha
+## (approximates probability of inclusion)
+## mu: global initialization value for the variational parameter mu
+## (approximates regression coefficients)
 ## sigmavec: candidate values of sigmabeta_sq
 ## pivec: candidate values of pi. If NULL, uses varsbvs to generate scaler pi
 ## tolerance: end the variational update loop when the square root of the sum of
@@ -26,7 +30,7 @@ source("generate_data.R")
 ## -----------------------------RETURNS-----------------------------------------
 ## TBD
 ## _____________________________________________________________________________
-covdepGE1 <- function(data_mat, Z, tau = 0.1,
+covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
                       sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
                       pi_vec = seq(0.1, 0.9, 0.1),
                       tolerance = 1e-9, max_iter = 100, edge_threshold = 0.5,
@@ -76,14 +80,14 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1,
     X_mat <- data_mat[, -resp_index]
 
     # instantiate initial values of variational parameters
-    alpha_mat <- matrix(0.8, n, p) # argument?
-    mu_mat <- matrix(0, n, p, byrow = TRUE) # argument?
+    alpha_mat <- matrix(alpha, n, p)
+    mu_mat <- matrix(mu, n, p)
 
     E <- rnorm(n, 0, 1) # removing this causes discrepency in discrete case
 
     # Setting hyperparameter values for sigmasq and the probability of inclusion
     # according to the Carbonetto-Stephens model
-    idmod <- varbvs::varbvs(X_mat, y, Z = Z[, 1], verbose = FALSE)
+    idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
     sigmasq <- mean(idmod$sigma)
     if (is.null(pi_vec)){
       pi_vec <- mean(1 / (1 + exp(-idmod$logodds)))
@@ -100,7 +104,7 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1,
     # Select the value of pi that maximizes the ELBO
     pi_est <- pi_vec[which(elbo_sigmaXpi == max(elbo_sigmaXpi), T)[,"col"]]
 
-    # fit another model using this value of sigma_beta
+    # fit another model using these values of sigma_beta and pi_est
     result <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
                          pi_est, tolerance, max_iter)
 
@@ -143,15 +147,14 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1,
   graphs <- lapply(incl_probs, function(mat) (mat > edge_threshold) * 1)
 
   # stop timer and see how much time has elapsed
-  end_time <- Sys.time()
-  if (print_time) print(end_time - start_time)
+  if (print_time) print(Sys.time() - start_time)
 
   return(list(graphs = graphs, inclusion_probs = incl_probs,
               alpha_matrices = alpha_matrices, ELBO = ELBO_p))
 }
 
 # generate data and covariates
-discrete_data <- F # true if discrete example is desired
+discrete_data <- T # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter
