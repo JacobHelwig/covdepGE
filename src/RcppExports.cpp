@@ -33,8 +33,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // sigma_loop_c
-arma::colvec sigma_loop_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X_mat, const arma::mat& mu_mat, const arma::mat& alpha_mat, double sigmasq, const arma::colvec& sigmabeta_sq_vec, double pi_est, double tolerance, int max_iter, double upper_limit);
-RcppExport SEXP _covdepGE_sigma_loop_c(SEXP ySEXP, SEXP DSEXP, SEXP X_matSEXP, SEXP mu_matSEXP, SEXP alpha_matSEXP, SEXP sigmasqSEXP, SEXP sigmabeta_sq_vecSEXP, SEXP pi_estSEXP, SEXP toleranceSEXP, SEXP max_iterSEXP, SEXP upper_limitSEXP) {
+arma::mat sigma_loop_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X_mat, const arma::mat& mu_mat, const arma::mat& alpha_mat, double sigmasq, const arma::colvec& sigmabeta_sq_vec, const arma::colvec& pi_vec, double tolerance, int max_iter, double upper_limit);
+RcppExport SEXP _covdepGE_sigma_loop_c(SEXP ySEXP, SEXP DSEXP, SEXP X_matSEXP, SEXP mu_matSEXP, SEXP alpha_matSEXP, SEXP sigmasqSEXP, SEXP sigmabeta_sq_vecSEXP, SEXP pi_vecSEXP, SEXP toleranceSEXP, SEXP max_iterSEXP, SEXP upper_limitSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -45,11 +45,11 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type alpha_mat(alpha_matSEXP);
     Rcpp::traits::input_parameter< double >::type sigmasq(sigmasqSEXP);
     Rcpp::traits::input_parameter< const arma::colvec& >::type sigmabeta_sq_vec(sigmabeta_sq_vecSEXP);
-    Rcpp::traits::input_parameter< double >::type pi_est(pi_estSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type pi_vec(pi_vecSEXP);
     Rcpp::traits::input_parameter< double >::type tolerance(toleranceSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
     Rcpp::traits::input_parameter< double >::type upper_limit(upper_limitSEXP);
-    rcpp_result_gen = Rcpp::wrap(sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq_vec, pi_est, tolerance, max_iter, upper_limit));
+    rcpp_result_gen = Rcpp::wrap(sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq_vec, pi_vec, tolerance, max_iter, upper_limit));
     return rcpp_result_gen;
 END_RCPP
 }

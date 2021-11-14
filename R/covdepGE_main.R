@@ -4,47 +4,65 @@
 ## -----------------------------DESCRIPTION-------------------------------------
 ## Function to estimate the covariance structure for n individuals using
 ## variational Bayes
-## Optimizes the spike and slab paramter sigma_beta_sq by choosing the value
-## for each predictor that maximizes the ELBO
+## Optimizes the spike and slab parameter sigma_beta_sq by choosing the value
+## for each predictor that maximizes the ELBO; can also optimize pi if candidate
+## values are specified
 ## -----------------------------ARGUMENTS---------------------------------------
 ## data_mat: n by p data matrix
 ## Z: n by p' matrix of extraneous covariates
 ## tau: bandwidth parameter; greater values allow for more information to be
 ## shared from other individuals when estimating the graph for a fixed
 ## individual. 0.1 by default.
+## alpha: global initialization value for the variational parameter alpha
+## (approximates probability of inclusion)
+## mu: global initialization value for the variational parameter mu
+## (approximates regression coefficients)
 ## sigmavec: candidate values of sigmabeta_sq
+## pivec: candidate values of pi. If NULL, uses varsbvs to generate scaler pi
+## scale: boolean that dictates whether the extraneous covariates should be
+## centered and scaled prior to calculating the weights
 ## tolerance: end the variational update loop when the square root of the sum of
 ## squared changes to the elements of the alpha matrix are within tolerance
 ## max_iter: if the tolerance criteria has not been met by max_iter iterations,
 ## end the variational update loop
-## edge_threshold: If the posterior inclusion probability is greater than edge_threshold, include a edge. 0.5 by default
 ## -----------------------------RETURNS-----------------------------------------
 ## TBD
+## -----------------------------TODO--------------------------------------------
+## 1. symmetrization method - mean, min, max
+## 2. norm - l2, l1, linf?
+## 3. Change alpha matrix return to return asymmetric inclusion probabilties
 ## _____________________________________________________________________________
-#' covdepGE
+#' Title
 #'
-#' @param data_mat n by p data matrix
-#' @param Z n by p' matrix of extraneous covariates
-#' @param tau bandwidth parameter; greater values allow for more information to be shared from other individuals when estimating the graph for a fixed individual. 0.1 by default.
-#' @param sigmavec candidate values of sigmabeta_sq
-#' @param tolerance end the variational update loop when the square root of the sum of squared changes to the elements of the alpha matrix are within tolerance. 1e-9 by default
-#' @param max_iter if the tolerance criteria has not been met by max_iter iterations, end the variational update loop. 100 by default
-#' @param edge_threshold if the posterior inclusion probability is greater than edge_threshold, include a edge. 0.5 by default
+#' @param data_mat
+#' @param Z
+#' @param tau
+#' @param alpha
+#' @param mu
+#' @param sigmavec
+#' @param pi_vec
+#' @param scale
+#' @param tolerance
+#' @param max_iter
+#' @param edge_threshold
 #' @param print_time
 #'
 #' @return
 #' @export
 #'
 #' @examples
-covdepGE <- function(data_mat, Z, tau = 0.1,
+covdepGE <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
                       sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                      tolerance = 1e-9, max_iter = 100, edge_threshold = 0.5,
-                      print_time = F){
+                      pi_vec = seq(0.1, 0.9, 0.1), scale = T, tolerance = 1e-9,
+                      max_iter = 100, edge_threshold = 0.5, print_time = F){
 
   start_time <- Sys.time()
 
   # get sample size and number of parameters
   n <- nrow(data_mat); p <- ncol(data_mat) - 1
+
+  # if the covariates should be centered and scaled, do so
+  if (scale) Z <- matrix(scale(Z)[ , ], n)
 
   # D is a symmetric n by n matrix of weights; the i, j entry is the similarity
   # between individuals i and j
@@ -71,6 +89,10 @@ covdepGE <- function(data_mat, Z, tau = 0.1,
   # predictor fixed as the response
   alpha_matrices <- vector("list", p + 1)
 
+  # List for saving the final ELBO for each of the p responses
+  ELBO_p <- vector("list", p + 1)
+  names(ELBO_p) <- paste("Response", 1:(p + 1))
+
   # main loop over the predictors
   for (resp_index in 1:(p + 1)) {
 
@@ -80,32 +102,38 @@ covdepGE <- function(data_mat, Z, tau = 0.1,
     # Set the remaining p variables as predictors
     X_mat <- data_mat[, -resp_index]
 
-    # instantiate initial values of variational parameters and hyperparmeters
-    alpha_mat <- matrix(0.2, n, p) # argument?
-    sigmabeta_sq <- 3 # argument?
-    sigmasq <- 1 # argument?
-    E <- rnorm(n, 0, sigmasq) # removing this causes discrepency in discrete case
-    # dont delete S_sq <- matrix(sigmasq * (DXtX + 1 / sigmabeta_sq)^(-1), n, p) # should be byrow = T?
-    S_sq <- t(sigmasq * (t(X_mat^2) + 1 / sigmabeta_sq)^(-1))
-    mu_mat <- matrix(0, n, p, byrow = TRUE) # argument?
+    # instantiate initial values of variational parameters
+    alpha_mat <- matrix(alpha, n, p)
+    mu_mat <- matrix(mu, n, p)
+
+    E <- rnorm(n, 0, 1) # removing this causes discrepency in discrete case
 
     # Setting hyperparameter values for sigmasq and the probability of inclusion
     # according to the Carbonetto-Stephens model
-    idmod <- varbvs::varbvs(X_mat, y, Z = Z[, 1], verbose = FALSE)
+    idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
     sigmasq <- mean(idmod$sigma)
-    pi_est <- mean(1 / (1 + exp(-idmod$logodds)))
+    if (is.null(pi_vec)){
+      pi_vec <- mean(1 / (1 + exp(-idmod$logodds))) # need to convert to log base 10
+    }
 
-    # loop to optimize sigma; for each value of sigma in sigmavec, store the
-    # resulting ELBO
-    elbo_sigma <- sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmavec,
-                                pi_est, tolerance, max_iter)
+    # loop to optimize sigma; for each pair of candidate values of sigma in
+    # sigmavec, pi in pi_vec, store the resulting ELBO
+    elbo_sigmaXpi <- sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
+                                  sigmavec, pi_vec, tolerance, max_iter)
 
     # Select the value of sigma_beta that maximizes the ELBO
-    sigmabeta_sq <- sigmavec[which.max(elbo_sigma)]
+    sigmabeta_sq <- sigmavec[which(elbo_sigmaXpi == max(elbo_sigmaXpi), T)[,"row"]]
 
-    # fit another model using this value of sigma_beta
+    # Select the value of pi that maximizes the ELBO
+    pi_est <- pi_vec[which(elbo_sigmaXpi == max(elbo_sigmaXpi), T)[,"col"]]
+
+    # fit another model using these values of sigma_beta and pi_est
     result <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
-                          pi_est, tolerance, max_iter)
+                         pi_est, tolerance, max_iter)
+
+    # save the final ELBO
+    ELBO_p[[resp_index]] <- list("sigma^2_beta" = sigmabeta_sq, "pi" = pi_est,
+                                 "ELBO" = result$var.elbo)
 
     # var.alpha is an n by p matrix; the i,j-th entry is the probability of
     # inclusion for the i-th individual for the j-th variable according to the
@@ -135,6 +163,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1,
   }
 
   # symmetrize the inclusion matrices
+  incl_probs_asym <- incl_probs # return this instead of the alpha matrices
   incl_probs <- lapply(incl_probs, function(mat) (mat + t(mat)) / 2)
 
   # if the probability of an edge is greater than edge_threshold, denote an
@@ -142,9 +171,8 @@ covdepGE <- function(data_mat, Z, tau = 0.1,
   graphs <- lapply(incl_probs, function(mat) (mat > edge_threshold) * 1)
 
   # stop timer and see how much time has elapsed
-  end_time <- Sys.time()
-  if (print_time) print(end_time - start_time)
+  if (print_time) print(Sys.time() - start_time)
 
   return(list(graphs = graphs, inclusion_probs = incl_probs,
-              alpha_matrices = alpha_matrices))
+              alpha_matrices = alpha_matrices, ELBO = ELBO_p))
 }

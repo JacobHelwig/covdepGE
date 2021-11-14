@@ -31,12 +31,15 @@ source("generate_data.R")
 ## end the variational update loop
 ## -----------------------------RETURNS-----------------------------------------
 ## TBD
+## -----------------------------TODO--------------------------------------------
+## 1. symmetrization method - mean, min, max
+## 2. norm - l2, l1, linf?
+## 3. Change alpha matrix return to return asymmetric inclusion probabilties
 ## _____________________________________________________________________________
 covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
                       sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                      pi_vec = seq(0.1, 0.9, 0.1), scale = T,
-                      tolerance = 1e-9, max_iter = 100, edge_threshold = 0.5,
-                      print_time = F){
+                      pi_vec = seq(0.1, 0.9, 0.1), scale = T, tolerance = 1e-9,
+                      max_iter = 100, edge_threshold = 0.5, print_time = F){
 
   start_time <- Sys.time()
 
@@ -95,7 +98,7 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
     idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
     sigmasq <- mean(idmod$sigma)
     if (is.null(pi_vec)){
-      pi_vec <- mean(1 / (1 + exp(-idmod$logodds)))
+      pi_vec <- mean(1 / (1 + exp(-idmod$logodds))) # need to convert to log base 10
     }
 
     # loop to optimize sigma; for each pair of candidate values of sigma in
@@ -145,6 +148,7 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
   }
 
   # symmetrize the inclusion matrices
+  incl_probs_asym <- incl_probs # return this instead of the alpha matrices
   incl_probs <- lapply(incl_probs, function(mat) (mat + t(mat)) / 2)
 
   # if the probability of an edge is greater than edge_threshold, denote an
@@ -171,7 +175,7 @@ if (discrete_data) {
 data_mat <- dat$data
 Z.cov <- dat$covts
 
-package <- F # true if the package version is desired
+package <- T # true if the package version is desired
 if (package){
   out <- covdepGE::covdepGE(data_mat, Z.cov, tau_, print_time = T,
                             pi_vec = NULL, scale = discrete_data)
@@ -209,41 +213,3 @@ for (j in 1:length(out$inclusion_probs)) {
   }
 }
 same_probs
-
-## History (continuous data):
-# Original:
-# Time difference of 23.49625 secs
-# Time difference of 23.76863 secs
-# Modified the s_update:
-# Time difference of 16.98189 secs
-# Time difference of 15.27206 secs
-# Modified the mu update:
-# Time difference of 14.16393 secs
-# Time difference of 14.3205 secs
-# Modified the alpha_update:
-# Time difference of 11.38467 secs
-# Time difference of 11.68092 secs
-# Re-organization (removing unnecessary variables)
-# Time difference of 10.42546 secs
-# Time difference of 10.87398 secs
-# ELBO calculation in C++
-# Time difference of 9.042475 secs
-# Time difference of 9.159554 secs
-# Mu update in C++
-# Time difference of 4.533927 secs
-# Time difference of 4.517517 secs
-# Alpha update in C++
-# Time difference of 4.118175 secs
-# Time difference of 4.188726 secs
-# Move ELBO calculation outside the variational update loop
-# Time difference of 2.080118 secs
-# Time difference of 1.93863 secs
-# Variational update loop (cov_vsvb function) to C++
-# Time difference of 1.907178 secs
-# Time difference of 1.922939 secs
-# Sigma loop to C++
-# Time difference of 1.895749 secs
-# Time difference of 1.865739 secs
-# Modified calculation of weights
-# Time difference of 1.521307 secs
-# Time difference of 1.511709 secs

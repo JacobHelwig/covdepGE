@@ -250,13 +250,13 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
   }
 
   // calculate ELBO across n individuals
-  double ELBO_LB = total_ELBO_c(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est);
+  double ELBO = total_ELBO_c(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est);
 
   // return matrices of variational parameters and the ELBO
   return(Rcpp::List::create(Rcpp::Named("var.alpha") = alpha,
                             Rcpp::Named("var.mu") = mu,
                             Rcpp::Named("var.S_sq") = S_sq,
-                            Rcpp::Named("var.elbo") = ELBO_LB));
+                            Rcpp::Named("var.elbo") = ELBO));
 }
 
 // _____________________________________________________________________________
@@ -274,9 +274,9 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 // mu_mat, alpha_mat: n by (p - 1) matrices of variational parameters; the l, k
 // entry is the k-th parameter for the l-th individual
 // sigmasq: scaler; spike and slab variance hyperparameter
-// sigmabeta_sq: n_sigma by 1 vector of spike-and-slab hyperparameter
+// sigmabeta_sq_vec: n_sigma by 1 vector of spike-and-slab hyperparameter
 // candidates
-// pi_est: spike and slab probability of inclusion
+// pi_vec: vector of candidate spike and slab probabilities of inclusion
 // tolerance: double; when the Square Root of the Sum of Squared changes in
 // the elements of alpha are within tolderance, stop iterating
 // max_iter: integer; maximum number of iterations
@@ -285,35 +285,41 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 // -----------------------------RETURNS-----------------------------------------
 // vector of n_sigma ELBOs
 // _____________________________________________________________________________
-//[[Rcpp::export]]
-arma::colvec sigma_loop_c(const arma::colvec& y, const arma::mat& D,
-                          const arma::mat& X_mat, const arma::mat& mu_mat,
-                          const arma::mat& alpha_mat, double sigmasq,
-                          const arma::colvec& sigmabeta_sq_vec, double pi_est,
-                          double tolerance = 1e-9, int max_iter = 100,
-                          double upper_limit = 9){
+// [[Rcpp::export]]
+arma::mat sigma_loop_c(const arma::colvec& y, const arma::mat& D,
+                       const arma::mat& X_mat, const arma::mat& mu_mat,
+                       const arma::mat& alpha_mat, double sigmasq,
+                       const arma::colvec& sigmabeta_sq_vec,
+                       const arma::colvec& pi_vec,
+                       double tolerance = 1e-9, int max_iter = 100,
+                       double upper_limit = 9){
 
   // get the number of sigmas that are being tried
-  int n_sigma = sigmabeta_sq_vec.n_rows;
+  int n_sigma = sigmabeta_sq_vec.n_elem;
 
-  // instantiate a vector for storing the ELBO corresponding to each sigma
-  arma::colvec elbo_sigma(n_sigma, arma::fill::zeros);
+  // get the number of pi's that are being tried
+  int n_pi = pi_vec.n_elem;
 
-  // store the ELBO of the estimated graphs for each sigma
+  // instantiate a matrix for storing the ELBO corresponding to each
+  // sigma, pi pair
+  arma::mat elbo_sigmaXpi(n_sigma, n_pi, arma::fill::zeros);
+
+  // store the ELBO of the estimated graphs for each sigma, pi pair
   double elbo_graph;
 
-  // loop over each of the sigmas, estimate n graphs for each sigma and
-  // record the total ELBO across these n graphs for each sigma
+  // for each sigma, pi pair, estimate n graphs and record the total ELBO
+  // summed across these n graphs
   for (int j = 0; j < n_sigma; j++){
+    for (int k = 0; k < n_pi; k++){
+      // get the ELBO for the graph
+      elbo_graph = cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
+                              sigmabeta_sq_vec(j), pi_vec(k), tolerance,
+                              max_iter, upper_limit)["var.elbo"];
 
-    // get the ELBO for the graph
-    elbo_graph = cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
-                            sigmabeta_sq_vec(j), pi_est, tolerance,
-                            max_iter, upper_limit)["var.elbo"];
-
-    // add the ELBO to the vector of ELBOs
-    elbo_sigma(j) = elbo_graph;
+      // add the ELBO to the matrix of ELBOs
+      elbo_sigmaXpi(j, k) = elbo_graph;
+    }
   }
 
-  return elbo_sigma;
+  return elbo_sigmaXpi;
 }

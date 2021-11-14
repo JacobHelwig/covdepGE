@@ -5,7 +5,7 @@ cov_vsvb_c <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi
     .Call(`_covdepGE_cov_vsvb_c`, y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi_est, tolerance, max_iter, upper_limit)
 }
 
-sigma_loop_c <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq_vec, pi_est, tolerance = 1e-9, max_iter = 100L, upper_limit = 9) {
-    .Call(`_covdepGE_sigma_loop_c`, y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq_vec, pi_est, tolerance, max_iter, upper_limit)
+sigma_loop_c <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq_vec, pi_vec, tolerance = 1e-9, max_iter = 100L, upper_limit = 9) {
+    .Call(`_covdepGE_sigma_loop_c`, y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq_vec, pi_vec, tolerance, max_iter, upper_limit)
 }
 
