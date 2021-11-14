@@ -8,16 +8,17 @@ source("generate_data.R")
 ## -----------------------------DESCRIPTION-------------------------------------
 ## Function to estimate the covariance structure for n individuals using
 ## variational Bayes
-## Optimizes the spike and slab paramter sigma_beta_sq by choosing the value
-## for each predictor that maximizes the ELBO
+## Optimizes the spike and slab parameter sigma_beta_sq by choosing the value
+## for each predictor that maximizes the ELBO; can also optimize pi if candidate
+## values are specified
 ## -----------------------------ARGUMENTS---------------------------------------
 ## data_mat: n by p data matrix
 ## Z: n by p' matrix of extraneous covariates
 ## tau: bandwidth parameter; greater values allow for more information to be
 ## shared from other individuals when estimating the graph for a fixed
 ## individual. 0.1 by default.
-## default
 ## sigmavec: candidate values of sigmabeta_sq
+## pivec: candidate values of pi. If NULL, uses varsbvs to generate scaler pi
 ## tolerance: end the variational update loop when the square root of the sum of
 ## squared changes to the elements of the alpha matrix are within tolerance
 ## max_iter: if the tolerance criteria has not been met by max_iter iterations,
@@ -27,6 +28,7 @@ source("generate_data.R")
 ## _____________________________________________________________________________
 covdepGE1 <- function(data_mat, Z, tau = 0.1,
                       sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
+                      pi_vec = seq(0.1, 0.9, 0.1),
                       tolerance = 1e-9, max_iter = 100, edge_threshold = 0.5,
                       print_time = F){
 
@@ -60,6 +62,10 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1,
   # predictor fixed as the response
   alpha_matrices <- vector("list", p + 1)
 
+  # List for saving the final ELBO for each of the p responses
+  ELBO_p <- vector("list", p + 1)
+  names(ELBO_p) <- paste("Response", 1:(p + 1))
+
   # main loop over the predictors
   for (resp_index in 1:(p + 1)) {
 
@@ -70,7 +76,7 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1,
     X_mat <- data_mat[, -resp_index]
 
     # instantiate initial values of variational parameters and hyperparmeters
-    alpha_mat <- matrix(0.2, n, p) # argument?
+    alpha_mat <- matrix(0.8, n, p) # argument?
     sigmabeta_sq <- 3 # argument?
     sigmasq <- 1 # argument?
     E <- rnorm(n, 0, sigmasq) # removing this causes discrepency in discrete case
@@ -82,19 +88,28 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1,
     # according to the Carbonetto-Stephens model
     idmod <- varbvs::varbvs(X_mat, y, Z = Z[, 1], verbose = FALSE)
     sigmasq <- mean(idmod$sigma)
-    pi_est <- mean(1 / (1 + exp(-idmod$logodds)))
+    if (is.null(pi_vec)){
+      pi_vec <- mean(1 / (1 + exp(-idmod$logodds)))
+    }
 
-    # loop to optimize sigma; for each value of sigma in sigmavec, store the
-    # resulting ELBO
-    elbo_sigma <- sigma_loop_c_(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmavec,
-                                pi_est, tolerance, max_iter)
+    # loop to optimize sigma; for each pair of candidate values of sigma in
+    # sigmavec, pi in pi_vec, store the resulting ELBO
+    elbo_sigmaXpi <- sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
+                                  sigmavec, pi_vec, tolerance, max_iter)
 
     # Select the value of sigma_beta that maximizes the ELBO
-    sigmabeta_sq <- sigmavec[which.max(elbo_sigma)]
+    sigmabeta_sq <- sigmavec[which(elbo_sigmaXpi == max(elbo_sigmaXpi), T)[,"row"]]
+
+    # Select the value of pi that maximizes the ELBO
+    pi_est <- pi_vec[which(elbo_sigmaXpi == max(elbo_sigmaXpi), T)[,"col"]]
 
     # fit another model using this value of sigma_beta
-    result <- cov_vsvb_c_(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
-                          pi_est, tolerance, max_iter)
+    result <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
+                         pi_est, tolerance, max_iter)
+
+    # save the final ELBO
+    ELBO_p[[resp_index]] <- list("sigma^2_beta" = sigmabeta_sq, "pi" = pi_est,
+                                 "ELBO" = result$var.elbo)
 
     # var.alpha is an n by p matrix; the i,j-th entry is the probability of
     # inclusion for the i-th individual for the j-th variable according to the
@@ -135,11 +150,11 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1,
   if (print_time) print(end_time - start_time)
 
   return(list(graphs = graphs, inclusion_probs = incl_probs,
-              alpha_matrices = alpha_matrices))
+              alpha_matrices = alpha_matrices, ELBO = ELBO_p))
 }
 
 # generate data and covariates
-discrete_data <- F # true if discrete example is desired
+discrete_data <- T # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter
@@ -151,13 +166,14 @@ if (discrete_data) {
 data_mat <- dat$data
 Z.cov <- dat$covts
 
-package <- T # true if the package version is desired
+package <- F # true if the package version is desired
 if (package){
   out <- covdepGE::covdepGE(data_mat, Z.cov, tau_, print_time = T)
 }else{
   Rcpp::sourceCpp("c_dev.cpp")
-  out <- covdepGE1(data_mat, Z.cov, tau_, print_time = T)
+  out <- covdepGE1(data_mat, Z.cov, tau_, print_time = T, pi_vec = NULL)
 }
+out$ELBO
 # check to see that this modified code produces the same results as the original code
 if (discrete_data){
   load("original_discrete_alpha_matrices.Rdata")
