@@ -1,0 +1,77 @@
+\documentclass[12pt]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{amsfonts} % for using mathbb
+\usepackage{amsmath} 
+\usepackage{setspace}
+\usepackage{amsbsy}
+\usepackage{bbm}
+\usepackage{xcolor} % for coloring text
+\usepackage{hyperref} % for inserting hyper links
+\definecolor{blu}{RGB}{17, 112, 195}
+
+
+\setstretch{1.25}
+\setlength\parindent{25pt} % sets indent to zero
+%\setlength{\parskip}{2cm} % changes vertical space between paragraphs
+
+%<!-- real numbers--> 
+\newcommand{\R}{\mathbb{R}}
+%<!--big ()--> 
+\newcommand{\lr}[1]{\left(#1\right)}
+\newcommand{\norm}[2]{\mathcal{N}\lr{#1,#2}}
+%<!-- Bold X>
+\newcommand{\X}{\pmb{X}}
+
+
+\begin{document}
+
+\section{\texttt{covdepGE:} Covariate Dependent Graph Estimation}
+\subsection{Overview}
+
+Suppose $\X\in \R^{n\times p}$ is a data matrix of independent observations $\X = \lr{\pmb{x}_1,..., \pmb{x}_p}$, where, for $j\in1,...,p$:
+
+\begin{equation}
+\pmb{x}_j\sim\norm{\mu_j}{\Sigma_{j,j}}, \pmb x_j\in \R^n\hspace{2cm}\X\sim\norm\mu\Sigma
+\end{equation}
+
+Let $\pmb{Z}$ be an $n\times p'$ matrix of extraneous covariates. The conditional dependence structure of $\pmb{x_1},...,\pmb{x_p}$ can be modeled as an undirected graph $\mathcal{G}$ such that:
+
+\begin{equation}
+\mathcal G_{i,j} = 
+\begin{cases}
+	1 & \iff \mathrm{Cov}(\pmb{x_i}, \pmb{x_j})\neq 0 
+	\\
+	0 & \textrm{otherwise} 
+\end{cases}
+\end{equation}
+
+ That is, there is an edge between the $\pmb{x_i}$ and $\pmb{x_j}$ nodes if, and only if, these variables are dependent on each other given all other variables.
+ 
+ Further suppose that the conditional dependence structure of $\X$ is not homogeneous across the individuals, and is instead a continuous function of the extraneous covariates $\pmb Z$\cite{covDepGM}. Then, this methodology aims to estimate a graph for each of the individuals, possibly unique to the individual, such that similar estimates are made for those who are similar to one another in terms of the extraneous covariates. 
+ 
+ For an example application, see \cite{covDepGM}, wherein the sample was composed of healthy and cancerous individuals, $\pmb x_1,...,\pmb x_8$ were protein expression levels of 8 genes, and $\pmb Z$ was the copy number variation of a gene $\pmb z$ associated with cancer, $\pmb z\not\in \{\pmb x_1,...,\pmb x_8\}$. 
+
+\subsection{Functionality}
+
+The main function, \texttt{covdepGE::covdepGE(}$\pmb X,\pmb Z$\texttt{)}, estimates the posterior distribution of the graphical structure $\mathcal G_l$ for each of the $n$ individuals using a variational mean-field approximation. The function will output $n$ $p\times p$ symmetric matrices $\mathcal{A}_l$, where ${\mathcal{A}_{i,j}^{(l)}}$ is the posterior inclusion probability of an edge between the node representing the $i$-th variable and the node representing the $j$-th variable. 
+
+\subsection{To-do}
+
+\begin{itemize}
+\item Implement KDE to obtain individual specific bandwidths. Currently, only one global bandwidth is used, and it requires that the user specify it (or use the default, deterministic value). This modification will estimate a unique bandwidth for each individual dependent on the empirical density of $\pmb Z$ resulting from KDE.
+\item Create a vignette demonstrating usage on a simple simulated dataset.
+\item Parallelization of the ``main loop'' over the predictors in \texttt{covdepGE\_main.R}). This is complicated by the \texttt{C++} code, however, two potential solutions are:
+	\begin{itemize}
+		\item \textcolor{blu}{\href{https://stackoverflow.com/questions/69789634/parallelization-of-rcpp-without-inline-creating-a-local-package?noredirect=1\#comment123649680_69789634}{StackOverflow suggestion}}
+		\item \textcolor{blu}{\href{https://cran.r-project.org/web/packages/RcppParallel/index.html}{RcppParallel}}
+	\end{itemize}
+	This is a finishing touch and \textbf{likely will not be implemented in the package by the end of the semester.}
+
+\end{itemize}
+
+
+\begin{thebibliography}{1}
+\bibitem{covDepGM} Dasgupta, Sutanoy, et al. ``An approximate Bayesian approach to covariate dependent graphical modeling." 2021
+\end{thebibliography}
+
+\end{document}
