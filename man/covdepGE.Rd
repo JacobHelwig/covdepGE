@@ -2,13 +2,17 @@
 % Please edit documentation in R/covdepGE_main.R
 \name{covdepGE}
 \alias{covdepGE}
-\title{covdepGE}
+\title{Title}
 \usage{
 covdepGE(
   data_mat,
   Z,
   tau = 0.1,
+  alpha = 0.2,
+  mu = 0,
   sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
+  pi_vec = seq(0.1, 0.9, 0.1),
+  scale = T,
   tolerance = 1e-09,
   max_iter = 100,
   edge_threshold = 0.5,
@@ -16,25 +20,11 @@ covdepGE(
 )
 }
 \arguments{
-\item{data_mat}{n by p data matrix}
-
-\item{Z}{n by p' matrix of extraneous covariates}
-
-\item{tau}{bandwidth parameter; greater values allow for more information to be shared from other individuals when estimating the graph for a fixed individual. 0.1 by default.}
-
-\item{sigmavec}{candidate values of sigmabeta_sq}
-
-\item{tolerance}{end the variational update loop when the square root of the sum of squared changes to the elements of the alpha matrix are within tolerance. 1e-9 by default}
-
-\item{max_iter}{if the tolerance criteria has not been met by max_iter iterations, end the variational update loop. 100 by default}
-
-\item{edge_threshold}{if the posterior inclusion probability is greater than edge_threshold, include a edge. 0.5 by default}
-
 \item{print_time}{}
 }
 \value{
 
 }
 \description{
-covdepGE
+Title
 }

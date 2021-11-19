@@ -1,12 +1,13 @@
 Package: covdepGE
-Title: What the Package Does (One Line, Title Case)
+Title: Covariate Dependent Graph Estimation
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"),
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+    c(person("Jacob", "Helwig", email = "jacob.a.helwig@stat.tamu.edu", role = c("cre", "aut")), 
+    person("Sutanoy", "Dasgupta", email = "sutanoy@stat.tamu.edu", role = c("aut")), 
+    person("Debdeep", "Pati", email = "debdeep@stat.tamu.edu", role = c("aut")), 
+    person("Patrick", "Ding", email = "patrickding@stat.tamu.edu", role = c("aut")))
+Description: For a n by p data matrix of independent observations, X, and a n by p′ matrix of extraneous covariates, Z. The conditional dependence structure of X can be modeled as an undirected graph G such that there is an edge between the two variables if, and only if, these variables are dependent on each other given all other variables. Further suppose that the conditional dependence structure of X is not homogeneous across the individuals, and is instead a continuous function of the extraneous covariates Z. Then, this methodology aims to estimate a graph for each of the individuals, possibly unique to the individual, such that similar estimates are made for those who are similar to one another in terms of the extraneous covariates
+License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
