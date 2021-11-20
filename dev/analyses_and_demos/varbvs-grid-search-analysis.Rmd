@@ -1,5 +1,5 @@
 ---
-title: "grid-analysis"
+title: "varbvs-grid-search-analysis"
 output: pdf_document
 ---
 
@@ -11,49 +11,70 @@ knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 65), tidy = TRUE)
 library(covdepGE)
 library(ggplot2)
 library(latex2exp)
+library(varbvs)
 setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
 source("generate_data.R") 
 
 # number of trials
-trials <- 100
+trials <- 5
 
-# get data
-cont <- generate_continuous()
-
-n <- nrow(cont$data)
+# number of individuals
+n <- nrow(generate_continuous()$data)
 
 # matrices for storing inclusion probabilities
 prob_mat12 <- matrix(NA, trials, n) 
 prob_mat13 <- matrix(NA, trials, n) 
+
+# generate the pi-grid using CS
+
+# generate the data
+cont <- generate_continuous()
+
+data_mat <- cont$data
+X <- data_mat[ , -1]
+y <- data_mat[ , 1]
+Z <- cont$covts
+
+# use CS to get log-odds
+logit.CS <- varbvs(X = X, Z = NULL, y = y, verbose = F)$logodds
+
+# convert the log-odds to probabilities
+(probs.CS <- 1 / (1 + 10^-logit.CS))
 
 # matrix for storing optimal pi values
 pi_values <- matrix(NA, trials, 3)
 colnames(pi_values) <- paste("response", 1:3)
 rownames(pi_values) <- paste("trial", 1:trials)
 
+# generate the data "trials" times 
 for (j in 1:trials){
   
   # generate the data
   cont <- generate_continuous(seed = j)
   
+  data_mat <- cont$data
+  X <- data_mat[ , -1]
+  y <- data_mat[ , 1]
+  Z <- cont$covts
+
   # estimate the graphs
   out <- covdepGE(data_mat = cont$data,
                   Z = cont$covts,
                   tau = 0.56,
                   sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                  pi_vec = seq(from = 0.05, to = 0.95, by = 0.05))
-  
-  # get probabilities of inclusion 
+                  pi_vec = probs.CS)
+
+  # get probabilities of inclusion
   incl.probs <- out$inclusion_probs
-  
+
   # get continuous probabilities of inclusion for x_1 to x_2 and x_1 to x_3
   probs12 <- as.numeric(lapply(incl.probs, function(x) x[1, 2]))
   probs13 <- as.numeric(lapply(incl.probs, function(x) x[1, 3]))
-  
+
   # add them to the probs matrices
   prob_mat12[j, ] <- probs12
   prob_mat13[j, ] <- probs13
-  
+
   # save the optimal pi_values for each response
   pi_values[j, ] <- as.numeric(lapply(out$ELBO[paste("Response", 1:3)], `[[`, 2))
 }
@@ -85,16 +106,10 @@ for (j in 1:2){
 }
 
 # add the mean lines and display
-graphs12 + geom_line(data = data.frame(subj = 1:length(mean_probs12), prob = mean_probs12), aes(subj, prob)) + geom_point(data = data.frame(subj = 1:length(mean_probs12), prob = mean_probs12), color = "dodgerblue", fill = "white", shape = 21, aes(subj, prob))
+graphs12 + geom_line(data = data.frame(subj = 1:length(mean_probs12), prob = mean_probs12), aes(subj, prob)) + geom_point(data = data.frame(subj = 1:length(mean_probs12), prob = mean_probs12), color = "darkviolet", fill = "white", shape = 21, aes(subj, prob))
 
-graphs13 + geom_line(data = data.frame(subj = 1:length(mean_probs13), prob = mean_probs13), aes(subj, prob)) + geom_point(data = data.frame(subj = 1:length(mean_probs13), prob = mean_probs13), color = "forestgreen", fill = "white", shape = 21, aes(subj, prob))
+graphs13 + geom_line(data = data.frame(subj = 1:length(mean_probs13), prob = mean_probs13), aes(subj, prob)) + geom_point(data = data.frame(subj = 1:length(mean_probs13), prob = mean_probs13), color = "darkseagreen4", fill = "white", shape = 21, aes(subj, prob))
 
-# visualize the distribution of the optimal pi values
+# show optimal pi values
 pi_values
-
-ggplot(data.frame(pi = pi_values[ , "response 1"]), aes(pi)) + geom_histogram(binwidth = 0.05, fill = "dodgerblue3", color = "black") + theme_bw() + scale_x_continuous(breaks = seq(0, 1, 0.1)) + ggtitle(TeX("Distribution of optimal $\\pi$ for $x_1$")) + theme(plot.title = element_text(hjust = 0.5)) + xlab(TeX("$\\pi$"))
-
-ggplot(data.frame(pi = pi_values[ , "response 2"]), aes(pi)) + geom_histogram(binwidth = 0.05, fill = "tomato3", color = "black") + theme_bw() + scale_x_continuous(breaks = seq(0, 1, 0.1)) + ggtitle(TeX("Distribution of optimal $\\pi$ for $x_2$")) + theme(plot.title = element_text(hjust = 0.5)) + xlab(TeX("$\\pi$"))
-
-ggplot(data.frame(pi = pi_values[ , "response 3"]), aes(pi)) + geom_histogram(binwidth = 0.05, fill = "forestgreen", color = "black") + theme_bw() + scale_x_continuous(breaks = seq(0, 1, 0.1)) + ggtitle(TeX("Distribution of optimal $\\pi$ for $x_3$")) + theme(plot.title = element_text(hjust = 0.5)) + xlab(TeX("$\\pi$"))
 ```

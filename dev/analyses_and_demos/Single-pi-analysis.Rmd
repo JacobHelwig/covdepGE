@@ -1,0 +1,106 @@
+---
+title: "Single-pi-analysis"
+output: pdf_document
+---
+
+```{r, include = F}
+knitr::opts_chunk$set(tidy.opts = list(width.cutoff = 65), tidy = TRUE)
+```
+
+```{r}
+library(covdepGE)
+library(ggplot2)
+library(latex2exp)
+library(varbvs)
+setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
+source("generate_data.R") 
+
+# number of trials
+trials <- 3
+
+# number of individuals
+n <- nrow(generate_continuous()$data)
+
+# matrices for storing inclusion probabilities
+prob_mat12 <- matrix(NA, trials, n) 
+prob_mat13 <- matrix(NA, trials, n) 
+
+# values of pi to try
+pi_vec <- seq(0.1, 0.9, 0.2)
+
+colors <- c("cadetblue", "aquamarine3", "chartreuse3", "chocolate", "coral3", "cornflowerblue", "brown3", "deepskyblue3", "darkorange3", "darkcyan", "darkslateblue", "darkslategray")
+
+length(colors)
+for (pi in pi_vec){
+  for (j in 1:trials){
+    
+    # generate the data
+    cont <- generate_continuous(seed = j)
+    
+    data_mat <- cont$data
+    X <- data_mat[ , -1]
+    y <- data_mat[ , 1]
+    Z <- cont$covts
+  
+    # estimate the graphs
+    out <- covdepGE(data_mat = cont$data,
+                    Z = cont$covts,
+                    tau = 0.56,
+                    sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
+                    pi_vec = pi)
+  
+    # get probabilities of inclusion
+    incl.probs <- out$inclusion_probs
+  
+    # get continuous probabilities of inclusion for x_1 to x_2 and x_1 to x_3
+    probs12 <- as.numeric(lapply(incl.probs, function(x) x[1, 2]))
+    probs13 <- as.numeric(lapply(incl.probs, function(x) x[1, 3]))
+  
+    # add them to the probs matrices
+    prob_mat12[j, ] <- probs12
+    prob_mat13[j, ] <- probs13
+  
+  }
+  
+  # get the mean probabilities for each individual
+  mean_probs12 <- colMeans(prob_mat12)
+  mean_probs13 <- colMeans(prob_mat13)
+  
+  # find the 5% and 95% quantiles
+  CI12 <- apply(prob_mat12, 2, quantile, c(0.05, 0.95))
+  CI13 <- apply(prob_mat13, 2, quantile, c(0.05, 0.95))
+  
+  # visualize them
+  graphs12 <- ggplot() + theme_classic() + xlab("Subject Index") + ylab("Inclusion Probability") + ggtitle(TeX(paste("Inclusion probability of an edge between $x_1$ and $x_2$, $\\pi = $", round(pi, 4)))) + theme(plot.title = element_text(hjust = 0.5))
+  
+  graphs13 <- ggplot() + theme_classic() + xlab("Subject Index") + ylab("Inclusion Probability") + ggtitle(TeX(paste("Inclusion probability of an edge between $x_1$ and $x_3$, $\\pi = $", round(pi, 4)))) + theme(plot.title = element_text(hjust = 0.5))
+  
+  # add each of the instances to the plot
+  for (j in 1:trials){
+    graphs12 <- graphs12 + geom_line(data = data.frame(subj = 1:length(mean_probs12), prob = prob_mat12[j, ]), color = "gray66", alpha = 0.2,  aes(subj, prob))
+    
+    graphs13 <- graphs13 + geom_line(data = data.frame(subj = 1:length(mean_probs13), prob = prob_mat13[j, ]), color = "gray66", alpha = 0.2,  aes(subj, prob))
+  }
+  
+  # add error bars to the plot
+  for (j in 1:2){
+    graphs12 <- graphs12 + geom_line(data = data.frame(subj = 1:length(mean_probs12), prob = CI12[j, ]), color = "tomato", linetype = "dotted", size = 0.75, aes(subj, prob))
+    graphs13 <- graphs13 + geom_line(data = data.frame(subj = 1:length(mean_probs13), prob = CI13[j, ]), color = "tomato", linetype = "dotted", size = 0.75, aes(subj, prob))
+  }
+  
+  # add the mean lines and display
+  
+  # select some random colors for plotting 
+  clr <- sample(colors, 2)
+  colors <- colors[-which(colors %in% clr)]
+  
+  graphs12 <- graphs12 + geom_line(data = data.frame(subj = 1:length(mean_probs12), prob = mean_probs12), aes(subj, prob)) + geom_point(data = data.frame(subj = 1:length(mean_probs12), prob = mean_probs12), color = clr[1], fill = "white", shape = 21, aes(subj, prob))
+  
+  print(graphs12)
+  
+  graphs13 <- graphs13 + geom_line(data = data.frame(subj = 1:length(mean_probs13), prob = mean_probs13), aes(subj, prob)) + geom_point(data = data.frame(subj = 1:length(mean_probs13), prob = mean_probs13), color = clr[2], fill = "white", shape = 21, aes(subj, prob))
+  
+  print(graphs13)
+}
+
+```
