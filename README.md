@@ -1,5 +1,11 @@
 # `covdepGE:` Covariate Dependent Graph Estimation
 
+## Installation
+
+Run the following in `R`:
+
+`devtools::install_github("JacobHelwig/covdepGE")`
+
 ## Overview
 
 Suppose **X** ∈ ℝ<sup>*n* × *p*</sup> is a data matrix of independent
@@ -26,12 +32,12 @@ dependent on each other given all other variables.
 
 Further suppose that the conditional dependence structure of **X** is
 not homogeneous across the individuals, and is instead a continuous
-function of the extraneous covariates **Z**. Then, this methodology aims
-to estimate a graph for each of the individuals, possibly unique to the
-individual, such that similar estimates are made for those who are
+function of the extraneous covariates **Z**(1). Then, this methodology
+aims to estimate a graph for each of the individuals, possibly unique to
+the individual, such that similar estimates are made for those who are
 similar to one another in terms of the extraneous covariates.
 
-For an example application, see , wherein the sample was composed of
+For an example application, see (1), wherein the sample was composed of
 healthy and cancerous individuals,
 **x**<sub>1</sub>, ..., **x**<sub>8</sub> were protein expression levels
 of 8 genes, and **Z** was the copy number variation of a gene **z**
@@ -56,6 +62,25 @@ the *i*-th variable and the node representing the *j*-th variable.
     modification will estimate a unique bandwidth for each individual
     dependent on the empirical density of **Z** resulting from KDE.
 
+-   Add `KDE` argument (boolean). Then, the argument `tau` is only used
+    when `KDE = F`
+
+-   Allow for user specification of a norm (`"1", "2", `or `"inf"`) and
+    symmetrization method (`"mean", "min", `or `"max"`)
+
+-   Allow for user specification of hyperparameter `sigmasq`
+
+-   Change default `Pi_est` to a scalar
+
+-   Implement automatic `sigmabeta_sq` grid generation via arguments
+    `varmax, varmin, n_sigma`
+
+-   Add warnings for when the optimal `sigmabeta_sq` is chosen at either
+    of the grid end points
+
+-   Change return type of `alpha_matrices` from a `list` of *p*
+    *n* × *p* matrices to a `list` of *n* *p* × *p* matrices
+
 -   Create a vignette demonstrating usage on a simple simulated dataset.
 
 -   Parallelization of the “main loop” over the predictors in
@@ -73,7 +98,7 @@ the *i*-th variable and the node representing the *j*-th variable.
 
 <div class="thebibliography">
 
-1 Dasgupta, Sutanoy, et al. “An approximate Bayesian approach to
+1 (1) Dasgupta, Sutanoy, et al. “An approximate Bayesian approach to
 covariate dependent graphical modeling." 2021
 
 </div>

@@ -22,10 +22,20 @@
 %<!-- Bold X>
 \newcommand{\X}{\pmb{X}}
 
+% to convert to github friendly MD
+% pandoc -s README.tex -o README.md -t gfm
+
 
 \begin{document}
 
 \section{\texttt{covdepGE:} Covariate Dependent Graph Estimation}
+
+\subsection{Installation}
+
+Run the following in \texttt{R}:
+
+\texttt{devtools::install\_github("JacobHelwig/covdepGE")}
+
 \subsection{Overview}
 
 Suppose $\X\in \R^{n\times p}$ is a data matrix of independent observations $\X = \lr{\pmb{x}_1,..., \pmb{x}_p}$, where, for $j\in1,...,p$:
@@ -47,9 +57,9 @@ Let $\pmb{Z}$ be an $n\times p'$ matrix of extraneous covariates. The conditiona
 
  That is, there is an edge between the $\pmb{x_i}$ and $\pmb{x_j}$ nodes if, and only if, these variables are dependent on each other given all other variables.
  
- Further suppose that the conditional dependence structure of $\X$ is not homogeneous across the individuals, and is instead a continuous function of the extraneous covariates $\pmb Z$\cite{covDepGM}. Then, this methodology aims to estimate a graph for each of the individuals, possibly unique to the individual, such that similar estimates are made for those who are similar to one another in terms of the extraneous covariates. 
+ Further suppose that the conditional dependence structure of $\X$ is not homogeneous across the individuals, and is instead a continuous function of the extraneous covariates $\pmb Z$\cite{covDepGM}(1). Then, this methodology aims to estimate a graph for each of the individuals, possibly unique to the individual, such that similar estimates are made for those who are similar to one another in terms of the extraneous covariates. 
  
- For an example application, see \cite{covDepGM}, wherein the sample was composed of healthy and cancerous individuals, $\pmb x_1,...,\pmb x_8$ were protein expression levels of 8 genes, and $\pmb Z$ was the copy number variation of a gene $\pmb z$ associated with cancer, $\pmb z\not\in \{\pmb x_1,...,\pmb x_8\}$. 
+ For an example application, see \cite{covDepGM}(1), wherein the sample was composed of healthy and cancerous individuals, $\pmb x_1,...,\pmb x_8$ were protein expression levels of 8 genes, and $\pmb Z$ was the copy number variation of a gene $\pmb z$ associated with cancer, $\pmb z\not\in \{\pmb x_1,...,\pmb x_8\}$. 
 
 \subsection{Functionality}
 
@@ -59,6 +69,14 @@ The main function, \texttt{covdepGE::covdepGE(}$\pmb X,\pmb Z$\texttt{)}, estima
 
 \begin{itemize}
 \item Implement KDE to obtain individual specific bandwidths. Currently, only one global bandwidth is used, and it requires that the user specify it (or use the default, deterministic value). This modification will estimate a unique bandwidth for each individual dependent on the empirical density of $\pmb Z$ resulting from KDE.
+\item Add \texttt{KDE} argument (boolean). Then, the argument \texttt{tau} is only used when \texttt{KDE = F}
+\item Allow for user specification of a norm (\texttt{"1", "2", }or \texttt{"inf"}) and symmetrization method (\texttt{"mean", "min", }or \texttt{"max"})
+\item Allow for user specification of hyperparameter \texttt{sigmasq}
+\item Change default \texttt{Pi\_est} to a scalar
+\item Implement automatic \texttt{sigmabeta\_sq} grid generation via arguments \texttt{varmax, varmin, n\_sigma}
+\item Add warnings for when the optimal \texttt{sigmabeta\_sq} is chosen at either of the grid end points
+
+\item Change return type of \texttt{alpha\_matrices} from a \texttt{list} of $p$ $n\times p$ matrices to a \texttt{list} of $n$ $p \times p$ matrices
 \item Create a vignette demonstrating usage on a simple simulated dataset.
 \item Parallelization of the ``main loop'' over the predictors in \texttt{covdepGE\_main.R}). This is complicated by the \texttt{C++} code, however, two potential solutions are:
 	\begin{itemize}
@@ -71,7 +89,7 @@ The main function, \texttt{covdepGE::covdepGE(}$\pmb X,\pmb Z$\texttt{)}, estima
 
 
 \begin{thebibliography}{1}
-\bibitem{covDepGM} Dasgupta, Sutanoy, et al. ``An approximate Bayesian approach to covariate dependent graphical modeling." 2021
+\bibitem{covDepGM} (1) Dasgupta, Sutanoy, et al. ``An approximate Bayesian approach to covariate dependent graphical modeling." 2021
 \end{thebibliography}
 
 \end{document}
