@@ -1,4 +1,4 @@
-setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/Development")
+setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
 rm(list = ls())
 source("generate_data.R")
 
@@ -175,7 +175,7 @@ if (discrete_data) {
 data_mat <- dat$data
 Z.cov <- dat$covts
 
-package <- T # true if the package version is desired
+package <- F # true if the package version is desired
 if (package){
   out <- covdepGE::covdepGE(data_mat, Z.cov, tau_, print_time = T,
                             pi_vec = NULL, scale = discrete_data)

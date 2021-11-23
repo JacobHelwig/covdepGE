@@ -56,27 +56,29 @@ the *i*-th variable and the node representing the *j*-th variable.
 
 ## To-do
 
--   Implement KDE to obtain individual specific bandwidths. Currently,
-    only one global bandwidth is used, and it requires that the user
-    specify it (or use the default, deterministic value). This
-    modification will estimate a unique bandwidth for each individual
-    dependent on the empirical density of **Z** resulting from KDE.
+-   Complete documentation
 
--   Add `KDE` argument (boolean). Then, the argument `tau` is only used
-    when `KDE = F`
+-   Add compatibility checks
 
--   Allow for user specification of a norm (`"1", "2", `or `"inf"`) and
-    symmetrization method (`"mean", "min", `or `"max"`)
+-   `ggplot2` wrappers for graph visualization
 
--   Allow for user specification of hyperparameter `sigmasq`
+-   Implement KDE to obtain individual specific bandwidths; add `KDE`
+    argument (boolean). Then, the argument `tau` is only used when
+    `KDE = F`
 
--   Change default `Pi_est` to a scalar
+-   Allow for user specification of a norm (`"1", "2", `or `"inf"`),
+    symmetrization method (`"mean", "min", `or `"max"`) and
+    hyperparameter `sigmasq`
+
+-   Change default `pi_est` to a scalar
 
 -   Implement automatic `sigmabeta_sq` grid generation via arguments
     `varmax, varmin, n_sigma`
 
--   Add warnings for when the optimal `sigmabeta_sq` is chosen at either
-    of the grid end points
+-   Add warnings for when the optimal `sigmabeta_sq` OR `pi_est` is
+    chosen at either of the grid end points; a `warning` argument for
+    when users would like to toggle off the warnings. Should only be
+    enabled when either `sigmabeta_sq` or `pi_est` is longer than 2.
 
 -   Change return type of `alpha_matrices` from a `list` of *p*
     *n* × *p* matrices to a `list` of *n* *p* × *p* matrices

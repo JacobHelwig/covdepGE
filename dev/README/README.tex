@@ -68,14 +68,14 @@ The main function, \texttt{covdepGE::covdepGE(}$\pmb X,\pmb Z$\texttt{)}, estima
 \subsection{To-do}
 
 \begin{itemize}
-\item Implement KDE to obtain individual specific bandwidths. Currently, only one global bandwidth is used, and it requires that the user specify it (or use the default, deterministic value). This modification will estimate a unique bandwidth for each individual dependent on the empirical density of $\pmb Z$ resulting from KDE.
-\item Add \texttt{KDE} argument (boolean). Then, the argument \texttt{tau} is only used when \texttt{KDE = F}
-\item Allow for user specification of a norm (\texttt{"1", "2", }or \texttt{"inf"}) and symmetrization method (\texttt{"mean", "min", }or \texttt{"max"})
-\item Allow for user specification of hyperparameter \texttt{sigmasq}
-\item Change default \texttt{Pi\_est} to a scalar
+\item Complete documentation 
+\item Add compatibility checks 
+\item \texttt{ggplot2} wrappers for graph visualization 
+\item Implement KDE to obtain individual specific bandwidths; add \texttt{KDE} argument (boolean). Then, the argument \texttt{tau} is only used when \texttt{KDE = F}
+\item Allow for user specification of a norm (\texttt{"1", "2", }or \texttt{"inf"}), symmetrization method (\texttt{"mean", "min", }or \texttt{"max"}) and hyperparameter \texttt{sigmasq}
+\item Change default \texttt{pi\_est} to a scalar
 \item Implement automatic \texttt{sigmabeta\_sq} grid generation via arguments \texttt{varmax, varmin, n\_sigma}
-\item Add warnings for when the optimal \texttt{sigmabeta\_sq} is chosen at either of the grid end points
-
+\item Add warnings for when the optimal \texttt{sigmabeta\_sq} OR \texttt{pi\_est} is chosen at either of the grid end points; a \texttt{warning} argument for when users would like to toggle off the warnings. Should only be enabled when either \texttt{sigmabeta\_sq} or \texttt{pi\_est} is longer than 2. 
 \item Change return type of \texttt{alpha\_matrices} from a \texttt{list} of $p$ $n\times p$ matrices to a \texttt{list} of $n$ $p \times p$ matrices
 \item Create a vignette demonstrating usage on a simple simulated dataset.
 \item Parallelization of the ``main loop'' over the predictors in \texttt{covdepGE\_main.R}). This is complicated by the \texttt{C++} code, however, two potential solutions are:

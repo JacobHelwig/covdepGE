@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.23 (MiKTeX 21.8) (preloaded format=pdflatex 2021.11.10)  20 NOV 2021 14:43
+This is pdfTeX, Version 3.141592653-2.6-1.40.23 (MiKTeX 21.8) (preloaded format=pdflatex 2021.11.10)  22 NOV 2021 18:53
 entering extended mode
 **./README.tex
 (README.tex
@@ -398,7 +398,14 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 [1
 
 {C:/Users/jacob/AppData/Local/MiKTeX/pdftex/config/pdftex.map}]
-Overfull \hbox (3.19624pt too wide) in paragraph at lines 76--77
+Overfull \hbox (3.47147pt too wide) in paragraph at lines 75--76
+[]\OT1/cmr/m/n/12 Allow for user spec-i-fi-ca-tion of a norm (\OT1/cmtt/m/n/12 
+"1", "2", \OT1/cmr/m/n/12 or \OT1/cmtt/m/n/12 "inf"\OT1/cmr/m/n/12 ), sym-metri
+za-tion method (\OT1/cmtt/m/n/12 "mean",
+ []
+
+
+Overfull \hbox (3.19624pt too wide) in paragraph at lines 77--78
 []\OT1/cmr/m/n/12 Implement au-to-matic \OT1/cmtt/m/n/12 sigmabeta[]sq \OT1/cmr
 /m/n/12 grid gen-er-a-tion via ar-gu-ments \OT1/cmtt/m/n/12 varmax, varmin, n[]
 sigma 
@@ -411,11 +418,11 @@ Package rerunfilecheck Info: File `README.out' has not changed.
 Here is how much of TeX's memory you used:
  9232 strings out of 478927
  136525 string characters out of 2852534
- 466229 words of memory out of 3000000
+ 465229 words of memory out of 3000000
  26970 multiletter control sequences out of 15000+600000
  410268 words of font info for 53 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 60i,10n,66p,531b,393s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 60i,10n,66p,531b,391s stack positions out of 5000i,500n,10000p,200000b,80000s
  <C:\Users\jacob\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcrm
 1200.pk><C:/Users/jacob/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfon
 ts/cm/cmbx12.pfb><C:/Users/jacob/AppData/Local/Programs/MiKTeX/fonts/type1/publ
@@ -429,7 +436,7 @@ cob/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/
 Users/jacob/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt12
 .pfb><C:/Users/jacob/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/
 symbols/msbm10.pfb>
-Output written on README.pdf (2 pages, 118942 bytes).
+Output written on README.pdf (2 pages, 119285 bytes).
 PDF statistics:
  101 PDF objects out of 1000 (max. 8388607)
  12 named destinations out of 1000 (max. 500000)
