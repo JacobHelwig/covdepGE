@@ -394,3 +394,19 @@ incl_probs <- lapply(incl_probs, function(mat) (mat + t(mat)) / 2)
 # if the probability of an edge is greater than edge_threshold, denote an
 # edge by a 1; otherwise, 0
 graphs <- lapply(incl_probs, function(mat) ifelse(mat > edge_threshold, 1, 0))
+
+#-------------------------------------------------------------------------------
+#-------------------------------Symmetrization----------------------------------
+#-------------------------------------------------------------------------------
+
+set.seed(1)
+A <- matrix(sample(1:25, 25), 5)
+A
+t(A)
+# pmax(A, t(A)) >= A
+# pmax(A, t(A)) >= t(A)
+pmax(A, t(A))
+
+# pmin(A, t(A)) <= A
+# pmin(A, t(A)) <= t(A)
+pmin(A, t(A))

@@ -35,7 +35,7 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0, sigmasq = 0.5
                       sigmabetasq_vec = NULL, var_min = 0.01, var_max = 10,
                       n_sigma = 8, pi_vec = 0.2, norm = 2, scale = T,
                       tolerance = 1e-9, max_iter = 100, edge_threshold = 0.5,
-                      print_time = F, CS = F){
+                      sym_method = "mean", print_time = F, CS = F){
 
   start_time <- Sys.time()
 
@@ -162,23 +162,37 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0, sigmasq = 0.5
     }
   }
 
-  # symmetrize the inclusion matrices
-  incl_probs_asym <- incl_probs # return this instead of the alpha matrices
-  incl_probs <- lapply(incl_probs, function(mat) (mat + t(mat)) / 2)
+  # save the asymmetric matrices
+  incl_probs_asym <- incl_probs
 
-  # if the probability of an edge is greater than edge_threshold, denote an
-  # edge by a 1; otherwise, 0
+  # symmetrize the inclusion matrices according to the symmetrization method
+  if (sym_method == "mean"){
+
+    # take the mean of (i,j), (j,i) entries to symmetrize
+    incl_probs <- lapply(incl_probs, function(mat) (mat + t(mat)) / 2)
+  }else if (sym_method == "min"){
+
+    # take the min of (i,j), (j,i) entries to symmetrize
+    incl_probs <- lapply(incl_probs, function(mat) pmin(mat, t(mat)))
+  }else if (sym_method == "max"){
+
+    # take the max of (i,j), (j,i) entries to symmetrize
+    incl_probs <- lapply(incl_probs, function(mat) pmax(mat, t(mat)))
+  }
+
+  # using the symmetrized graphs, if the probability of an edge is greater than
+  # edge_threshold, denote an edge by 1; otherwise, 0
   graphs <- lapply(incl_probs, function(mat) (mat > edge_threshold) * 1)
 
   # stop timer and see how much time has elapsed
   if (print_time) print(Sys.time() - start_time)
 
   return(list(graphs = graphs, inclusion_probs = incl_probs,
-              alpha_matrices = alpha_matrices, ELBO = ELBO_p))
+              alpha_matrices = incl_probs_asym, ELBO = ELBO_p))
 }
 
 # generate data and covariates
-discrete_data <- T # true if discrete example is desired
+discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter
@@ -203,17 +217,16 @@ if (package){
 
 # check to see that this modified code produces the same results as the original code
 if (discrete_data){
-  load("original_discrete_alpha_matrices.Rdata")
-  load("original_discrete_graphs.Rdata")
+  load("out_original_discrete.Rdata")
 }else{
-  load("original_continuous_alpha_matrices.Rdata")
-  load("original_continuous_graphs.Rdata")
+  load("out_original_continuous.Rdata")
 }
 
 # check for equality between the alpha matrices
 same_alpha <- T
 for (j in 1:length(out$alpha_matrices)) {
-  if (all.equal(out$alpha_matrices[[j]], original_alpha_matrices[[j]]) != T) {
+  if (all.equal(out$alpha_matrices[[j]],
+                out_original$original_alpha_matrices[[j]]) != T) {
     same_alpha <- F
     break
   }
@@ -223,9 +236,13 @@ same_alpha
 # check for equality between the inclusion probabilities
 same_probs <- T
 for (j in 1:length(out$inclusion_probs)) {
-  if (all.equal(out$inclusion_probs[[j]], original_graphs[[j]]) != T) {
+  if (all.equal(out$inclusion_probs[[j]],
+                out_original$original_incl_probs[[j]]) != T) {
     same_probs <- F
     break
   }
 }
 same_probs
+
+# check for equality between ELBO
+all.equal(unname(unlist(lapply(out$ELBO, `[[`, 3))), out_original$original_ELBO)

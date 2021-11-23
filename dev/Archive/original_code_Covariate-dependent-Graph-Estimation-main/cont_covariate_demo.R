@@ -2,10 +2,13 @@
 # 1. Correct mupdate
 # 2. Set seed below
 # 3. Take the l2 norm instead of the spectral norm
-# 4. save the alpha matrices and the inclusion probability matrices
+# 4. Save the ELBO
+# 5. turn the alpha matrices into symmetric inclusion matrices
+# 6. save the alpha matrices, inclusion probability matrices, and ELBO
 
 set.seed(1)
 rm(list=ls())
+setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev/Archive/original_code_Covariate-dependent-Graph-Estimation-main")
 source("cov_vsvb.R")
 source("ELBO_calculator.R")
 library(Matrix)
@@ -33,6 +36,10 @@ Cfunc <- function(x)  x/2 - log(1+exp(x)) + x*tanh(x/2)/4
 ######### Data generation ############
 n <- 180
 p <- 4
+
+# for saving the ELBO
+ELBOs <- rep(NA, p + 1)
+
 MAXITER=1
 STR=1
 in_pr_13=matrix(0,MAXITER,n)
@@ -227,7 +234,7 @@ for(overiter in 1:MAXITER){
 
     }
     sigmabeta_sq=sigmavec[which.max(elb1)]
-
+    ELBOs[resp_index] <- max(elb1)
     result=cov_vsvb(y,X,Z,XtX,DXtX,Diff_mat,Xty,sigmasq, sigmabeta_sq,pi_est)
     incl_prob=result$var.alpha
     mu0_val=result$var.mu0_lambda
@@ -345,9 +352,35 @@ for(overiter in 1:MAXITER){
 
 }
 
-# save the original alpha matrices
-original_alpha_matrices <- mylist
-save(original_alpha_matrices, file = "original_continuous_alpha_matrices.Rdata")
+alpha_matrices <- mylist
+
+# Creating the graphs:
+# transform p + 1 n by n matrices to n p + 1 by p + 1 matrices using alpha_matrices
+# the j, k entry in the l-th matrix is the probability of inclusion of an edge
+# between the j, k variables for the l-th individual
+incl_probs <- replicate(n, matrix(0, p + 1, p + 1), simplify = F)
+
+# iterate over the p matrices
+for (j in 1:(p + 1)){
+
+  # fix the j-th alpha matrix
+  alpha_mat_j <- alpha_matrices[[j]]
+
+  # iterate over the rows of alpha_mat_j
+  for (l in 1:n){
+
+    # the j-th row of the l-th individual's graph is the l-th row of
+    # alpha_mat_j with a 0 in the j-th position
+    incl_probs[[l]][j, -j] <- alpha_mat_j[l,]
+  }
+}
+
+original_alpha_matrices <- incl_probs
+original_incl_probs <- lapply(incl_probs, function(mat) (mat + t(mat)) / 2)
+out_original <- list(original_alpha_matrices = original_alpha_matrices,
+                     original_incl_probs = original_incl_probs,
+                     original_ELBO = ELBOs)
+save(out_original, file = "out_original_continuous.Rdata")
 #################BELOW IS FOR VISUALIZATION#####################
 
 original_graphs <- vector("list", n)
@@ -370,7 +403,7 @@ for (SUBJECT in 1:n){
   }
   original_graphs[[SUBJECT]] <- a
 }
-save(original_graphs, file = "original_continuous_graphs.Rdata")
+#save(original_graphs, file = "original_continuous_graphs.Rdata")
 #heat_alpha=a
 
 data = melt(t(a))

@@ -44,7 +44,7 @@ Suppose $\X\in \R^{n\times p}$ is a data matrix of independent observations $\X 
 \pmb{x}_j\sim\norm{\mu_j}{\Sigma_{j,j}}, \pmb x_j\in \R^n\hspace{2cm}\X\sim\norm\mu\Sigma
 \end{equation}
 
-Let $\pmb{Z}$ be an $n\times p'$ matrix of extraneous covariates. The conditional dependence structure of $\pmb{x_1},...,\pmb{x_p}$ can be modeled as an undirected graph $\mathcal{G}$ such that:
+The conditional dependence structure of $\pmb{x_1},...,\pmb{x_p}$ can be modeled as an undirected graph $\mathcal{G}$ such that:
 
 \begin{equation}
 \mathcal G_{i,j} = 
@@ -55,9 +55,9 @@ Let $\pmb{Z}$ be an $n\times p'$ matrix of extraneous covariates. The conditiona
 \end{cases}
 \end{equation}
 
- That is, there is an edge between the $\pmb{x_i}$ and $\pmb{x_j}$ nodes if, and only if, these variables are dependent on each other given all other variables.
+That is, there is an edge between the $\pmb{x_i}$ and $\pmb{x_j}$ nodes if, and only if, these variables are dependent on each other given all other variables.
  
- Further suppose that the conditional dependence structure of $\X$ is not homogeneous across the individuals, and is instead a continuous function of the extraneous covariates $\pmb Z$\cite{covDepGM}(1). Then, this methodology aims to estimate a graph for each of the individuals, possibly unique to the individual, such that similar estimates are made for those who are similar to one another in terms of the extraneous covariates. 
+Let $\pmb{Z}$ be an $n\times p'$ matrix of extraneous covariates. Further suppose that the conditional dependence structure of $\X$ is not homogeneous across the individuals, and is instead a continuous function of the extraneous covariates $\pmb Z$\cite{covDepGM}(1). Then, this methodology aims to estimate a graph for each of the individuals, possibly unique to the individual, such that similar estimates are made for those who are similar to one another in terms of the extraneous covariates. 
  
  For an example application, see \cite{covDepGM}(1), wherein the sample was composed of healthy and cancerous individuals, $\pmb x_1,...,\pmb x_8$ were protein expression levels of 8 genes, and $\pmb Z$ was the copy number variation of a gene $\pmb z$ associated with cancer, $\pmb z\not\in \{\pmb x_1,...,\pmb x_8\}$. 
 
@@ -72,19 +72,16 @@ The main function, \texttt{covdepGE::covdepGE(}$\pmb X,\pmb Z$\texttt{)}, estima
 \item Add compatibility checks 
 \item \texttt{ggplot2} wrappers for graph visualization 
 \item Implement KDE to obtain individual specific bandwidths; add \texttt{KDE} argument (boolean). Then, the argument \texttt{tau} is only used when \texttt{KDE = F}
-\item Allow for user specification of a norm (\texttt{"1", "2", }or \texttt{"inf"}), symmetrization method (\texttt{"mean", "min", }or \texttt{"max"}) and hyperparameter \texttt{sigmasq}
-\item Change default \texttt{pi\_est} to a scalar
-\item Implement automatic \texttt{sigmabeta\_sq} grid generation via arguments \texttt{varmax, varmin, n\_sigma}
 \item Add warnings for when the optimal \texttt{sigmabeta\_sq} OR \texttt{pi\_est} is chosen at either of the grid end points; a \texttt{warning} argument for when users would like to toggle off the warnings. Should only be enabled when either \texttt{sigmabeta\_sq} or \texttt{pi\_est} is longer than 2. 
-\item Change return type of \texttt{alpha\_matrices} from a \texttt{list} of $p$ $n\times p$ matrices to a \texttt{list} of $n$ $p \times p$ matrices
 \item Create a vignette demonstrating usage on a simple simulated dataset.
+\item Change the \texttt{idmod} probs to logbase 10
+\item Remove \texttt{CS} argument
 \item Parallelization of the ``main loop'' over the predictors in \texttt{covdepGE\_main.R}). This is complicated by the \texttt{C++} code, however, two potential solutions are:
 	\begin{itemize}
 		\item \textcolor{blu}{\href{https://stackoverflow.com/questions/69789634/parallelization-of-rcpp-without-inline-creating-a-local-package?noredirect=1\#comment123649680_69789634}{StackOverflow suggestion}}
 		\item \textcolor{blu}{\href{https://cran.r-project.org/web/packages/RcppParallel/index.html}{RcppParallel}}
 	\end{itemize}
 	This is a finishing touch and \textbf{likely will not be implemented in the package by the end of the semester.}
-
 \end{itemize}
 
 
