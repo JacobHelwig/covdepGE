@@ -33,9 +33,9 @@ source("generate_data.R")
 ## TBD
 covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0, sigmasq = 0.5,
                       sigmabetasq_vec = NULL, var_min = 0.01, var_max = 10,
-                      n_sigma = 8, pi_vec = 0.2, scale = T, tolerance = 1e-9,
-                      max_iter = 100, edge_threshold = 0.5, print_time = F,
-                      CS = F){
+                      n_sigma = 8, pi_vec = 0.2, norm = 2, scale = T,
+                      tolerance = 1e-9, max_iter = 100, edge_threshold = 0.5,
+                      print_time = F, CS = F){
 
   start_time <- Sys.time()
 
@@ -51,11 +51,25 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0, sigmasq = 0.5
   for (i in 1:n) {
     for (j in i:n) {
 
-      # take the l2 norm
+      # take the p-norm
       diff_vec <- Z[i, ] - Z[j, ]
-      diff_norm <- sqrt(as.numeric(crossprod(diff_vec)))
 
-      # given the l2 norm, find the weight using the normal density
+      if (norm == 2){
+
+        # if the norm is 2, use crossprod
+        diff_norm <- sqrt(as.numeric(crossprod(diff_vec)))
+      }else if (is.infinite(norm)){
+
+        # take the infinity norm
+        diff_norm <- max(abs(diff_vec))
+      }else{
+
+        # take the p-norm
+        diff_norm <- (sum(abs(diff_vec)^norm))^(1 / norm)
+      }
+
+
+      # given the norm, find the weight using the normal density
       D[j, i] <- stats::dnorm(diff_norm, 0, tau)
       D[i, j] <- D[j, i]
     }
