@@ -54,9 +54,9 @@ generate_continuous <- function(seed = 1, n = 180, p = 4,
   set.seed(seed)
 
   # create covariate for individuals in each of the three clusters
-  z1 <- seq(limits1[1], limits1[2], length.out = n %/% 3)
-  z2 <- seq(limits2[1], limits2[2], length.out = n %/% 3)
-  z3 <- seq(limits3[1], limits3[2], length.out = n %/% 3)
+  z1 <- seq(limits1[1], limits1[2], length = n %/% 3)
+  z2 <- seq(limits2[1], limits2[2], length = n %/% 3)
+  z3 <- seq(limits3[1], limits3[2], length = n %/% 3)
   Z <- matrix(c(z1, z2, z3), n, 1)
 
   # create the data matrix; each individual is generated from a MVN with 0 mean

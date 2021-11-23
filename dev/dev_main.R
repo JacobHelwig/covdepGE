@@ -8,7 +8,7 @@ source("generate_data.R")
 ## -----------------------------DESCRIPTION-------------------------------------
 ## Function to estimate the covariance structure for n individuals using
 ## variational Bayes
-## Optimizes the spike and slab parameter sigma_beta_sq by choosing the value
+## Optimizes the spike and slab parameter sigmabeta_sq by choosing the value
 ## for each predictor that maximizes the ELBO; can also optimize pi if candidate
 ## values are specified
 ## -----------------------------ARGUMENTS---------------------------------------
@@ -21,8 +21,8 @@ source("generate_data.R")
 ## (approximates probability of inclusion)
 ## mu: global initialization value for the variational parameter mu
 ## (approximates regression coefficients)
-## sigmavec: candidate values of sigmabeta_sq
-## pivec: candidate values of pi. If NULL, uses varsbvs to generate scaler pi
+## sigmabetasq_vec: candidate values of sigmabeta_sq
+## pi_vec: candidate values of pi
 ## scale: boolean that dictates whether the extraneous covariates should be
 ## centered and scaled prior to calculating the weights
 ## tolerance: end the variational update loop when the square root of the sum of
@@ -31,15 +31,11 @@ source("generate_data.R")
 ## end the variational update loop
 ## -----------------------------RETURNS-----------------------------------------
 ## TBD
-## -----------------------------TODO--------------------------------------------
-## 1. symmetrization method - mean, min, max
-## 2. norm - l2, l1, linf?
-## 3. Change alpha matrix return to return asymmetric inclusion probabilties
-## _____________________________________________________________________________
-covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
-                      sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                      pi_vec = seq(0.1, 0.9, 0.1), scale = T, tolerance = 1e-9,
-                      max_iter = 100, edge_threshold = 0.5, print_time = F){
+covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0, sigmasq = 0.5,
+                      sigmabetasq_vec = NULL, var_min = 0.01, var_max = 10,
+                      n_sigma = 8, pi_vec = 0.2, scale = T, tolerance = 1e-9,
+                      max_iter = 100, edge_threshold = 0.5, print_time = F,
+                      CS = F){
 
   start_time <- Sys.time()
 
@@ -78,6 +74,11 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
   ELBO_p <- vector("list", p + 1)
   names(ELBO_p) <- paste("Response", 1:(p + 1))
 
+  # if sigmabetasq_vec is NULL, instantiate the grid
+  if(is.null(sigmabetasq_vec)){
+    sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_sigma))
+  }
+
   # main loop over the predictors
   for (resp_index in 1:(p + 1)) {
 
@@ -93,21 +94,21 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
 
     E <- rnorm(n, 0, 1) # removing this causes discrepency in discrete case
 
-    # Setting hyperparameter values for sigmasq and the probability of inclusion
-    # according to the Carbonetto-Stephens model
-    idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
-    sigmasq <- mean(idmod$sigma)
-    if (is.null(pi_vec)){
+    # If CS, choose pi and sigmasq according to the Carbonetto-Stephens model
+    if (CS){
+      idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
+      sigmasq <- mean(idmod$sigma)
       pi_vec <- mean(1 / (1 + exp(-idmod$logodds))) # need to convert to log base 10
     }
 
-    # loop to optimize sigma; for each pair of candidate values of sigma in
+    # loop to optimize sigmabeta_sq; for each pair of candidate values of sigma in
     # sigmavec, pi in pi_vec, store the resulting ELBO
     elbo_sigmaXpi <- sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
-                                  sigmavec, pi_vec, tolerance, max_iter)
+                                  sigmabetasq_vec, pi_vec, tolerance, max_iter)
 
     # Select the value of sigma_beta that maximizes the ELBO
-    sigmabeta_sq <- sigmavec[which(elbo_sigmaXpi == max(elbo_sigmaXpi), T)[,"row"]]
+    sigmabeta_sq <- sigmabetasq_vec[which(elbo_sigmaXpi
+                                          == max(elbo_sigmaXpi), T)[,"row"]]
 
     # Select the value of pi that maximizes the ELBO
     pi_est <- pi_vec[which(elbo_sigmaXpi == max(elbo_sigmaXpi), T)[,"col"]]
@@ -163,7 +164,7 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0,
 }
 
 # generate data and covariates
-discrete_data <- F # true if discrete example is desired
+discrete_data <- T # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter
@@ -177,12 +178,13 @@ Z.cov <- dat$covts
 
 package <- F # true if the package version is desired
 if (package){
-  out <- covdepGE::covdepGE(data_mat, Z.cov, tau_, print_time = T,
-                            pi_vec = NULL, scale = discrete_data)
+  out <- covdepGE::covdepGE(data_mat, Z.cov, tau_, print_time = T, CS = T,
+                            scale = F,
+                            sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
 }else{
   Rcpp::sourceCpp("c_dev.cpp")
-  out <- covdepGE1(data_mat, Z.cov, tau_, print_time = T, pi_vec = NULL,
-                   scale = discrete_data)
+  out <- covdepGE1(data_mat, Z.cov, tau_, print_time = T, CS = T, scale = F,
+                   sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
 }
 
 # check to see that this modified code produces the same results as the original code
