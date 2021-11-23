@@ -4,90 +4,115 @@
 
 library(MASS)
 
-generate_continuous <- function(seed = 1){
+# function to create the covariance matrix for a p-dimensional gaussian given
+# the value of an extraneous covariate
+# takes the scalar value of the covariate, the number of predictors, and the
+# covariate bounds for each of the three clusters
+# returns the covariance matrix
+Var_cont <- function(z, p, limits1, limits2, limits3) {
+
+  STR <- 1
+
+  # determine the cluster of the given individual
+  cl1 <- (limits1[1] <= z & z <= limits1[2]) * 1
+  cl2 <- (limits2[1] <= z & z <= limits2[2]) * 1
+  cl3 <- (limits3[1] <= z & z <= limits3[2]) * 1
+
+  # create the precision matrix for the individual given their covariate
+  pr <- matrix(0, p + 1, p + 1)
+
+  # put 1 in the 2, 3 position
+  pr[2, 3] <- STR
+
+  # if the individual belongs to cluster 1 or 2, add a non-zero entry to the 1, 2 position
+  pr[1, 2] <- STR * cl1 + (STR - STR * ((z + .23) / .56)) * cl2
+
+  # if the individual belongs to cluster 2 or 3, add a non-zero entry to the 1, 3 position
+  pr[1, 3] <- (STR * ((z + .23) / .56)) * cl2 + (STR) * cl3
+
+  # symmetrize the matrix
+  pr <- pr + t(pr)
+
+  # add a 2 to the diagonal
+  diag(pr) <- 2
+
+  # find the covariance matrix from the precision matrix
+  Var <- solve(pr)
+
+  return(Var)
+}
+
+# function to generate the continuous data and covariates
+# takes a RNG seed, sample size, number of predictors, and bounds of the
+# extraneous covariate for each of the three clusters
+# returns the continuous data, covariates, and true covariance matrix
+generate_continuous <- function(seed = 1, n = 180, p = 4,
+                                limits1 = c(-.990, -.331),
+                                limits2 = c(-.229, 0.329),
+                                limits3 = c(0.431, 0.990)){
 
   set.seed(seed)
 
-  # Data generation
-  n <- 180
-  p <- 4
+  # create covariate for individuals in each of the three clusters
+  z1 <- seq(limits1[1], limits1[2], length.out = n %/% 3)
+  z2 <- seq(limits2[1], limits2[2], length.out = n %/% 3)
+  z3 <- seq(limits3[1], limits3[2], length.out = n %/% 3)
+  Z <- matrix(c(z1, z2, z3), n, 1)
 
-  # function to create sigma matrix for a p-dimensional gaussian given the value
-  # of an extraneous covariate
-  Var_cont <- function(z) {
-    STR <- 1
-    pr <- matrix(0, p + 1, p + 1)
-    diag(pr) <- 2
-    pr[2, 3] <- STR
-    pr[1, 2] <- STR * ((z > -1) && (z < -.33)) + (STR - STR * ((z + .23) / .56)) * ((z > -0.23) && (z < 0.33)) + (0) * ((z > 0.43) && (z < 1))
-    pr[1, 3] <- 0 * ((z > -1) && (z < -.33)) + (STR * ((z + .23) / .56)) * ((z > -0.23) && (z < 0.33)) + (STR) * ((z > 0.43) && (z < 1))
-    pr[2, 1] <- pr[1, 2]
-    pr[3, 1] <- pr[1, 3]
-    pr[3, 2] <- pr[2, 3]
-    Var <- solve(pr)
-    return(Var)
-  }
-
-  # creation of covariate
-  Z <- c(
-    seq(-0.99, -0.331, (-.331 + .99) / 59),
-    seq(-0.229, 0.329, (.329 + .229) / 59),
-    seq(0.431, .99, (.99 - .431) / 59)
-  )
-  Z <- matrix(Z, n, 1)
-
-  # creation the data matrix; each individual is generated from a MVN with 0 mean
-  # and covariance matrix determined by their corresponding extraneous covariate
+  # create the data matrix; each individual is generated from a MVN with 0 mean
+  # and covariance matrix depending on their extraneous covariate
   data_mat <- matrix(0, n, p + 1)
-  for (i in 1:n) {
-    data_mat[i, ] <- mvrnorm(1, rep(0, p + 1), Var_cont(Z[i]))
+  sigma_mats <- vector("list", n)
+  for (l in 1:n) {
+
+    # generate the covariance matrix depending on the covariates
+    sigma_mats[[l]] <- Var_cont(Z[l], p, limits1, limits2, limits3)
+
+    # draw from the multivariate normal
+    data_mat[l, ] <- MASS::mvrnorm(1, rep(0, p + 1), sigma_mats[[l]])
   }
 
-  return(list(data = data_mat, covts = Z))
+  return(list(data = data_mat, covts = Z, true_covariance = sigma_mats))
 
 }
+
 
 #-------------------------------------------------------------------------------
 #-------------------FUNCTION TO GENERATE DISCRETE DATA--------------------------
 #-------------------------------------------------------------------------------
 
-generate_discrete <- function(seed = 1, same = T){
+# function to generate the discrete data and covariates
+# takes a RNG seed, sample size, number of predictors, lambda (root of the
+# non-zero elements in the precision matrix), values to populate the
+# extraneous covariate vector with, and boolean for whether the two groups
+# should have the same covariance
+# returns the continuous data, covariates, and true covariance matrix
+generate_discrete <- function(seed = 1, n = 100, p = 10, lambda = 15,
+                              cov1 = -0.1, cov2 = 0.1, same = T){
 
   set.seed(seed)
 
-  # Data generation
-  n <- 100
-  p <- 10
+  # generating the precision matrix: Assume two discrete covariate levels, one
+  # for each group
+  Lam1 <- c(rep(lambda, 4), rep(0, p - 3))
+  Lam2 <- c(rep(0, 4), rep(lambda, p - 3))
 
-  # generating the precision matrix: Assume two discrete covariate levels
-  Lam1 <- c(3, 3, 3, 3, rep(0, p - 3)) * 5 # For Z[i]=-0.1
+  # if same is true, the individuals in both groups will have the same
+  # covariance matrix
+  if (same) Lam2 <- Lam1
 
-  # Same lambda for both covariate levels, corresponds to covariate
-  Lam2 <- Lam1
-  if (!same) Lam2 <- c(0, 0, 0, 0, rep(3, p - 3)) * 5
-
-  # covariance matrix for covariate level 1
+  # create covariance matrix for both groups
   Var1 <- solve(Lam1 %*% t(Lam1) + diag(rep(10, p + 1)))
-
-  # covariance matrix for covariate level 2
   Var2 <- solve(Lam2 %*% t(Lam2) + diag(rep(10, p + 1)))
 
-  # Initializing the covariate matrix
-  Z <- matrix(-1, n, p)
+  # create the extraneous covariate; individuals in group j have a covariate
+  # vector of length p with cov_j as the only entry, j\in {1,2}
+  Z <- matrix(c(rep(cov1, n %/% 2), rep(cov2, n %/% 2)), n, p)
 
-  # covariate creation; half the individuals get a 0.1, while the others get -0.1
-  for (i in 1:n) {
-    for (j in 1:p) {
-      Z[i, j] <- -.1 * (i <= n / 2) + .1 * (i > n / 2)
-    }
-  }
-
-  # create the data matrix; half of the individuals are generated from a MVN with
-  # 0 mean vector and covariance matrix corresponding to covariate level 1, while
-  # the other are from an MVN with covariance matrix corresponding to covariate
-  # level 2
-  X1 <- mvrnorm(n / 2, rep(0, p + 1), Var1)
-  X2 <- mvrnorm(n / 2, rep(0, p + 1), Var2)
+  # create the data matrix; individuals in group j are generated from a MVN with
+  # 0 mean vector and covariance matrix Var_j, j\in {1,2}
+  X1 <- mvrnorm(n %/% 2, rep(0, p + 1), Var1)
+  X2 <- mvrnorm(n %/% 2, rep(0, p + 1), Var2)
   data_mat <- rbind(X1, X2)
 
   return(list(data = data_mat, covts = Z, true_covariance = list(Var1, Var2)))
