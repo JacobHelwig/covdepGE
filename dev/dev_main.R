@@ -1,6 +1,7 @@
 setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
 rm(list = ls())
 source("generate_data.R")
+source("dev_weights.R")
 
 ## _____________________________________________________________________________
 ## _____________________________covdepGE________________________________________
@@ -12,8 +13,10 @@ source("generate_data.R")
 ## -----------------------------ARGUMENTS---------------------------------------
 ## data_mat: n by (p + 1) matrix; data
 ## Z: n by p' matrix; extraneous covariates
-## tau: scalar in (0, Inf); global bandwidth parameter. greater values allow for
-## more information to be shared between individuals. 0.1 by default.
+## tau: scalar in (0, Inf) OR n x 1 vector, entries in (0, Inf); bandwidth
+## parameter. greater values allow for more information to be shared between
+## individuals. Allows for global or individual-specific specification. If
+## kde = T, this argument is ignored. 0.1 by default.
 ## kde: boolean; if T, use 2-step KDE methodology described in (2) to calculate
 ## individual-specific bandwidths in place of global bandwidth parameter tau.
 ## T by default
@@ -63,11 +66,12 @@ source("generate_data.R")
 ## and contains 3 elements - the final values of pi and sigmabeta_sq that
 ## maximized ELBO over all individuals with the j-th predictor fixed as the
 ## response and the maximum value of ELBO
-covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0, sigmasq = 0.5,
-                      sigmabetasq_vec = NULL, var_min = 0.01, var_max = 10,
-                      n_sigma = 8, pi_vec = 0.2, norm = 2, scale = T,
-                      tolerance = 1e-9, max_iter = 100, edge_threshold = 0.5,
-                      sym_method = "mean", print_time = F, CS = F){
+covdepGE1 <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
+                      sigmasq = 0.5, sigmabetasq_vec = NULL, var_min = 0.01,
+                      var_max = 10, n_sigma = 8, pi_vec = 0.2, norm = 2,
+                      scale = T, tolerance = 1e-9, max_iter = 100,
+                      edge_threshold = 0.5, sym_method = "mean", print_time = F,
+                      CS = F){
 
   start_time <- Sys.time()
 
@@ -77,40 +81,10 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0, sigmasq = 0.5
   # if the covariates should be centered and scaled, do so
   if (scale) Z <- matrix(scale(Z)[ , ], n)
 
-  # D is a n by n matrix of weights; the l, k entry is the weighting
-  # between individuals of individual k with respect to individual l.
-  # If KDE = T, then the bandwidth parameter (tau) used is the bandwidth
-  # corresponding to individual l
-  D <- matrix(NA, n, n)
-  for (i in 1:n) {
-    for (j in i:n) {
-
-      # take the p-norm
-      diff_vec <- Z[i, ] - Z[j, ]
-
-      if (norm == 2){
-
-        # take the 2-norm, use crossprod
-        diff_norm <- sqrt(as.numeric(crossprod(diff_vec)))
-      }else if (is.infinite(norm)){
-
-        # take the infinity norm
-        diff_norm <- max(abs(diff_vec))
-      }else{
-
-        # take the p-norm
-        diff_norm <- (sum(abs(diff_vec)^norm))^(1 / norm)
-      }
-
-
-      # given the norm, find the weight using the normal density
-      D[j, i] <- stats::dnorm(diff_norm, 0, tau)
-      D[i, j] <- D[j, i]
-    }
-  }
-
-  # Scale weights to sum to n down the columns
-  D <- n * (D) * matrix(1 / colSums(D), n, n, T)
+  # get weights
+  D <- get_weights(Z, norm, kde, tau)
+  bandwidths <- D$bandwidths
+  D <- D$D
 
   # List for the variable-specific inclusion probability matrix; the j-th element
   # in the list is a n by p matrix; in this matrix, the l-th row corresponds to
@@ -225,7 +199,8 @@ covdepGE1 <- function(data_mat, Z, tau = 0.1, alpha = 0.2, mu = 0, sigmasq = 0.5
   if (print_time) print(Sys.time() - start_time)
 
   return(list(graphs = graphs, inclusion_probs = incl_probs,
-              alpha_matrices = incl_probs_asym, ELBO = ELBO_p))
+              alpha_matrices = incl_probs_asym, ELBO = ELBO_p, D = D,
+              bandwidths = bandwidths))
 }
 
 # generate data and covariates
@@ -243,12 +218,13 @@ Z.cov <- dat$covts
 
 package <- F # true if the package version is desired
 if (package){
-  out <- covdepGE::covdepGE(data_mat, Z.cov, tau_, print_time = T, CS = T,
-                            scale = F,
+  out <- covdepGE::covdepGE(data_mat, Z.cov, tau_, kde = F, print_time = T,
+                            CS = T, scale = F,
                             sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
 }else{
   Rcpp::sourceCpp("c_dev.cpp")
-  out <- covdepGE1(data_mat, Z.cov, tau_, print_time = T, CS = T, scale = F,
+  out <- covdepGE1(data_mat, Z.cov, tau_, kde = T, print_time = T, CS = T,
+                   scale = F,
                    sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
 }
 
