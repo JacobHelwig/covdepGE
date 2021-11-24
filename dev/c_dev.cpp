@@ -9,16 +9,17 @@ using namespace Rcpp;
 // -----------------------------DESCRIPTION-------------------------------------
 // Calculates ELBO for a fixed response j and individual l
 // -----------------------------ARGUMENTS---------------------------------------
-// y: n by 1 vector of responses (j-th column of the data)
-// D: n by 1 vector of weights; i-th entry is the weight of the i-th
-// individual with respect to the l-th individual
-// X_mat: n by (p - 1) data matrix X with the j-th column removed
-// S_sq, mu, alpha: p by 1 vectors of variational parameters; the k-th
+// y: n x 1 vector; responses (j-th column of the data)
+// D: n x 1 vector; weights (i-th entry is the weight of the i-th
+// individual with respect to the l-th individual using the l-th individual's
+// bandwidth)
+// X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
+// S_sq, mu, alpha: p x 1 vectors; variational parameters. the k-th
 // entry is the k-th parameter for the l-th individual
-// sigmasq, sigmabeta_sq: scaler; spike and slab variance hyperparameters
-// pi_est: spike and slab probability of inclusion
+// sigmasq, sigmabeta_sq: scalar; spike and slab variance hyperparameters
+// pi_est: scalar; spike and slab probability of inclusion
 // -----------------------------RETURNS-----------------------------------------
-// Returns: double; ELBO for the l-th individual and j-th column fixed as the
+// Returns: scalar; ELBO for the l-th individual and j-th column fixed as the
 // response
 // _____________________________________________________________________________
 double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
@@ -55,16 +56,17 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
 // for a fixed response, calculate and sum the ELBO for all individuals in the
 // data
 // -----------------------------ARGUMENTS---------------------------------------
-// y: n by 1 vector of responses (j-th column of the data)
-// D: n by n symmetric matrix of weights (l,k entry is the weight of the k-th
-// individual with respect to the l-th individual)
-// X_mat: n by (p - 1) data matrix X with the j-th column removed
-// S_sq, mu, alpha: n by (p - 1) matrices of variational parameters; the l, k
+// y: n x 1 vector; responses (j-th column of the data)
+// D: n x n matrix; weights (k,l entry is the weight of the k-th individual
+// with respect to the l-th individual using the l-th individual's bandwidth)
+// X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
+// S_sq, mu, alpha: n x (p - 1) matrices; variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
-// sigmasq, sigmabeta_sq: scaler; spike and slab variance hyperparameters
-// pi_est: spike and slab probability of inclusion
+// sigmasq, sigmabeta_sq: scalars; spike and slab variance hyperparameters
+// pi_est: scalar; spike and slab probability of inclusion
 // -----------------------------RETURNS-----------------------------------------
-// double; ELBO for the l-th individual and j-th column fixed as the response
+// elbo_tot: scalar; ELBO for the l-th individual with j-th column fixed as the
+// response
 // _____________________________________________________________________________
 double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
                    const arma::mat& X_mat, const arma::mat& S_sq,
@@ -96,13 +98,13 @@ double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
 // -----------------------------DESCRIPTION-------------------------------------
 // for a fixed response, update mu matrix
 // -----------------------------ARGUMENTS---------------------------------------
-// y: n by 1 vector of responses (j-th column of the data)
-// D: n by n symmetric matrix of weights (l,k entry is the weight of the k-th
-// individual with respect to the l-th individual)
-// X_mat: n by (p - 1) data matrix X with the j-th column removed
-// S_sq, mu, alpha: n by (p - 1) matrices of variational parameters; the l, k
+// y: n x 1 vector; responses (j-th column of the data)
+// D: n x n matrix; weights (k,l entry is the weight of the k-th individual
+// with respect to the l-th individual using the l-th individual's bandwidth)
+// X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
+// S_sq, mu, alpha: n x (p - 1) matrices; variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
-// sigmasq: scaler; spike and slab variance hyperparameter
+// sigmasq: scalar; spike and slab variance hyperparameter
 // _____________________________________________________________________________
 void mu_update_c (const arma::colvec& y, const arma::mat& D,
                   const arma::mat& X_mat, const arma::mat& S_sq, arma::mat& mu,
@@ -151,10 +153,11 @@ void mu_update_c (const arma::colvec& y, const arma::mat& D,
 // -----------------------------DESCRIPTION-------------------------------------
 // for a fixed response, update alpha matrix
 // -----------------------------ARGUMENTS---------------------------------------
-// mu_mat, alpha_mat: n by (p - 1) matrices of variational parameters; the l, k
+// mu_mat, alpha_mat: n x (p - 1) matrices; variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
-// alpha_logit_term 1,2,3: terms used to calculate the logit of alpha
-// upper_limit: double, during the alpha update, values of logit(alpha) greater
+// alpha_logit_term 1, 2, 3: scalar (1), n x (p - 1) matrices (2, 3): terms
+// used to calculate the logit of alpha
+// upper_limit: scalar; during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1; this avoids issues
 // with exponentiation of large numbers creating Infinity divided by Infinity
 // _____________________________________________________________________________
@@ -165,8 +168,8 @@ void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
 
   // calculate the logit of alpha
   arma::mat alpha_logit = (alpha_logit_term1
-                   + (arma::pow(mu, 2) / alpha_logit_term2_denom)
-                   + alpha_logit_term3);
+                             + (arma::pow(mu, 2) / alpha_logit_term2_denom)
+                             + alpha_logit_term3);
 
   // transform from logit to probabilities of inclusion; update alpha_mat
   arma::mat exp_logit = arma::exp(alpha_logit);
@@ -186,22 +189,22 @@ void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
 // returns the final variational estimates of a single regression for each of
 // the n individuals
 // -----------------------------ARGUMENTS---------------------------------------
-// y: n by 1 vector of responses (j-th column of the data)
-// D: n by n symmetric matrix of weights (l,k entry is the weight of the k-th
-// individual with respect to the l-th individual)
-// X_mat: n by (p - 1) data matrix X with the j-th column removed
-// mu_mat, alpha_mat: n by (p - 1) matrices of variational parameters; the l, k
+// y: n x 1 vector; responses (j-th column of the data)
+// D: n x n matrix; weights (k,l entry is the weight of the k-th individual
+// with respect to the l-th individual using the l-th individual's bandwidth)
+// X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
+// mu_mat, alpha_mat: n x (p - 1) matrices; variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
-// sigmasq, sigmabeta_sq: scaler; spike and slab variance hyperparameters
-// pi_est: spike and slab probability of inclusion
-// tolerance: double; when the Square Root of the Sum of Squared changes in
-// the elements of alpha are within tolderance, stop iterating
-// max_iter: integer; maximum number of iterations
-// upper_limit: double, during the alpha update, values of logit(alpha) greater
+// sigmasq, sigmabeta_sq: scalars; spike and slab variance hyperparameters
+// pi_est: scalar; spike and slab probability of inclusion
+// tolerance: scalar; when the square root of the sum of squared changes in
+// the elements of alpha are within tolerance, stop iterating
+// max_iter: scalar; maximum number of iterations
+// upper_limit: scalar; during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1
 // -----------------------------RETURNS-----------------------------------------
-// list; list contains: matrices of updated alpha, mu, and S_sq parameters,
-// final ELBO across all n individuals
+// var.alpha: n x (p - 1) matrix; final alpha values
+// var.ELB: scalar; final value of ELBO summed across all individuals
 // _____________________________________________________________________________
 //[[Rcpp::export]]
 Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
@@ -254,8 +257,6 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 
   // return matrices of variational parameters and the ELBO
   return(Rcpp::List::create(Rcpp::Named("var.alpha") = alpha,
-                            Rcpp::Named("var.mu") = mu,
-                            Rcpp::Named("var.S_sq") = S_sq,
                             Rcpp::Named("var.elbo") = ELBO));
 }
 
@@ -263,27 +264,27 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 // _____________________________sigma_loop_c______________________________________
 // _____________________________________________________________________________
 // -----------------------------DESCRIPTION-------------------------------------
-// For a fixed response, find the graph for each individual across a range
-// of sigmabeta_sq values to choose the value of sigmabeta_sq that maximizes
-// the ELBO
+// for a fixed response, find the graph for each individual across a range
+// of sigmabeta_sq an pi values to choose the pair of sigmabeta_sq, pi that
+// maximize the ELBO
 // -----------------------------ARGUMENTS---------------------------------------
-// y: n by 1 vector of responses (j-th column of the data)
-// D: n by n symmetric matrix of weights (l,k entry is the weight of the k-th
-// individual with respect to the l-th individual)
-// X_mat: n by (p - 1) data matrix X with the j-th column removed
-// mu_mat, alpha_mat: n by (p - 1) matrices of variational parameters; the l, k
+// y: n x 1 vector; responses (j-th column of the data)
+// D: n x n matrix; weights (k,l entry is the weight of the k-th individual
+// with respect to the l-th individual using the l-th individual's bandwidth)
+// X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
+// mu_mat, alpha_mat: n x (p - 1); matrices of variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
-// sigmasq: scaler; spike and slab variance hyperparameter
-// sigmabeta_sq_vec: n_sigma by 1 vector of spike-and-slab hyperparameter
+// sigmasq: scalar; spike and slab variance hyperparameter
+// sigmabeta_sq_vec: n_sigma x 1 vector; spike-and-slab hyperparameter
 // candidates
-// pi_vec: vector of candidate spike and slab probabilities of inclusion
-// tolerance: double; when the Square Root of the Sum of Squared changes in
+// pi_vec: n_pi x 1 vector; candidate spike and slab probabilities of inclusion
+// tolerance: scalar; when the square root of the sum of squared changes in
 // the elements of alpha are within tolderance, stop iterating
-// max_iter: integer; maximum number of iterations
-// upper_limit: double, during the alpha update, values of logit(alpha) greater
+// max_iter: scalar; maximum number of iterations
+// upper_limit: scalar, during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1
 // -----------------------------RETURNS-----------------------------------------
-// vector of n_sigma ELBOs
+// returns n_sigma x n_pi matrix of ELBOs
 // _____________________________________________________________________________
 // [[Rcpp::export]]
 arma::mat sigma_loop_c(const arma::colvec& y, const arma::mat& D,
