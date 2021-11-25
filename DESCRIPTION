@@ -18,4 +18,6 @@ LinkingTo:
 Imports: 
     varbvs,
     Rcpp,
-    stats
+    stats,
+    ggplot2,
+    latex2exp

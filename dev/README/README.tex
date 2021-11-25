@@ -70,8 +70,6 @@ The main function, \texttt{covdepGE::covdepGE(}$\pmb X,\pmb Z$\texttt{)}, estima
 \begin{itemize}
 \item Complete documentation 
 \item Add compatibility checks 
-\item \texttt{ggplot2} wrappers for graph visualization 
-\item Implement KDE to obtain individual specific bandwidths; add \texttt{KDE} argument (boolean). Then, the argument \texttt{tau} is only used when \texttt{KDE = F}
 \item Add warnings for when the optimal \texttt{sigmabeta\_sq} OR \texttt{pi\_est} is chosen at either of the grid end points; a \texttt{warning} argument for when users would like to toggle off the warnings. Should only be enabled when either \texttt{sigmabeta\_sq} or \texttt{pi\_est} is longer than 2. 
 \item Create a vignette demonstrating usage on a simple simulated dataset.
 \item Change the \texttt{idmod} probs to logbase 10

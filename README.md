@@ -60,12 +60,6 @@ the *i*-th variable and the node representing the *j*-th variable.
 
 -   Add compatibility checks
 
--   `ggplot2` wrappers for graph visualization
-
--   Implement KDE to obtain individual specific bandwidths; add `KDE`
-    argument (boolean). Then, the argument `tau` is only used when
-    `KDE = F`
-
 -   Add warnings for when the optimal `sigmabeta_sq` OR `pi_est` is
     chosen at either of the grid end points; a `warning` argument for
     when users would like to toggle off the warnings. Should only be

@@ -8,19 +8,27 @@ covdepGE(
   data_mat,
   Z,
   tau = 0.1,
+  kde = T,
   alpha = 0.2,
   mu = 0,
-  sigmavec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-  pi_vec = seq(0.1, 0.9, 0.1),
+  sigmasq = 0.5,
+  sigmabetasq_vec = NULL,
+  var_min = 0.01,
+  var_max = 10,
+  n_sigma = 8,
+  pi_vec = 0.2,
+  norm = 2,
   scale = T,
   tolerance = 1e-09,
   max_iter = 100,
   edge_threshold = 0.5,
-  print_time = F
+  sym_method = "mean",
+  print_time = F,
+  CS = F
 )
 }
 \arguments{
-\item{print_time}{}
+\item{CS}{}
 }
 \value{
 
