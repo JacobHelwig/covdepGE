@@ -58,7 +58,7 @@ the *i*-th variable and the node representing the *j*-th variable.
 
 -   Complete documentation
 
--   Add compatibility checks
+-   Add compatibility checks gor visualization functions
 
 -   Add warnings for when the optimal `sigmabeta_sq` OR `pi_est` is
     chosen at either of the grid end points; a `warning` argument for

@@ -7,13 +7,13 @@
 ## out: list; return of covdepGE function
 ## l: scalar in {1, 2, ..., n}; the individual for which the adjacency matrix
 ## is desired
-## prob_shade: boolean; if T, then entries will be shaded according to posterior
+## prob_shade: logical; if T, then entries will be shaded according to posterior
 ## inclusion probabilities on a gradient ranging from color0 (0 probability) to
 ## color1 (probability 1); if F, binary coloring is used. T by default
 ## color0: string; color for 0 entries. "white" by default
 ## color1: string; color for 1 entries. "#500000" by default
 ## grid_color: string; color of grid lines. "black" by default
-## incl_probs: boolean; whether the posterior inclusion probability should be
+## incl_probs: logical; whether the posterior inclusion probability should be
 ## displayed for each entry. T by default
 ## prob_prec: scalar in {1, 2, ...}; number of decimal places to round
 ## probabilities to if incl_probs = T. 2 by default
@@ -158,7 +158,7 @@ gg_adjMat <- function(out, l, prob_shade = T, color0 = "white",
 ## point_color: string; color of probability points. "#500000" by default
 ## point_fill: string; fill of probability points. Only applies to select
 ## shapes. "white" by default
-## sort: boolean; when T, rearranges the subject index so that individuals that
+## sort: logical; when T, rearranges the subject index so that individuals that
 ## are similar in terms of extraneous covariates have neighboring indices to
 ## demonstrate the continuity with which the edge probabilities are modeled with
 ## respect to the the extraneous covariates. otherwise, the indexing is left
@@ -187,7 +187,7 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
                               line_size = 0.5, line_color = "black",
                               point_shape = 21, point_size = 1.5,
                               point_color = "#500000", point_fill = "white",
-                              sort = T){
+                              sort = F){
 
   # get the probabilities for each individual of an edge between the variables
   # corresponding to col_idx1 and col_idx2

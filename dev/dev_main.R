@@ -2,6 +2,7 @@ setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/c
 rm(list = ls())
 source("generate_data.R")
 source("dev_weights.R")
+source("dev_checks.R")
 
 ## _____________________________________________________________________________
 ## _____________________________covdepGE________________________________________
@@ -11,13 +12,13 @@ source("dev_weights.R")
 ## of individual-specific extranesous covariates as described in (1)
 ## "An approximate Bayesian approach to covariate dependent graphical modeling"
 ## -----------------------------ARGUMENTS---------------------------------------
-## data_mat: n by (p + 1) matrix; data
-## Z: n by p' matrix; extraneous covariates
+## data_mat: n x (p + 1) matrix; data
+## Z: n x p' matrix; extraneous covariates
 ## tau: scalar in (0, Inf) OR n x 1 vector, entries in (0, Inf); bandwidth
 ## parameter. greater values allow for more information to be shared between
 ## individuals. Allows for global or individual-specific specification. If
 ## kde = T, this argument is ignored. 0.1 by default.
-## kde: boolean; if T, use 2-step KDE methodology described in (2) to calculate
+## kde: logical; if T, use 2-step KDE methodology described in (2) to calculate
 ## individual-specific bandwidths in place of global bandwidth parameter tau.
 ## T by default
 ## alpha: scalar in [0, 1]; global initialization value for the variational
@@ -37,17 +38,18 @@ source("dev_weights.R")
 ## 8 by default. Ex: for default values, sigmabeta_sq is:
 ## > round(exp(seq(log(var_max), log(var_min), length = n_sigma)), 3)
 ## [1] 10.000  3.728  1.389  0.518  0.193  0.072  0.027  0.010
-## pi_vec: n_pi x 1 vector; candidate values of pi. 0.2 by default
+## pi_vec: n_pi x 1 vector, entries in [0, 1]; candidate values of pi. 0.2 by
+## default
 ## norm: scalar in [1, Inf]; norm to use when calculating weights. Inf results
 ## in infinity norm. 2 by default
-## scale: boolean; if T, center and scale extraneous covariates to 0 mean,
+## scale: logical; if T, center and scale extraneous covariates to 0 mean,
 ## standard deviation 1 prior to calculating the weights. T by default
 ## tolerance: scalar in (0, Inf); end the variational update loop when the
 ## square root of the sum of squared changes to the elements of the alpha matrix
 ## are within tolerance. 1e-9 by default
 ## max_iter: scalar in {1, 2,...} if the tolerance criteria has not been met by
 ## max_iter iterations, end the variational update loop. 100 by default
-## edge_threshold: scalar in [0, 1]; when processing the inclusion
+## edge_threshold: scalar in (0, 1); when processing the inclusion
 ## probabilities, add an edge to the graph if the (i, j) edge has probability
 ## of inclusion greater than edge_threshold. 0.5 by default
 ## sym_method: string in {"mean", "max", "min"}; to symmetrize the alpha
@@ -66,14 +68,23 @@ source("dev_weights.R")
 ## and contains 3 elements - the final values of pi and sigmabeta_sq that
 ## maximized ELBO over all individuals with the j-th predictor fixed as the
 ## response and the maximum value of ELBO
-covdepGE1 <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
-                      sigmasq = 0.5, sigmabetasq_vec = NULL, var_min = 0.01,
-                      var_max = 10, n_sigma = 8, pi_vec = 0.2, norm = 2,
-                      scale = T, tolerance = 1e-9, max_iter = 100,
-                      edge_threshold = 0.5, sym_method = "mean", print_time = F,
-                      CS = F){
+covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
+                     sigmasq = 0.5, sigmabetasq_vec = NULL, var_min = 0.01,
+                     var_max = 10, n_sigma = 8, pi_vec = 0.2, norm = 2,
+                     scale = T, tolerance = 1e-9, max_iter = 100,
+                     edge_threshold = 0.5, sym_method = "mean", print_time = F,
+                     CS = F){
 
   start_time <- Sys.time()
+
+  # run compatibility checks
+  covdepGE_checks(data_mat, Z, tau, kde, alpha, mu, sigmasq, sigmabetasq_vec,
+                  var_min, var_max, n_sigma, pi_vec, norm, scale, tolerance,
+                  max_iter, edge_threshold, sym_method, print_time, CS)
+
+  # ensure that data_mat and Z are matrices
+  data_mat <- as.matrix(data_mat)
+  Z <- as.matrix(Z)
 
   # get sample size and number of parameters
   n <- nrow(data_mat); p <- ncol(data_mat) - 1
@@ -214,18 +225,17 @@ if (discrete_data) {
 }
 
 data_mat <- dat$data
-Z.cov <- dat$covts
+Z <- dat$covts
 
 package <- F # true if the package version is desired
 if (package){
-  out <- covdepGE::covdepGE(data_mat, Z.cov, tau_, kde = F, print_time = T,
+  out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, print_time = T,
                             CS = T, scale = F,
                             sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
 }else{
   Rcpp::sourceCpp("c_dev.cpp")
-  out <- covdepGE1(data_mat, Z.cov, tau_, kde = T, print_time = T, CS = T,
-                   scale = F,
-                   sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
+  out <- covdepGE(data_mat, Z, tau_, kde = F, print_time = T, CS = T, scale = F,
+                  sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
 }
 
 # check to see that this modified code produces the same results as the original code
