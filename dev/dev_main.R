@@ -55,6 +55,12 @@ source("dev_checks.R")
 ## sym_method: string in {"mean", "max", "min"}; to symmetrize the alpha
 ## matrices, the i,j = j,i entry is sym_method((i,j entry), (j,i) entry). "mean"
 ## by default
+## print_time: logical; if T, function run time is printed. F by default
+## warnings: logical; if T, convergence and grid warnings will be displayed.
+## Convergence warnings occur when the tolerance exit condition has not been
+## met by max_iter iterations. Grid warnings occur when, for either
+## sigmabetasq_vec or pi_vec, the grid is longer than 2 candidates, and the
+## final model selects a candidate value on the grid boundary. T by default
 ## -----------------------------RETURNS-----------------------------------------
 ## graphs: list of n (p + 1) x (p + 1) matrices; the l-th element is the graph
 ## for the l-th individual (obtained from inclusion_probs according to
@@ -73,14 +79,14 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                      var_max = 10, n_sigma = 8, pi_vec = 0.2, norm = 2,
                      scale = T, tolerance = 1e-9, max_iter = 100,
                      edge_threshold = 0.5, sym_method = "mean", print_time = F,
-                     CS = F){
+                     warnings = T, CS = F){
 
   start_time <- Sys.time()
 
   # run compatibility checks
   covdepGE_checks(data_mat, Z, tau, kde, alpha, mu, sigmasq, sigmabetasq_vec,
                   var_min, var_max, n_sigma, pi_vec, norm, scale, tolerance,
-                  max_iter, edge_threshold, sym_method, print_time, CS)
+                  max_iter, edge_threshold, sym_method, print_time, warnings)
 
   # ensure that data_mat and Z are matrices
   data_mat <- as.matrix(data_mat)
@@ -139,8 +145,22 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
 
     # loop to optimize sigmabeta_sq; for each pair of candidate values of sigma in
     # sigmavec, pi in pi_vec, store the resulting ELBO
-    elbo_sigmaXpi <- sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
-                                  sigmabetasq_vec, pi_vec, tolerance, max_iter)
+    sigma_loop_out <- sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
+                                   sigmabetasq_vec, pi_vec, tolerance, max_iter)
+
+    # total number of models fit by sigma_loop_c
+    total_models <- length(pi_vec) * length(sigmabetasq_vec)
+
+    # get the resulting ELBO and the number of converged models
+    elbo_sigmaXpi <- sigma_loop_out[["elbo_grid"]]
+    converged <- sigma_loop_out[["num_converged"]]
+
+    # if any of the models did not converge, display a warning
+    if (converged < total_models & warnings){
+      warning(paste0("Response ", resp_index, ": ", (total_models - converged),
+                     "/", total_models, " candidate models did not converge in ",
+                     max_iter, " iterations"))
+    }
 
     # Select the value of sigma_beta that maximizes the ELBO
     sigmabeta_sq <- sigmabetasq_vec[which(elbo_sigmaXpi
@@ -153,6 +173,12 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
     result <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
                          pi_est, tolerance, max_iter)
 
+    # if the final model did not converge, display a warning
+    if (!result$converged & warnings){
+      warning(paste0("Response ", resp_index, ": final model did not converge in ",
+                     max_iter, " iterations"))
+    }
+
     # save the final ELBO
     ELBO_p[[resp_index]] <- list("sigma^2_beta" = sigmabeta_sq, "pi" = pi_est,
                                  "ELBO" = result$var.elbo)
@@ -163,6 +189,47 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
     alpha_matrices[[resp_index]] <- result$var.alpha
   }
 
+  if (warnings){
+
+    # grid warnings - for each of the candidate grids (pi and sigmabeta_sq), if
+    # points along the grid boundaries were selected and the grid had more than
+    # 2 candidates, display a warning
+
+    # sigmabetasq_vec
+    if (length(sigmabetasq_vec) > 2){
+
+      # get the selected values of sigmabeta_sq for each response
+      final_sigmabeta_sq <- unlist(lapply(ELBO_p, `[[`, 1))
+
+      # count the number of final_sigmabeta_sq that were on the boundary of the
+      # grid
+      grid_boundary <- sigmabetasq_vec[c(1, length(sigmabetasq_vec))]
+      on_boundary <- sum(final_sigmabeta_sq %in% grid_boundary)
+
+      # if any of the final sigma were on the boundary, display a warning
+      if (on_boundary > 0){
+        warning(paste0("For ", on_boundary, "/", p + 1,
+                       " responses, the selected value of sigmabeta_sq was on the grid boundary. See return value ELBO for details"))
+      }
+    }
+
+    # pi_vec
+    if (length(pi_vec) > 2){
+
+      # get the selected values of pi for each response
+      final_pi <- unlist(lapply(ELBO_p, `[[`, 2))
+
+      # count the number of final_pi that were on the boundary of the grid
+      grid_boundary <- pi_vec[c(1, length(pi_vec))]
+      on_boundary <- sum(final_pi %in% grid_boundary)
+
+      # if any of the final pi were on the boundary, display a warning
+      if (on_boundary > 0){
+        warning(paste0("For ", on_boundary, "/", p + 1,
+                       " responses, the selected value of pi was on the grid boundary. See return value ELBO for details"))
+      }
+    }
+  }
   # Creating the graphs:
   # transform p + 1 n by n matrices to n p + 1 by p + 1 matrices using alpha_matrices
   # the j, k entry in the l-th matrix is the probability of inclusion of an edge
@@ -215,7 +282,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
 }
 
 # generate data and covariates
-discrete_data <- F # true if discrete example is desired
+discrete_data <- T # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter

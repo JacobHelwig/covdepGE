@@ -69,12 +69,11 @@ The main function, \texttt{covdepGE::covdepGE(}$\pmb X,\pmb Z$\texttt{)}, estima
 
 \begin{itemize}
 \item Complete documentation 
-\item Add compatibility checks gor visualization functions 
-\item Add warnings for when the optimal \texttt{sigmabeta\_sq} OR \texttt{pi\_est} is chosen at either of the grid end points; a \texttt{warning} argument for when users would like to toggle off the warnings. Should only be enabled when either \texttt{sigmabeta\_sq} or \texttt{pi\_est} is longer than 2. 
+\item Add compatibility checks for visualization functions 
 \item Create a vignette demonstrating usage on a simple simulated dataset.
 \item Change the \texttt{idmod} probs to logbase 10
 \item Remove \texttt{CS} argument
-\item Parallelization of the ``main loop'' over the predictors in \texttt{covdepGE\_main.R}). This is complicated by the \texttt{C++} code, however, two potential solutions are:
+\item Parallelization of the ``main loop'' over the predictors in \texttt{covdepGE\_main.R}. This is complicated by the \texttt{C++} code, however, two potential solutions are:
 	\begin{itemize}
 		\item \textcolor{blu}{\href{https://stackoverflow.com/questions/69789634/parallelization-of-rcpp-without-inline-creating-a-local-package?noredirect=1\#comment123649680_69789634}{StackOverflow suggestion}}
 		\item \textcolor{blu}{\href{https://cran.r-project.org/web/packages/RcppParallel/index.html}{RcppParallel}}

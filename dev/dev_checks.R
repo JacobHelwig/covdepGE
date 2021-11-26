@@ -31,22 +31,22 @@
 ## max_iter: scalar in {1, 2,...}; end the variational update loop
 ## edge_threshold: scalar in (0, 1)
 ## sym_method: string in {"mean", "max", "min"}
+## print_time: logical; if T, function run time is printed
+## warnings: logical; if T, convergence and grid warnings will be displayed
 covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                             sigmabetasq_vec, var_min, var_max, n_sigma, pi_vec,
                             norm, scale, tolerance, max_iter, edge_threshold,
-                            sym_method, print_time, CS){
+                            sym_method, print_time, warnings){
 
   # ensure that data_mat and Z are matrices
   data_mat <- tryCatch(as.matrix(data_mat),
                        error = function(msg){
                          stop(paste("data_mat should be of class matrix or a class that is coercible to a matrix;",
-                                    class(data_mat), "is not coercible to a matrix"))
-                         })
+                                    class(data_mat), "is not coercible to a matrix"))})
   Z <- tryCatch(as.matrix(Z),
                 error = function(msg){
                   stop(paste("Z should be of class matrix or a class that is coercible to a matrix;",
-                             class(Z)[1], "is not coercible to a matrix"))
-                  })
+                             class(Z)[1], "is not coercible to a matrix"))})
 
   # check dimensions of data_mat and Z for compatibility
   n <- nrow(data_mat)
@@ -77,7 +77,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                      pi_vec = pi_vec, norm = norm, scale = scale,
                      tolerance = tolerance, max_iter = max_iter,
                      edge_threshold = edge_threshold, sym_method = sym_method,
-                     print_time = print_time)
+                     print_time = print_time, warnings = warnings)
   if (any(sapply(args_nonNA, function (x) any(is.na(x))))){
 
     # get the name of the NA
@@ -90,7 +90,6 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                       sigmasq = sigmasq, var_min = var_min, var_max = var_max,
                       n_sigma = n_sigma, tolerance = tolerance,
                       max_iter = max_iter)
-
   if (any(!sapply(args_finite, function (x) all(is.finite(x))))){
 
     # get the name of the non-finite
@@ -114,7 +113,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                       var_min = var_min, var_max = var_max, n_sigma = n_sigma,
                       norm = norm, scale = scale, tolerance = tolerance,
                       max_iter = max_iter, edge_threshold = edge_threshold,
-                      sym_method = sym_method, print_time = print_time)
+                      sym_method = sym_method, print_time = print_time,
+                      warnings = warnings)
   if (any(!(sapply(args_scalar, length) == 1))){
 
     # get the name of the non-scalar
@@ -135,7 +135,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   }
 
   # ensure logical input for parameters that are expected to be logicals
-  args_logical <- list(kde = kde, scale = scale, print_time = print_time)
+  args_logical <- list(kde = kde, scale = scale, print_time = print_time,
+                       warnings = warnings)
   if (any(!sapply(args_logical, is.logical))){
 
     # get the name of the non-logical
@@ -210,7 +211,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
       stop("sigmabetasq_vec should have all non-NA entries")
     }
 
-    # check that all entties are finite
+    # check that all entries are finite
     if (any(is.infinite(sigmabetasq_vec))){
       stop("sigmabetasq_vec should have all finite entries")
     }

@@ -58,12 +58,7 @@ the *i*-th variable and the node representing the *j*-th variable.
 
 -   Complete documentation
 
--   Add compatibility checks gor visualization functions
-
--   Add warnings for when the optimal `sigmabeta_sq` OR `pi_est` is
-    chosen at either of the grid end points; a `warning` argument for
-    when users would like to toggle off the warnings. Should only be
-    enabled when either `sigmabeta_sq` or `pi_est` is longer than 2.
+-   Add compatibility checks for visualization functions
 
 -   Create a vignette demonstrating usage on a simple simulated dataset.
 
@@ -72,7 +67,7 @@ the *i*-th variable and the node representing the *j*-th variable.
 -   Remove `CS` argument
 
 -   Parallelization of the “main loop” over the predictors in
-    `covdepGE_main.R`). This is complicated by the `C++` code, however,
+    `covdepGE_main.R`. This is complicated by the `C++` code, however,
     two potential solutions are:
 
     -   <span style="color: blu">[StackOverflow

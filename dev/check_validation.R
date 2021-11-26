@@ -320,3 +320,25 @@ covdepGE(data_mat, Z, sym_method = "Inf")
 
 # non-scalar
 covdepGE(data_mat, Z, sym_method = c("max", "min"))
+
+## -----------------------------print_time--------------------------------------
+
+# NA
+covdepGE(data_mat, Z, print_time = NA)
+
+# non-logical
+covdepGE(data_mat, Z, print_time = 10)
+
+# logicial vector
+covdepGE(data_mat, Z, print_time = c(T, F))
+
+## -----------------------------warnings----------------------------------------
+
+# NA
+covdepGE(data_mat, Z, warnings = NA)
+
+# non-logical
+covdepGE(data_mat, Z, warnings = 10)
+
+# logicial vector
+covdepGE(data_mat, Z, warnings = c(T, F))
