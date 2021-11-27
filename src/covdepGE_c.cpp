@@ -222,6 +222,10 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
   arma::mat alpha_last;
   arma::mat change_alpha;
 
+  // boolean that is true if the model reaches convergence in less than max_iter
+  // iteration
+  bool converged = false;
+
   // S_sq update
   arma::mat S_sq = (sigmasq * arma::pow(arma::pow(X_mat, 2).t() * D + 1 / sigmabeta_sq, -1)).t();
 
@@ -248,6 +252,7 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
     // if the sum of squared changes in alpha is within the tolerance, break
     // from the for loop
     if (sqrt(arma::accu(arma::pow(change_alpha, 2))) < tolerance){
+      converged = true;
       break;
     }
   }
@@ -257,7 +262,8 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 
   // return matrices of variational parameters and the ELBO
   return(Rcpp::List::create(Rcpp::Named("var.alpha") = alpha,
-                            Rcpp::Named("var.elbo") = ELBO));
+                            Rcpp::Named("var.elbo") = ELBO,
+                            Rcpp::Named("converged") = converged));
 }
 
 // _____________________________________________________________________________
@@ -287,13 +293,13 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 // returns n_sigma x n_pi matrix of ELBOs
 // _____________________________________________________________________________
 // [[Rcpp::export]]
-arma::mat sigma_loop_c(const arma::colvec& y, const arma::mat& D,
-                       const arma::mat& X_mat, const arma::mat& mu_mat,
-                       const arma::mat& alpha_mat, double sigmasq,
-                       const arma::colvec& sigmabeta_sq_vec,
-                       const arma::colvec& pi_vec,
-                       double tolerance = 1e-9, int max_iter = 100,
-                       double upper_limit = 9){
+Rcpp::List sigma_loop_c(const arma::colvec& y, const arma::mat& D,
+                        const arma::mat& X_mat, const arma::mat& mu_mat,
+                        const arma::mat& alpha_mat, double sigmasq,
+                        const arma::colvec& sigmabeta_sq_vec,
+                        const arma::colvec& pi_vec,
+                        double tolerance = 1e-9, int max_iter = 100,
+                        double upper_limit = 9){
 
   // get the number of sigmas that are being tried
   int n_sigma = sigmabeta_sq_vec.n_elem;
@@ -305,22 +311,34 @@ arma::mat sigma_loop_c(const arma::colvec& y, const arma::mat& D,
   // sigma, pi pair
   arma::mat elbo_sigmaXpi(n_sigma, n_pi, arma::fill::zeros);
 
+  // store the resulting graphs
+  Rcpp::List out;
+
   // store the ELBO of the estimated graphs for each sigma, pi pair
   double elbo_graph;
+
+  // count the number of graphs for which convergence was attained
+  int converged_ct = 0;
 
   // for each sigma, pi pair, estimate n graphs and record the total ELBO
   // summed across these n graphs
   for (int j = 0; j < n_sigma; j++){
     for (int k = 0; k < n_pi; k++){
-      // get the ELBO for the graph
-      elbo_graph = cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
-                              sigmabeta_sq_vec(j), pi_vec(k), tolerance,
-                              max_iter, upper_limit)["var.elbo"];
+
+      // get the ELBO and convergence status for the graph
+      out = cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
+                       sigmabeta_sq_vec(j), pi_vec(k), tolerance,
+                       max_iter, upper_limit);
+      elbo_graph = out["var.elbo"];
+      if (out["converged"]){
+        converged_ct++;
+      }
 
       // add the ELBO to the matrix of ELBOs
       elbo_sigmaXpi(j, k) = elbo_graph;
     }
   }
 
-  return elbo_sigmaXpi;
+  return Rcpp::List::create(Rcpp::Named("elbo_grid") = elbo_sigmaXpi,
+                            Rcpp::Named("num_converged") = converged_ct);
 }

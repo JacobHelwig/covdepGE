@@ -21,7 +21,7 @@
 ## tolerance: scalar in (0, Inf); end the variational update loop
 ## max_iter: scalar in {1, 2,...}; end the variational update loop
 ## edge_threshold: scalar in (0, 1)
-## sym_method: string in {"mean", "max", "min"}
+## sym_method: character in {"mean", "max", "min"}
 ## print_time: logical; if T, function run time is printed
 ## warnings: logical; if T, convergence and grid warnings will be displayed
 covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
@@ -29,21 +29,29 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                             norm, scale, tolerance, max_iter, edge_threshold,
                             sym_method, print_time, warnings){
 
-  # ensure that data_mat and Z are matrices
-  data_mat <- tryCatch(as.matrix(data_mat),
-                       error = function(msg){
-                         stop(paste("data_mat should be of class matrix or a class that is coercible to a matrix;",
-                                    class(data_mat), "is not coercible to a matrix"))})
-  Z <- tryCatch(as.matrix(Z),
-                error = function(msg){
-                  stop(paste("Z should be of class matrix or a class that is coercible to a matrix;",
-                             class(Z)[1], "is not coercible to a matrix"))})
+  # ensure vector input for parameters that are expected to be vectors
+  args_vector <- list(tau = tau, pi_vec = pi_vec)
+  if (any(!sapply(args_vector, is.vector))){
 
-  # check dimensions of data_mat and Z for compatibility
-  n <- nrow(data_mat)
-  if (n != nrow(Z)){
-    stop(paste0("Number of rows in data_mat (", n,
-                ") is not equal to the number of rows in Z (", nrow(Z), ")"))
+    # get the name of the non-vector
+    non_vector <- names(which(!sapply(args_vector, is.vector)))[1]
+    stop(paste0(non_vector, " is of class ", class(args_vector[[non_vector]])[1],
+                "; expected vector"))
+  }
+
+  # ensure scalar input for parameters that are expected to be scalars
+  args_scalar <- list(kde = kde, alpha = alpha, mu = mu, sigmasq = sigmasq,
+                      var_min = var_min, var_max = var_max, n_sigma = n_sigma,
+                      norm = norm, scale = scale, tolerance = tolerance,
+                      max_iter = max_iter, edge_threshold = edge_threshold,
+                      sym_method = sym_method, print_time = print_time,
+                      warnings = warnings)
+  if (any(!(sapply(args_scalar, length) == 1))){
+
+    # get the name of the non-scalar
+    non_scalar <- names(which(!(sapply(args_scalar, length) == 1)))[1]
+    stop(paste0(non_scalar, " is of length ",
+                length(args_scalar[[non_scalar]]), "; expected scalar value"))
   }
 
   # ensure numeric input for parameters that are expected to be numeric
@@ -57,8 +65,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
     # get the name of the non-numeric
     non_numeric <- names(which(!sapply(args_numeric, is.numeric)))[1]
     stop(paste0(non_numeric, " is of type ",
-                typeof(args_numeric[[non_numeric]]),
-                "; expected numeric"))
+                typeof(args_numeric[[non_numeric]]), "; expected numeric"))
   }
 
   # ensure non-NA input for parameters that are to be non-NA
@@ -89,32 +96,6 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
     stop(paste0(non_finite, " should have all finite entries"))
   }
 
-  # ensure vector input for parameters that are expected to be vectors
-  args_vector <- list(tau = tau, pi_vec = pi_vec)
-  if (any(!sapply(args_vector, is.vector))){
-
-    # get the name of the non-vector
-    non_vector <- names(which(!sapply(args_vector, is.vector)))[1]
-    stop(paste0(non_vector, " is of class ", class(args_vector[[non_vector]])[1],
-                "; expected vector"))
-  }
-
-  # ensure scalar input for parameters that are expected to be scalars
-  args_scalar <- list(kde = kde, alpha = alpha, mu = mu, sigmasq = sigmasq,
-                      var_min = var_min, var_max = var_max, n_sigma = n_sigma,
-                      norm = norm, scale = scale, tolerance = tolerance,
-                      max_iter = max_iter, edge_threshold = edge_threshold,
-                      sym_method = sym_method, print_time = print_time,
-                      warnings = warnings)
-  if (any(!(sapply(args_scalar, length) == 1))){
-
-    # get the name of the non-scalar
-    non_scalar <- names(which(!(sapply(args_scalar, length) == 1)))[1]
-    stop(paste0(non_scalar, " is of length ",
-                length(args_scalar[[non_scalar]]),
-                "; expected scalar value"))
-  }
-
   # ensure integer input for parameters that are expected to be integers
   args_integers <- list(n_sigma = n_sigma, max_iter = max_iter)
   if (any(!(sapply(args_integers, function(x) x %% 1) == 0))){
@@ -133,8 +114,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
     # get the name of the non-logical
     non_logical <- names(which(!sapply(args_logical, is.logical)))[1]
     stop(paste0(non_logical, " is of type ",
-                typeof(args_logical[[non_logical]]),
-                "; expected logical"))
+                typeof(args_logical[[non_logical]]), "; expected logical"))
   }
 
   # ensure character input for parameters that are expected to be characters
@@ -170,6 +150,23 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
     non_01 <- names(which(!sapply(args_01,
                                   function (x) all(0 <= x & x <= 1))))[1]
     stop(paste0(non_01, " should have all entries in the interval [0, 1]"))
+  }
+
+  # ensure that data_mat and Z are matrices
+  data_mat <- tryCatch(as.matrix(data_mat),
+                       error = function(msg){
+                         stop(paste("data_mat should be of class matrix or a class that is coercible to a matrix;",
+                                    class(data_mat), "is not coercible to a matrix"))})
+  Z <- tryCatch(as.matrix(Z),
+                error = function(msg){
+                  stop(paste("Z should be of class matrix or a class that is coercible to a matrix;",
+                             class(Z)[1], "is not coercible to a matrix"))})
+
+  # ensure data_mat and Z have compatible dimensions
+  n <- nrow(data_mat)
+  if (n != nrow(Z)){
+    stop(paste0("Number of rows in data_mat (", n,
+                ") is not equal to the number of rows in Z (", nrow(Z), ")"))
   }
 
   # ensure that tau is either of length 1 or n
@@ -213,18 +210,266 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
     }
   }
 
-  # check that norm is greater than or equal to 1
+  # ensure that norm is greater than or equal to 1
   if (norm < 1){
     stop("norm should be greater than or equal to 1")
   }
 
-  # check that edge_threshold is in (0, 1)
+  # ensure that edge_threshold is in (0, 1)
   if (!(0 < edge_threshold & edge_threshold < 1)){
     stop("edge_threshold should be in the interval (0, 1)")
   }
 
-  # check that sym_method is mean, min, or max
+  # ensure that sym_method is mean, min, or max
   if (!(sym_method %in% c("mean", "min", "max"))){
     stop("sym_method should be one of \"mean\", \"min\", or \"max\"")
+  }
+}
+
+## _____________________________________________________________________________
+## _____________________________adjMat_checks___________________________________
+## _____________________________________________________________________________
+## -----------------------------DESCRIPTION-------------------------------------
+## Function to check compatibility of arguments to gg_adjMat
+## -----------------------------ARGUMENTS---------------------------------------
+## out: list; return of covdepGE function
+## l: scalar in {1, 2, ..., n}; individual index
+## prob_shade: logical; if T, entries will be shaded according probabilities
+## color1 (probability 1); if F, binary coloring is used
+## color0: character; color for 0 entries
+## color1: character; color for 1 entries
+## grid_color: character; color of grid lines
+## incl_probs: logical; display posterior inclusion probability
+## prob_prec: scalar in {1, 2, ...}; number of decimal places to round
+## font_size: scalar in (0, Inf); size of font if incl_probs = T
+## font_color0: character; color of font for 0 entries if incl_probs = T
+## font_color1: character; color of font for 1 entries if incl_probs = T.
+adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
+                          incl_probs, prob_prec, font_size, font_color0,
+                          font_color1){
+
+  # ensure scalar input for parameters that are expected to be scalars
+  args_scalar <- list(l = l, prob_shade = prob_shade, color0 = color0,
+                      color1 = color1, grid_color = grid_color,
+                      incl_probs = incl_probs, prob_prec = prob_prec,
+                      font_size = font_size, font_color0 = font_color0,
+                      font_color1 = font_color1)
+  if (any(!(sapply(args_scalar, length) == 1))){
+
+    # get the name of the non-scalar
+    non_scalar <- names(which(!(sapply(args_scalar, length) == 1)))[1]
+    stop(paste0(non_scalar, " is of length ", length(args_scalar[[non_scalar]]),
+                "; expected scalar value"))
+  }
+
+  # ensure numeric input for parameters that are expected to be numeric
+  args_numeric <- list(l = l, prob_prec = prob_prec, font_size = font_size)
+  if (any(!sapply(args_numeric, is.numeric))){
+
+    # get the name of the non-numeric
+    non_numeric <- names(which(!sapply(args_numeric, is.numeric)))[1]
+    stop(paste0(non_numeric, " is of type ", typeof(args_numeric[[non_numeric]]),
+                "; expected numeric"))
+  }
+
+  # ensure non-NA input for parameters that are to be non-NA
+  args_nonNA <- list(out = out, l = l, prob_shade = prob_shade, color0 = color0,
+                     color1 = color1, grid_color = grid_color,
+                     incl_probs = incl_probs, prob_prec = prob_prec,
+                     font_size = font_size, font_color0 = font_color0,
+                     font_color1 = font_color1)
+  if (any(sapply(args_nonNA, function (x) any(is.na(x))))){
+
+    # get the name of the NA
+    na <- names(which(sapply(args_nonNA, function (x) any(is.na(x)))))[1]
+    stop(paste0(na, " should have all non-NA entries"))
+  }
+
+  # ensure finite input for parameters that are expected to be finite
+  args_finite <- list(l = l, prob_prec = prob_prec, font_size = font_size)
+  if (any(!sapply(args_finite, function (x) all(is.finite(x))))){
+
+    # get the name of the non-finite
+    non_finite <- names(which(!sapply(args_finite,
+                                      function (x) all(is.finite(x)))))[1]
+    stop(paste0(non_finite, " should have all finite entries"))
+  }
+
+  # ensure logical input for parameters that are expected to be logicals
+  args_logical <- list(prob_shade = prob_shade, incl_probs = incl_probs)
+  if (any(!sapply(args_logical, is.logical))){
+
+    # get the name of the non-logical
+    non_logical <- names(which(!sapply(args_logical, is.logical)))[1]
+    stop(paste0(non_logical, " is of type ",
+                typeof(args_logical[[non_logical]]), "; expected logical"))
+  }
+
+  # ensure valid color input for parameters that are expected to be colors
+  # citation:
+  # https://stackoverflow.com/a/13290832/10965084
+  args_colors <- list(color0 = color0, color1 = color1, grid_color = grid_color,
+                      font_color0 = font_color0, font_color1 = font_color1)
+  if (any(!sapply(args_colors, function(x){
+    tryCatch(is.matrix(grDevices::col2rgb(x)), error = function(msg) F)}))){
+
+    # get the name of the non-color
+    non_color <- args_colors[!sapply(args_colors, function(x){
+      tryCatch(is.matrix(grDevices::col2rgb(x)),
+               error = function(msg) F)})][[1]]
+    stop(paste0(non_color, " is not a valid color"))
+  }
+
+  # ensure positive input for parameters that are expected to be positive
+  args_positive <- list(l = l, prob_prec = prob_prec, font_size = font_size)
+  if (any(!sapply(args_positive, function (x) all(x > 0)))){
+
+    # get the name of the non-positive
+    non_positive <- names(which(!sapply(args_positive,
+                                        function (x) all(x > 0))))[1]
+    stop(paste0(non_positive, " should have all positive entries"))
+  }
+
+  # ensure out is a list
+  if (!is.list(out)){
+    stop(paste0("out is of class ", class(out)[1], "; expected list"))
+  }
+
+  # ensure out has inclusion_probs and graphs
+  if (!(all(c("inclusion_probs", "graphs") %in% names(out)))){
+    stop(paste0("out should be return of function covdepGE"))
+  }
+
+  # ensure l in 1,...,n
+  n <- length(out$graphs)
+  if (!(l %in% 1:n)){
+    stop(paste0("l should be in 1, 2, ..., ", n))
+  }
+
+  # ensure prob_prec is an integer
+  if ((prob_prec %% 1) != 0){
+    stop("prob_prec should be integer-valued")
+  }
+
+}
+
+## _____________________________________________________________________________
+## _____________________________inclusionCurve_checks___________________________
+## _____________________________________________________________________________
+## -----------------------------DESCRIPTION-------------------------------------
+## Function to check compatibility of arguments to gg_inclusionCurve
+## -----------------------------ARGUMENTS---------------------------------------
+## out: list; return of covdepGE function
+## col_idx1: scalar in {1, 2, ..., p + 1}; column index of the first variable
+## col_idx2: scalar in {1, 2, ..., p + 1}; column index of the second variable
+## line_type: character; ggplot2 line type
+## line_size: scalar in (0, Inf); thickness of the interpolating line
+## line_color: character; color of interpolating line
+## point_shape: scalar in {1, 2,...}; shape of the points
+## point_size: scalar in (0, Inf); size of probability points
+## point_color: character; color of probability points
+## point_fill: character; fill of probability points
+## sort: logical; sort the subject indices for smooth inclusion curve
+inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
+                                  line_color, point_shape, point_size,
+                                  point_color, point_fill, sort){
+
+  # ensure scalar input for parameters that are expected to be scalars
+  args_scalar <- list(col_idx1 = col_idx1, col_idx2 = col_idx2,
+                      line_type = line_type, line_size = line_size,
+                      line_color = line_color, point_shape = point_shape,
+                      point_size = point_size, point_color = point_color,
+                      point_fill = point_fill, sort = sort)
+  if (any(!(sapply(args_scalar, length) == 1))){
+
+    # get the name of the non-scalar
+    non_scalar <- names(which(!(sapply(args_scalar, length) == 1)))[1]
+    stop(paste0(non_scalar, " is of length ", length(args_scalar[[non_scalar]]),
+                "; expected scalar value"))
+  }
+
+  # ensure numeric input for parameters that are expected to be numeric
+  args_numeric <- list(col_idx1 = col_idx1, col_idx2 = col_idx2,
+                       line_size = line_size, point_size = point_size)
+  if (any(!sapply(args_numeric, is.numeric))){
+
+    # get the name of the non-numeric
+    non_numeric <- names(which(!sapply(args_numeric, is.numeric)))[1]
+    stop(paste0(non_numeric, " is of type ", typeof(args_numeric[[non_numeric]]),
+                "; expected numeric"))
+  }
+
+  # ensure non-NA input for parameters that are to be non-NA
+  args_nonNA <- list(out = out, col_idx1 = col_idx1, col_idx2 = col_idx2,
+                     line_type = line_type, line_size = line_size,
+                     line_color = line_color, point_shape = point_shape,
+                     point_size = point_size, point_color = point_color,
+                     point_fill = point_fill, sort = sort)
+  if (any(sapply(args_nonNA, function (x) any(is.na(x))))){
+
+    # get the name of the NA
+    na <- names(which(sapply(args_nonNA, function (x) any(is.na(x)))))[1]
+    stop(paste0(na, " should have all non-NA entries"))
+  }
+
+  # ensure finite input for parameters that are expected to be finite
+  args_finite <- list(col_idx1 = col_idx1, col_idx2 = col_idx2,
+                      line_size = line_size, point_size = point_size)
+  if (any(!sapply(args_finite, function (x) all(is.finite(x))))){
+
+    # get the name of the non-finite
+    non_finite <- names(which(!sapply(args_finite,
+                                      function (x) all(is.finite(x)))))[1]
+    stop(paste0(non_finite, " should have all finite entries"))
+  }
+
+  # ensure valid color input for parameters that are expected to be colors
+  # citation:
+  # https://stackoverflow.com/a/13290832/10965084
+  args_colors <- list(line_color = line_color, point_color = point_color,
+                      point_fill = point_fill)
+  if (any(!sapply(args_colors, function(x){
+    tryCatch(is.matrix(grDevices::col2rgb(x)), error = function(msg) F)}))){
+
+    # get the name of the non-color
+    non_color <- args_colors[!sapply(args_colors, function(x){
+      tryCatch(is.matrix(grDevices::col2rgb(x)),
+               error = function(msg) F)})][[1]]
+    stop(paste0(non_color, " is not a valid color"))
+  }
+
+  # ensure positive input for parameters that are expected to be positive
+  args_positive <- list(col_idx1 = col_idx1, col_idx2 = col_idx2,
+                        line_size = line_size, point_size = point_size)
+  if (any(!sapply(args_positive, function (x) all(x > 0)))){
+
+    # get the name of the non-positive
+    non_positive <- names(which(!sapply(args_positive,
+                                        function (x) all(x > 0))))[1]
+    stop(paste0(non_positive, " should have all positive entries"))
+  }
+
+  # ensure out is a list
+  if (!is.list(out)){
+    stop(paste0("out is of class ", class(out)[1], "; expected list"))
+  }
+
+  # ensure out has inclusion_probs and graphs
+  if (!(all(c("inclusion_probs", "graphs") %in% names(out)))){
+    stop(paste0("out should be return of function covdepGE"))
+  }
+
+  # ensure sort is a logical
+  if (!is.logical(sort)){
+    stop(paste0("sort is of type ", typeof(sort), "; expected logical"))
+  }
+
+  # ensure col_idx1 and col_idx2 are in 1,...,p + 1
+  p <- ncol(out$graphs[[1]])
+  if (!(col_idx1 %in% 1:p)){
+    stop(paste0("col_idx1 should be in 1, 2, ..., ", p))
+  }
+  if (!(col_idx2 %in% 1:p)){
+    stop(paste0("col_idx2 should be in 1, 2, ..., ", p))
   }
 }

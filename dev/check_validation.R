@@ -7,6 +7,10 @@ cont <- generate_continuous()
 data_mat <- cont$data
 Z <- cont$covts
 
+## -----------------------------------------------------------------------------
+## -----------------------------covdepGE----------------------------------------
+## -----------------------------------------------------------------------------
+
 ## -----------------------------data_mat----------------------------------------
 
 # NA
@@ -342,3 +346,325 @@ covdepGE(data_mat, Z, warnings = 10)
 
 # logicial vector
 covdepGE(data_mat, Z, warnings = c(T, F))
+
+## -----------------------------------------------------------------------------
+## -----------------------------gg_adjMat---------------------------------------
+## -----------------------------------------------------------------------------
+
+out <- covdepGE(data_mat, Z)
+gg_adjMat(out, 1)
+
+## -----------------------------out---------------------------------------------
+
+# non-list
+gg_adjMat(7, 1)
+
+# list without proper values
+gg_adjMat(list(7), 1)
+
+## -----------------------------l-----------------------------------------------
+
+# NA
+gg_adjMat(out, NA)
+
+# Inf
+gg_adjMat(out, Inf)
+
+# Negative
+gg_adjMat(out, -5)
+
+# non-integer
+gg_adjMat(out, 5.1)
+
+# vector
+gg_adjMat(out, c(5, 5))
+
+## -----------------------------prob_shade--------------------------------------
+
+# NA
+gg_adjMat(out, 1, prob_shade = NA)
+
+# Inf
+gg_adjMat(out, 1, prob_shade = Inf)
+
+# non-logical
+gg_adjMat(out, 1, prob_shade = 5)
+
+# logical vector
+gg_adjMat(out, 1, prob_shade = c(T, T))
+
+## -----------------------------color0------------------------------------------
+
+# NA
+gg_adjMat(out, 1, color0 = NA)
+
+# Inf
+gg_adjMat(out, 1, color0 = Inf)
+
+# non-color character
+gg_adjMat(out, 1, color0 = "here")
+
+# vector of colors
+gg_adjMat(out, 1, color0 = c("red", "blue"))
+
+## -----------------------------color1------------------------------------------
+
+# NA
+gg_adjMat(out, 1, color1 = NA)
+
+# Inf
+gg_adjMat(out, 1, color1 = Inf)
+
+# non-color character
+gg_adjMat(out, 1, color1 = "here")
+
+# vector of colors
+gg_adjMat(out, 1, color1 = c("red", "blue"))
+
+## -----------------------------grid_color------------------------------------------
+
+# NA
+gg_adjMat(out, 1, grid_color = NA)
+
+# Inf
+gg_adjMat(out, 1, grid_color = Inf)
+
+# non-color character
+gg_adjMat(out, 1, grid_color = "here")
+
+# vector of colors
+gg_adjMat(out, 1, grid_color = c("red", "blue"))
+
+## -----------------------------incl_probs--------------------------------------
+
+# NA
+gg_adjMat(out, 1, incl_probs = NA)
+
+# Inf
+gg_adjMat(out, 1, incl_probs = Inf)
+
+# non-logical
+gg_adjMat(out, 1, incl_probs = 5)
+
+# logical vector
+gg_adjMat(out, 1, incl_probs = c(T, T))
+
+## -----------------------------prob_prec--------------------------------------
+
+# NA
+gg_adjMat(out, 1, prob_prec = NA)
+
+# Inf
+gg_adjMat(out, 1, prob_prec = Inf)
+
+# non-integer
+gg_adjMat(out, 1, prob_prec = 5.1)
+
+# integer vector
+gg_adjMat(out, 1, prob_prec = c(1, 1))
+
+# negative
+gg_adjMat(out, 1, prob_prec = -1)
+
+## -----------------------------font_size---------------------------------------
+
+# NA
+gg_adjMat(out, 1, font_size = NA)
+
+# Inf
+gg_adjMat(out, 1, font_size = Inf)
+
+# vector
+gg_adjMat(out, 1, font_size = c(1, 1))
+
+# negative
+gg_adjMat(out, 1, font_size = -1)
+
+# non-numeric
+gg_adjMat(out, 1, font_size = "1")
+
+## -----------------------------font_color0-------------------------------------
+
+# NA
+gg_adjMat(out, 1, font_color0 = NA)
+
+# Inf
+gg_adjMat(out, 1, font_color0 = Inf)
+
+# non-color character
+gg_adjMat(out, 1, font_color0 = "here")
+
+# vector of colors
+gg_adjMat(out, 1, font_color0 = c("red", "blue"))
+
+## -----------------------------font_color1-------------------------------------
+
+# NA
+gg_adjMat(out, 1, font_color1 = NA)
+
+# Inf
+gg_adjMat(out, 1, font_color1 = Inf)
+
+# non-color character
+gg_adjMat(out, 1, font_color1 = "here")
+
+# vector of colors
+gg_adjMat(out, 1, font_color1 = c("red", "blue"))
+
+## -----------------------------------------------------------------------------
+## -----------------------------gg_inclusionCurve-------------------------------
+## -----------------------------------------------------------------------------
+
+out <- covdepGE(data_mat, Z)
+gg_inclusionCurve(out, 1, 2)
+
+## -----------------------------out---------------------------------------------
+
+# non-list
+gg_inclusionCurve(7, 1, 2)
+
+# list without proper values
+gg_inclusionCurve(list(7), 1, 2)
+
+## -----------------------------col_idx1----------------------------------------
+
+# NA
+gg_inclusionCurve(out, NA, 2)
+
+# Inf
+gg_inclusionCurve(out, Inf, 2)
+
+# Negative
+gg_inclusionCurve(out, -5, 2)
+
+# non-integer
+gg_inclusionCurve(out, 5.1, 2)
+
+# vector
+gg_inclusionCurve(out, c(5, 5), 2)
+
+## -----------------------------col_idx1----------------------------------------
+
+# NA
+gg_inclusionCurve(out, 2, NA)
+
+# Inf
+gg_inclusionCurve(out, 2, Inf)
+
+# Negative
+gg_inclusionCurve(out, 5, -2)
+
+# non-integer
+gg_inclusionCurve(out, 5, 2.1)
+
+# vector
+gg_inclusionCurve(out, 2, c(5, 5))
+
+## -----------------------------line_type---------------------------------------
+
+# NA
+gg_inclusionCurve(out, 2, 3, line_type = NA)
+
+# Inf
+gg_inclusionCurve(out, 2, 3, line_type = Inf)
+
+# non-character
+gg_inclusionCurve(out, 2, 5, line_type = -2)
+
+# wrong character
+gg_inclusionCurve(out, 5, 2, line_type = "here")
+
+# vector
+gg_inclusionCurve(out, 5, 2, line_type = c(1, 2))
+
+## -----------------------------line_size---------------------------------------
+
+# NA
+gg_inclusionCurve(out, 1, 2, line_size = NA)
+
+# Inf
+gg_inclusionCurve(out, 1, 2, line_size = Inf)
+
+# non-numeric
+gg_inclusionCurve(out, 1, 2, line_size = "5")
+
+# vector
+gg_inclusionCurve(out, 1, 2, line_size = c(1, 2))
+
+## -----------------------------line_color--------------------------------------
+
+# NA
+gg_inclusionCurve(out, 1, 2, line_color = NA)
+
+# Inf
+gg_inclusionCurve(out, 1, 2, line_color = Inf)
+
+# non-color character
+gg_inclusionCurve(out, 1, 2, line_color = "here")
+
+# vector of colors
+gg_inclusionCurve(out, 1, 2, line_color = c("red", "blue"))
+
+## -----------------------------point_shape-------------------------------------
+
+# NA
+gg_inclusionCurve(out, 1, 2, point_shape = NA)
+
+# Inf
+gg_inclusionCurve(out, 1, 2, point_shape = Inf)
+
+## -----------------------------point_size--------------------------------------
+
+# NA
+gg_inclusionCurve(out, 1, 2, point_size = NA)
+
+# Inf
+gg_inclusionCurve(out, 1, 2, point_size = Inf)
+
+# non-numeric
+gg_inclusionCurve(out, 1, 2, point_size = "here")
+
+# vector
+gg_inclusionCurve(out, 1, 2, point_size = c(1, 2))
+
+## -----------------------------point_color-------------------------------------
+
+# NA
+gg_inclusionCurve(out, 1, 2, point_color = NA)
+
+# Inf
+gg_inclusionCurve(out, 1, 2, point_color = Inf)
+
+# non-color
+gg_inclusionCurve(out, 1, 2, point_color = "here")
+
+# vector of colors
+gg_inclusionCurve(out, 1, 2, point_color = c("red", "blue"))
+
+## -----------------------------point_fill-------------------------------------
+
+# NA
+gg_inclusionCurve(out, 1, 2, point_fill = NA)
+
+# Inf
+gg_inclusionCurve(out, 1, 2, point_fill = Inf)
+
+# non-color
+gg_inclusionCurve(out, 1, 2, point_fill = "here")
+
+# vector of colors
+gg_inclusionCurve(out, 1, 2, point_fill = c("red", "blue"))
+
+## -----------------------------sort--------------------------------------------
+
+# NA
+gg_inclusionCurve(out, 1, 2, sort = NA)
+
+# Inf
+gg_inclusionCurve(out, 1, 2, sort = Inf)
+
+# non-logical
+gg_inclusionCurve(out, 1, 2, sort = 5.1)
+
+# logical vector
+gg_inclusionCurve(out, 1, 2, sort = c(T, T))

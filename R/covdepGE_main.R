@@ -46,7 +46,7 @@
 ## edge_threshold: scalar in (0, 1); when processing the inclusion
 ## probabilities, add an edge to the graph if the (i, j) edge has probability
 ## of inclusion greater than edge_threshold. 0.5 by default
-## sym_method: string in {"mean", "max", "min"}; to symmetrize the alpha
+## sym_method: character in {"mean", "max", "min"}; to symmetrize the alpha
 ## matrices, the i,j = j,i entry is sym_method((i,j entry), (j,i) entry). "mean"
 ## by default
 ## print_time: logical; if T, function run time is printed. F by default

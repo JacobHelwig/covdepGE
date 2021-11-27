@@ -52,7 +52,7 @@ source("dev_checks.R")
 ## edge_threshold: scalar in (0, 1); when processing the inclusion
 ## probabilities, add an edge to the graph if the (i, j) edge has probability
 ## of inclusion greater than edge_threshold. 0.5 by default
-## sym_method: string in {"mean", "max", "min"}; to symmetrize the alpha
+## sym_method: character in {"mean", "max", "min"}; to symmetrize the alpha
 ## matrices, the i,j = j,i entry is sym_method((i,j entry), (j,i) entry). "mean"
 ## by default
 ## print_time: logical; if T, function run time is printed. F by default
@@ -277,7 +277,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   if (print_time) print(Sys.time() - start_time)
 
   return(list(graphs = graphs, inclusion_probs = incl_probs,
-              alpha_matrices = incl_probs_asym, ELBO = ELBO_p, D = D,
+              alpha_matrices = incl_probs_asym, ELBO = ELBO_p, weights = D,
               bandwidths = bandwidths))
 }
 

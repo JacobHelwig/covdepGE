@@ -33,7 +33,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // sigma_loop_c
-arma::mat sigma_loop_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X_mat, const arma::mat& mu_mat, const arma::mat& alpha_mat, double sigmasq, const arma::colvec& sigmabeta_sq_vec, const arma::colvec& pi_vec, double tolerance, int max_iter, double upper_limit);
+Rcpp::List sigma_loop_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X_mat, const arma::mat& mu_mat, const arma::mat& alpha_mat, double sigmasq, const arma::colvec& sigmabeta_sq_vec, const arma::colvec& pi_vec, double tolerance, int max_iter, double upper_limit);
 RcppExport SEXP _covdepGE_sigma_loop_c(SEXP ySEXP, SEXP DSEXP, SEXP X_matSEXP, SEXP mu_matSEXP, SEXP alpha_matSEXP, SEXP sigmasqSEXP, SEXP sigmabeta_sq_vecSEXP, SEXP pi_vecSEXP, SEXP toleranceSEXP, SEXP max_iterSEXP, SEXP upper_limitSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

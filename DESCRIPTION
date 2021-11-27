@@ -20,4 +20,5 @@ Imports:
     Rcpp,
     stats,
     ggplot2,
-    latex2exp
+    latex2exp,
+    grDevices

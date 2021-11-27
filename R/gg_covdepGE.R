@@ -10,43 +10,29 @@
 ## prob_shade: logical; if T, then entries will be shaded according to posterior
 ## inclusion probabilities on a gradient ranging from color0 (0 probability) to
 ## color1 (probability 1); if F, binary coloring is used. T by default
-## color0: string; color for 0 entries. "white" by default
-## color1: string; color for 1 entries. "#500000" by default
-## grid_color: string; color of grid lines. "black" by default
+## color0: character; color for 0 entries. "white" by default
+## color1: character; color for 1 entries. "#500000" by default
+## grid_color: character; color of grid lines. "black" by default
 ## incl_probs: logical; whether the posterior inclusion probability should be
 ## displayed for each entry. T by default
 ## prob_prec: scalar in {1, 2, ...}; number of decimal places to round
 ## probabilities to if incl_probs = T. 2 by default
 ## font_size: scalar in (0, Inf); size of font if incl_probs = T. 3 by default
-## font_color0: string; color of font for 0 entries if incl_probs = T. "black"
+## font_color0: character; color of font for 0 entries if incl_probs = T. "black"
 ## by default
-## font_color1: string; color of font for 1 entries if incl_probs = T. "white"
+## font_color1: character; color of font for 1 entries if incl_probs = T. "white"
 ## by default
 ##
 ## -----------------------------RETURNS-----------------------------------------
 ## returns visualization of adjacency matrix
-#' Title
-#'
-#' @param out
-#' @param l
-#' @param prob_shade
-#' @param color0
-#' @param color1
-#' @param grid_color
-#' @param incl_probs
-#' @param prob_prec
-#' @param font_size
-#' @param font_color0
-#' @param font_color1
-#'
-#' @return
-#' @export
-#'
-#' @examples
 gg_adjMat <- function(out, l, prob_shade = T, color0 = "white",
                       color1 = "#500000", grid_color = "black", incl_probs = T,
                       prob_prec = 2, font_size = 3, font_color0 = "black",
                       font_color1 = "white"){
+
+  # run compatibility checks
+  adjMat_checks(out, l, prob_shade, color0, color1, grid_color, incl_probs,
+                prob_prec, font_size, font_color0, font_color1)
 
   if (prob_shade){
 
@@ -147,16 +133,16 @@ gg_adjMat <- function(out, l, prob_shade = T, color0 = "white",
 ## out: list; return of covdepGE function
 ## col_idx1: scalar in {1, 2, ..., p + 1}; column index of the first variable
 ## col_idx2: scalar in {1, 2, ..., p + 1}; column index of the second variable
-## line_type: string; ggplot2 line type to interpolate the probabilities.
+## line_type: character; ggplot2 line type to interpolate the probabilities.
 ## "solid" by default
 ## line_size: scalar in (0, Inf); thickness of the interpolating line. 0.5 by
 ## default
-## line_color: string; color of interpolating line. "black" by default
+## line_color: character; color of interpolating line. "black" by default
 ## point_shape: scalar in {1, 2,...}; shape of the points denoting individual
 ## -specific probabilities; 21 by default
 ## point_size: scalar in (0, Inf); size of probability points. 1.5 by default
-## point_color: string; color of probability points. "#500000" by default
-## point_fill: string; fill of probability points. Only applies to select
+## point_color: character; color of probability points. "#500000" by default
+## point_fill: character; fill of probability points. Only applies to select
 ## shapes. "white" by default
 ## sort: logical; when T, rearranges the subject index so that individuals that
 ## are similar in terms of extraneous covariates have neighboring indices to
@@ -165,29 +151,16 @@ gg_adjMat <- function(out, l, prob_shade = T, color0 = "white",
 ## as is
 ## -----------------------------RETURNS-----------------------------------------
 ## returns visualization of adjacency matrix
-#' Title
-#'
-#' @param out
-#' @param col_idx1
-#' @param col_idx2
-#' @param line_type
-#' @param line_size
-#' @param line_color
-#' @param point_shape
-#' @param point_size
-#' @param point_color
-#' @param point_fill
-#' @param sort
-#'
-#' @return
-#' @export
-#'
-#' @examples
 gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
                               line_size = 0.5, line_color = "black",
                               point_shape = 21, point_size = 1.5,
                               point_color = "#500000", point_fill = "white",
                               sort = F){
+
+  # run compatibility checks
+  inclusionCurve_checks(out, col_idx1, col_idx2, line_type, line_size,
+                        line_color, point_shape, point_size, point_color,
+                        point_fill, sort)
 
   # get the probabilities for each individual of an edge between the variables
   # corresponding to col_idx1 and col_idx2
