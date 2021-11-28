@@ -1,8 +1,9 @@
 setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
 rm(list = ls())
 source("generate_data.R")
-source("dev_weights.R")
-source("dev_checks.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
 
 ## _____________________________________________________________________________
 ## _____________________________covdepGE________________________________________
@@ -315,7 +316,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
 }
 
 # generate data and covariates
-discrete_data <- T # true if discrete example is desired
+discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter
@@ -369,3 +370,4 @@ same_probs
 
 # check for equality between ELBO
 all.equal(unname(unlist(lapply(out$ELBO, `[[`, 3))), out_original$original_ELBO)
+
