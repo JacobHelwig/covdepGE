@@ -1,134 +1,175 @@
-## _____________________________________________________________________________
-## _____________________________covdepGE________________________________________
-## _____________________________________________________________________________
-## -----------------------------DESCRIPTION-------------------------------------
-## Function to model the conditional dependence structure of data as a function
-## of extraneous covariates as described in (1)
-## "An approximate Bayesian approach to covariate dependent graphical modeling".
-## The final model uses the candidate pair of pi and sigmabeta_sq that maximize
-## the ELBO for each variable
-## -----------------------------ARGUMENTS---------------------------------------
-## data_mat: n x (p + 1) matrix; data
-##
-## Z: n x p' matrix; extraneous covariates
-##
-## tau: scalar in (0, Inf) OR n x 1 vector, entries in (0, Inf); bandwidth
-## parameter. Greater values allow for more information to be shared between
-## individuals. Allows for global or individual-specific specification. If
-## kde = T, this argument is ignored. 0.1 by default
-##
-## kde: logical scalar; if T, use 2-step KDE methodology as described in (2) to
-## calculate individual-specific bandwidths in place of global bandwidth
-## parameter tau. T by default
-##
-## alpha: scalar in [0, 1]; global initialization value for the variational
-## parameters alpha (approximates probabilities of inclusion). 0.2 by default
-##
-## mu: scalar; global initialization value for the variational parameters mu
-## (approximates regression coefficients). 0 by default
-##
-## sigmasq: scalar in (0, Inf); variance hyperparameter for spike-and-slab.
-## 0.5 by default
-##
-## sigmabetasq_vec: n_sigma x 1 vector, entries in (0, Inf); candidate values of
-## sigmabeta_sq, the slab variance. NULL by default
-##
-## var_min: scalar in (0, Inf); if sigmabetasq_vec is NULL, var_min is the lower
-## bound of the auto-generated sigmabetasq_vec. 0.01 by default
-##
-## var_max: scalar in (0, Inf); if sigmabetasq_vec is NULL, var_max is the upper
-## bound of the auto-generated sigmabetasq_vec. 10 by default
-##
-## n_sigma: scalar in {1, 2,...}; if sigmabetasq_vec is NULL, it will be
-## auto-generated as:
-## sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_sigma))
-## 8 by default.
-##
-## pi_vec: n_pi x 1 vector, entries in [0, 1]; candidate values of pi. 0.2 by
-## default
-##
-## norm: scalar in [1, Inf]; norm to use when calculating weights. Inf results
-## in infinity norm. 2 by default
-##
-## scale: logical scalar; if T, center and scale extraneous covariates to mean 0,
-## standard deviation 1 prior to calculating the weights. T by default
-##
-## tolerance: scalar in (0, Inf); end the variational update loop when the
-## square root of the sum of squared changes to the elements of the alpha matrix
-## are within tolerance. 1e-9 by default
-##
-## max_iter: scalar in {1, 2,...} if the tolerance criteria has not been met by
-## max_iter iterations, end the variational update loop. 100 by default
-##
-## edge_threshold: scalar in (0, 1); when processing the inclusion
-## probabilities, an edge will be added to the graph if the (i, j) edge has
-## probability of inclusion greater than edge_threshold. 0.5 by default
-##
-## sym_method: character scalar in {"mean", "max", "min"}; to symmetrize the
-## alpha matrices, the i,j = j,i entry is sym_method((i,j entry), (j,i entry)).
-## "mean" by default
-##
-## print_time: logical scalar; if T, function run time is printed. F by default
-##
-## warnings: logical scalar; if T, convergence and grid warnings will be displayed.
-## Convergence warnings occur when the tolerance exit condition has not been
-## met by max_iter iterations. Grid warnings occur when, for either
-## sigmabetasq_vec or pi_vec, the grid is longer than 2 candidates, and the
-## final model selects a candidate value on the grid boundary. T by default
-##
-## CS: logical scalar; if T, pi_vec and sigma_sq will be scalars selected according to
-## Carbonetto-Stephens
-##
-## -----------------------------RETURNS-----------------------------------------
-## graphs: list of n (p + 1) x (p + 1) matrices; the l-th matrix is the
-## adjacency matrix for the l-th individual (obtained from inclusion_probs
-## according to edge_threshold)
-##
-## inclusion_probs: list of n (p + 1) x (p + 1) matrices; the l-th element is a
-## symmetric matrix of inclusion probabilities for the l-th individual
-## (obtained by symmetrizing alpha_matrices according to sym_method)
-##
-## alpha_matrices: list of n (p + 1) x (p + 1) matrices; the l-th element is an
-## asymmetric matrix of inclusion probabilities
-##
-## ELBO: list of (p + 1) lists; the j-th list corresponds to the j-th predictor
-## and contains 3 elements - the final values of pi and sigmabeta_sq that
-## maximized ELBO over all individuals with the j-th predictor fixed as the
-## response and the maximum value of ELBO
-##
-## weights: n x n matrix; j, i entry is the weighting of the j-th individual
-## with respect to the i-th individual using the i-th individual's bandwidth
-##
-## bandwidths: n x 1 vector; individual-specific bandwidths
-##
-#' Title
-#'
-#' @param data_mat
-#' @param Z
-#' @param tau
-#' @param kde
-#' @param alpha
-#' @param mu
-#' @param sigmasq
-#' @param sigmabetasq_vec
-#' @param var_min
-#' @param var_max
-#' @param n_sigma
-#' @param pi_vec
-#' @param norm
-#' @param scale
-#' @param tolerance
-#' @param max_iter
-#' @param edge_threshold
-#' @param sym_method
-#' @param print_time
-#' @param warnings
-#' @param CS
-#'
-#' @return
+## -----------------------------------------------------------------------------
+#' @title covdepGE: Covariate Dependent Graph Estimation
 #' @export
+## -----------------------------------------------------------------------------
+## -----------------------------DESCRIPTION-------------------------------------
+#' @description Model the conditional dependence structure of data as a function
+#' of extraneous covariates as described in (1). The final model uses the
+#' candidate pair of `pi` and `sigmabeta_sq` that maximize the ELBO for each
+#' variable
+## -----------------------------ARGUMENTS---------------------------------------
+#' @param data_mat \eqn{n} x \eqn{(p + 1)} matrix; data
 #'
+#' @param Z \eqn{n} x \eqn{p'} matrix; extraneous covariates
+#'
+#' @param tau scalar in \eqn{(0, Inf)} OR \eqn{n} x \eqn{1} vector, entries in
+#' \eqn{(0, Inf)}; bandwidth parameter. Greater values allow for more
+#' information to be shared between individuals. Allows for global or
+#' individual-specific specification. If `kde = T`, this argument is ignored.
+#' `0.1` by default
+#'
+#' @param kde logical scalar; if `T`, use 2-step KDE methodology as described in
+#' (2) to calculate individual-specific bandwidths in place of global bandwidth
+#' parameter `tau.` `T` by default
+#'
+#' @param alpha scalar in \eqn{[0, 1]}; global initialization value for the
+#' variational parameters `alpha_matrices` (approximates probabilities of
+#' inclusion). `0.2` by default
+#'
+#' @param mu scalar; global initialization value for the variational parameters
+#' `mu_matrices` (approximates regression coefficients). 0 by default
+#'
+#' @param sigmasq scalar in \eqn{(0, Inf)}; variance hyperparameter for
+#' spike-and-slab. `0.5` by default
+#'
+#' @param sigmabetasq_vec `n_sigma` x \eqn{1} vector, entries in\eqn{ (0, Inf)};
+#' candidate values of `sigmabeta_sq`, the slab variance. `NULL` by default
+#'
+#' @param var_min scalar in \eqn{(0, Inf)}; if `sigmabetasq_vec` is `NULL`,
+#'  `var_min` is the lower bound of the auto-generated `sigmabetasq_vec`. `0.01`
+#'  by default
+#'
+#' @param var_max scalar in \eqn{(0, Inf)}; if `sigmabetasq_vec` is `NULL`,
+#' `var_max` is the upper bound of the auto-generated `sigmabetasq_vec`. `10` by
+#' default
+#'
+#' @param n_sigma scalar in \eqn{{1, 2,...}}; if `sigmabetasq_vec` is `NULL`,
+#'  `n_sigma` is the number of candidate `sigmabetasq` that will be
+#'  auto-generated as:
+#'
+#' `sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_sigma))`
+#'
+#' `8` by default
+#'
+#' @param pi_vec `n_pi` x \eqn{1} vector, entries in \eqn{[0, 1]}; candidate
+#' values of `pi`. `0.2` by default
+#'
+#' @param norm scalar in \eqn{[1, Inf]}; norm to use when calculating weights.
+#' `Inf` results in infinity norm. `2` by default
+#'
+#' @param scale logical scalar; if `T`, center and scale extraneous covariates
+#' to mean 0, standard deviation 1 prior to calculating the weights. `T` by
+#' default
+#'
+#' @param tolerance scalar in \eqn{(0, Inf)}; end the variational update loop
+#'  when the square root of the sum of squared changes to the elements of the
+#'  alpha matrix are within tolerance. `1e-9` by default
+#'
+#' @param max_iter scalar in \eqn{{1, 2,...}}; if the tolerance criteria has not
+#' been met by `max_iter` iterations, end the variational update loop. `100` by
+#' default
+#'
+#' @param edge_threshold scalar in \eqn{(0, 1)}; when post-processing the
+#'  inclusion probabilities, an edge will be added to the graph if the
+#'  \eqn{(i, j)} edge has probability of inclusion greater than `edge_threshold`.
+#'  `0.5` by default
+#'
+#' @param sym_method character scalar in \{`"mean"`, `"max"`, `"min"`\}; to
+#' symmetrize the alpha matrices, the \eqn{i,j = j,i} entry is
+#' `sym_method`\eqn{((i,j entry), (j,i entry))}. `"mean"` by default
+#'
+#' @param print_time logical scalar; if `T`, function run time is printed. `F`
+#' by default
+#'
+#' @param warnings logical scalar; if `T`, convergence and grid warnings will be
+#'  displayed. Convergence warnings occur when the tolerance exit condition has
+#'  not been met by `max_iter` iterations. Grid warnings occur when, for either
+#'  `sigmabetasq_vec` or `pi_vec`, the grid is longer than 2 candidates, and the
+#'  final model selects a candidate value on the grid boundary. `T` by default
+#'
+#' @param CS logical scalar; if `T`, `pi_vec` and `sigma_sq` will be scalars
+#' selected according to Carbonetto-Stephens. `F` by default
+## -----------------------------RETURNS-----------------------------------------
+#' @return Returns `list` with the following values:
+#'
+#' 1. `graphs`: `list` of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices; the
+#' \eqn{l}-th matrix is the adjacency matrix for the \eqn{l}-th individual
+#' (obtained from `inclusion_probs` according to `edge_threshold`)
+#'
+#' 2. `inclusion_probs`: list of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices;
+#'  the \eqn{l}-th matrix is a symmetric matrix of inclusion probabilities for
+#'  the \eqn{l}-th individual (obtained by symmetrizing the `alpha_matrices`
+#'  according to `sym_method`)
+#'
+#' 3. `alpha_matrices`: list of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices;
+#' the \eqn{l}-th matrix is an asymmetric matrix of inclusion probabilities for
+#'  the \eqn{l}-th individual
+#'
+#' 4. `ELBO`: list of \eqn{(p + 1)} `lists`; the \eqn{j}-th list corresponds to
+#'  the \eqn{j}-th predictor and contains 3 values - the final values of `pi`
+#'  and `sigmabeta_sq` that maximized ELBO over all individuals with the
+#'  \eqn{j}-th predictor fixed as the response and the maximum value of ELBO
+#'
+#' 5. `weights`: \eqn{n} x \eqn{n} matrix; the \eqn{j, i} entry is the weighting
+#'  of the \eqn{j}-th individual with respect to the \eqn{i}-th individual using
+#'  the \eqn{i}-th individual's bandwidth
+#'
+#' 6. `bandwidths`: \eqn{n} x \eqn{1} vector; individual-specific bandwidths
+## -----------------------------EXAMPLES----------------------------------------
 #' @examples
+#' set.seed(1)
+#' n <- 100
+#' p <- 4
+#'
+#' # generate the extraneous covariate
+#' Z_neg <- sort(runif(n / 2) * -1)
+#' Z_pos <- sort(runif(n / 2))
+#' Z <- c(Z_neg, Z_pos)
+#' summary(Z)
+#'
+#' # create true covariance structure for 2 groups: positive Z and negative Z
+#' true_graph_pos <- true_graph_neg <- matrix(0, p + 1, p + 1)
+#' true_graph_pos[1, 2] <- true_graph_pos[2, 1] <- 1
+#' true_graph_neg[1, 3] <- true_graph_neg[3, 1] <- 1
+#'
+#' # visualize the true covariance structures
+#' (gg_adjMat(true_graph_neg) +
+#'     ggplot2::ggtitle("True graph for individuals with negative Z"))
+#' (gg_adjMat(true_graph_pos, color1 = "steelblue") +
+#'     ggplot2::ggtitle("True graph for individuals with positive Z"))
+#'
+#' # generate the covariance matrices as a function of Z
+#' sigma_mats_neg <- lapply(Z_neg, function(z) z * true_graph_neg + diag(p + 1))
+#' sigma_mats_pos <- lapply(Z_pos, function(z) z * true_graph_pos + diag(p + 1))
+#' sigma_mats <- c(sigma_mats_neg, sigma_mats_pos)
+#'
+#' # generate the data using the covariance matrices
+#' data_mat <- t(sapply(sigma_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+#'
+#' # visualize the sample correlation
+#' gg_adjMat(abs(cor(data_mat[1:(n / 2), ])) - diag(p + 1))
+#' gg_adjMat(abs(cor(data_mat[(n / 2 + 1):n, ])) - diag(p + 1),
+#'           color1 = "dodgerblue")
+#'
+#' # estimate the covariance structure
+#' out <- covdepGE(data_mat, Z)
+#'
+#' # analyze results
+#' gg_adjMat(out, 1)
+#' gg_adjMat(out, 50, color1 = "tomato")
+#' gg_adjMat(out, 54, color1 = "steelblue")
+#' gg_adjMat(out, 100, color1 = "dodgerblue")
+#'
+#' gg_inclusionCurve(out, 1, 2)
+#' gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
+## -----------------------------REFERENCES--------------------------------------
+#' @references
+#' 1. Dasgupta S., Ghosh P., Pati D., Mallick B., *An approximate Bayesian
+#' approach to covariate dependent graphical modeling*, 2021
+#'
+#' 2. Dasgupta S., Pati D., Srivastava A., *A Two-Step Geometric Framework For
+#' Density Modeling*, Statistica Sinica, 2020
+## -----------------------------------------------------------------------------
 covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                      sigmasq = 0.5, sigmabetasq_vec = NULL, var_min = 0.01,
                      var_max = 10, n_sigma = 8, pi_vec = 0.2, norm = 2,

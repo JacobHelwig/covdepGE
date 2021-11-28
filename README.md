@@ -56,12 +56,12 @@ the *i*-th variable and the node representing the *j*-th variable.
 
 ## To-do
 
--   How to refer to *σ*<sup>2</sup> (regression coefficient variance?)
-    and *σ*<sub>*β*</sub><sup>2</sup> (slab variance?)
+-   Add Carbonetto-Stephens reference in documentation
 
--   Complete documentation
+-   Check how to refer to *σ*<sup>2</sup> (regression coefficient
+    variance) and *σ*<sub>*β*</sub><sup>2</sup> (slab variance)
 
--   Create a vignette demonstrating usage on a simple simulated dataset.
+-   Create a vignette demonstrating usage on a simple simulated dataset
 
 -   Model details in return
 
@@ -84,7 +84,7 @@ the *i*-th variable and the node representing the *j*-th variable.
 
 <div class="thebibliography">
 
-1 (1) Dasgupta, Sutanoy, et al. “An approximate Bayesian approach to
-covariate dependent graphical modeling." 2021
+1 (1) Dasgupta S., Ghosh P., Pati D., Mallick B. “An approximate
+Bayesian approach to covariate dependent graphical modeling." 2021
 
 </div>

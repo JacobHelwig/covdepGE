@@ -1,62 +1,97 @@
-## _____________________________________________________________________________
-## _____________________________gg_adjMat_______________________________________
-## _____________________________________________________________________________
-## -----------------------------DESCRIPTION-------------------------------------
-## function for visualizing an adjacency matrix
-## -----------------------------ARGUMENTS---------------------------------------
-## out: list OR matrix; return of covdepGE function OR an adjacency matrix
-##
-## l: scalar in {1, 2, ..., n}; individual index for which the adjacency matrix
-## is desired. ignored if out is a matrix. 1 by default
-##
-## prob_shade: logical scalar; if T, then entries will be shaded according to posterior
-## inclusion probabilities on a gradient ranging from color0 (probability 0) to
-## color1 (probability 1); if F, binary coloring is used. ignored if out is a
-## matrix. T by default
-##
-## color0: scalar; color for 0 entries. "white" by default
-##
-## color1: scalar; color for 1 entries. "#500000" by default
-##
-## grid_color: scalar; color of grid lines. "black" by default
-##
-## incl_probs: logical scalar; if T, the posterior inclusion probability will be
-## displayed for each entry. ignored if out is a matrix with 2 or less unique
-## entries. T by default
-##
-## prob_prec: scalar in {1, 2, ...}; number of decimal places to round
-## probabilities to if incl_probs = T. ignored if out is a matrix with 2 or less
-## unique entries. 2 by default
-##
-## font_size: scalar in (0, Inf); size of font if incl_probs = T. ignored if
-## out is a matrix with 2 or less unique entries. 3 by default
-##
-## font_color0: scalar; color of font for 0 entries if incl_probs = T.
-## ignored if out is a matrix with 2 or less unique entries. "black" by default
-##
-## font_color1: scalar; color of font for 1 entries if incl_probs = T.
-## ignored if out is a matrix with 2 or less unique entries. "white" by default
-## -----------------------------RETURNS-----------------------------------------
-## returns visualization of adjacency matrix
-##
-#' Title
-#'
-#' @param out
-#' @param l
-#' @param prob_shade
-#' @param color0
-#' @param color1
-#' @param grid_color
-#' @param incl_probs
-#' @param prob_prec
-#' @param font_size
-#' @param font_color0
-#' @param font_color1
-#'
-#' @return
+## -----------------------------------------------------------------------------
+#' @title gg_adjMat
 #' @export
+## -----------------------------------------------------------------------------
+## -----------------------------DESCRIPTION-------------------------------------
+#' @description Create a visualization of an adjacency matrix
+## -----------------------------ARGUMENTS---------------------------------------
+#' @param out `list` OR `matrix`; return of `covdepGE` function OR an adjacency
+#' matrix
 #'
+#' @param l scalar in \eqn{{1, 2, ..., n}}; individual index for which the
+#'  adjacency matrix will be visualized. Ignored if `out` is a
+#'  `matrix`. `1` by default
+#'
+#' @param prob_shade logical scalar; if `T`, then entries will be shaded
+#'  according to posterior inclusion probabilities on a gradient ranging from
+#'  `color0` (probability 0) to `color1` (probability 1); if `F`, binary
+#'  coloring is used. Ignored if `out` is a `matrix`. `T` by default
+#'
+#' @param color0 scalar; color for 0 entries. `"white"` by default
+#'
+#' @param color1 scalar; color for 1 entries. `"#500000"` by default
+#'
+#' @param grid_color scalar; color of grid lines. `"black"` by default
+#'
+#' @param incl_probs logical scalar; if `T`, the posterior inclusion probability
+#'  will be displayed for each entry. Ignored if `out` is a `matrix` with 2 or
+#'  less unique entries. `T` by default
+#'
+#' @param prob_prec scalar in \eqn{{1, 2, ...}}; number of decimal places to
+#' round probabilities to if `incl_probs = T`. Ignored if `out` is a `matrix`
+#' with 2 or less unique entries. `2` by default
+#'
+#' @param font_size font_size: scalar in \eqn{(0, Inf)}; size of font if
+#' `incl_probs = T`. Ignored if `out` is a `matrix` with 2 or less unique entries.
+#'  `3` by default
+#'
+#' @param font_color0 scalar; color of font for 0 entries if `incl_probs = T`.
+#' Ignored if `out` is a `matrix` with 2 or less unique entries. `"black"` by
+#' default
+#'
+#' @param font_color1 scalar; color of font for 1 entries if `incl_probs = T`.
+#' Ignored if `out` is a `matrix` with 2 or less unique entries. `"white"` by
+#' default
+## -----------------------------RETURNS-----------------------------------------
+#' @return Returns `ggplot2` visualization of adjacency matrix
+## -----------------------------EXAMPLES----------------------------------------
 #' @examples
+#' set.seed(1)
+#' n <- 100
+#' p <- 4
+#'
+#' # generate the extraneous covariate
+#' Z_neg <- sort(runif(n / 2) * -1)
+#' Z_pos <- sort(runif(n / 2))
+#' Z <- c(Z_neg, Z_pos)
+#' summary(Z)
+#'
+#' # create true covariance structure for 2 groups: positive Z and negative Z
+#' true_graph_pos <- true_graph_neg <- matrix(0, p + 1, p + 1)
+#' true_graph_pos[1, 2] <- true_graph_pos[2, 1] <- 1
+#' true_graph_neg[1, 3] <- true_graph_neg[3, 1] <- 1
+#'
+#' # visualize the true covariance structures
+#' (gg_adjMat(true_graph_neg) +
+#'     ggplot2::ggtitle("True graph for individuals with negative Z"))
+#' (gg_adjMat(true_graph_pos, color1 = "steelblue") +
+#'     ggplot2::ggtitle("True graph for individuals with positive Z"))
+#'
+#' # generate the covariance matrices as a function of Z
+#' sigma_mats_neg <- lapply(Z_neg, function(z) z * true_graph_neg + diag(p + 1))
+#' sigma_mats_pos <- lapply(Z_pos, function(z) z * true_graph_pos + diag(p + 1))
+#' sigma_mats <- c(sigma_mats_neg, sigma_mats_pos)
+#'
+#' # generate the data using the covariance matrices
+#' data_mat <- t(sapply(sigma_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+#'
+#' # visualize the sample correlation
+#' gg_adjMat(abs(cor(data_mat[1:(n / 2), ])) - diag(p + 1))
+#' gg_adjMat(abs(cor(data_mat[(n / 2 + 1):n, ])) - diag(p + 1),
+#'           color1 = "dodgerblue")
+#'
+#' # estimate the covariance structure
+#' out <- covdepGE(data_mat, Z)
+#'
+#' # analyze results
+#' gg_adjMat(out, 1)
+#' gg_adjMat(out, 50, color1 = "tomato")
+#' gg_adjMat(out, 54, color1 = "steelblue")
+#' gg_adjMat(out, 100, color1 = "dodgerblue")
+#'
+#' gg_inclusionCurve(out, 1, 2)
+#' gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
+## -----------------------------------------------------------------------------
 gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
                       color1 = "#500000", grid_color = "black", incl_probs = T,
                       prob_prec = 2, font_size = 3, font_color0 = "black",
@@ -205,63 +240,98 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
   return(vis)
 }
 
-## _____________________________________________________________________________
-## _____________________________gg_inclusionCurve_______________________________
-## _____________________________________________________________________________
-## -----------------------------DESCRIPTION-------------------------------------
-## function to create a visualization of the probabilities of inclusion of an
-## edge between two variables across all n individuals
-## -----------------------------ARGUMENTS---------------------------------------
-## out: list; return of covdepGE function
-##
-## col_idx1: scalar in {1, 2, ..., p + 1}; column index of the first variable
-##
-## col_idx2: scalar in {1, 2, ..., p + 1}; column index of the second variable
-##
-## line_type: scalar; ggplot2 line type to interpolate the probabilities.
-## "solid" by default
-##
-## line_size: scalar in (0, Inf); thickness of the interpolating line. 0.5 by
-## default
-##
-## line_color: scalar; color of interpolating line. "black" by default
-##
-## point_shape: scalar; shape of the points denoting individual-specific
-## inclusion probabilities; 21 by default
-##
-## point_size: scalar in (0, Inf); size of probability points. 1.5 by default
-##
-## point_color: scalar; color of probability points. "#500000" by default
-##
-## point_fill: scalar; fill of probability points. Only applies to select
-## shapes. "white" by default
-##
-## sort: logical scalar; if T, applies a piori sorting algorithm to re-order
-## subject indices according to weights such for j in 1,...,n - 1, subject j + 1
-## is the most similar in terms of their extraneous covariate to subject j.
-## demonstrates the continuity with which the edge probabilities are modeled
-## with respect to the the extraneous covariates
-## -----------------------------RETURNS-----------------------------------------
-## returns visualization of inclusion probability curve
-##
-#' Title
-#'
-#' @param out
-#' @param col_idx1
-#' @param col_idx2
-#' @param line_type
-#' @param line_size
-#' @param line_color
-#' @param point_shape
-#' @param point_size
-#' @param point_color
-#' @param point_fill
-#' @param sort
-#'
-#' @return
+## -----------------------------------------------------------------------------
+#' @title gg_inclusionCurve
 #' @export
+## -----------------------------------------------------------------------------
+## -----------------------------DESCRIPTION-------------------------------------
+#' @description Create a visualization of the probabilities of inclusion of an
+#' edge between two variables across all \eqn{n} individuals
+## -----------------------------ARGUMENTS---------------------------------------
+#' @param out `list`; return of `covdepGE` function
 #'
+#' @param col_idx1 scalar in \eqn{{1, 2, ..., p + 1}}; column index of the first
+#'  variable
+#'
+#' @param col_idx2 scalar in \eqn{{1, 2, ..., p + 1}}; column index of the
+#'  second variable
+#'
+#' @param line_type scalar; `ggplot2` line type to interpolate the
+#'  probabilities. `"solid"` by default
+#'
+#' @param line_size scalar in \eqn{(0, Inf)}; thickness of the interpolating
+#'  line. `0.5` by default
+#'
+#' @param line_color scalar; color of interpolating line. `"black"` by default
+#'
+#' @param point_shape scalar; shape of the points denoting individual-specific
+#'  inclusion probabilities; `21` by default
+#'
+#' @param point_size scalar in \eqn{(0, Inf)}; size of probability points. `1.5`
+#'  by default
+#'
+#' @param point_color scalar; color of probability points. `"#500000"` by
+#'  default
+#'
+#' @param point_fill scalar; fill of probability points. Only applies to select
+#'  shapes. `"white"` by default
+#'
+#' @param sort logical scalar; if `T`, applies a piori sorting algorithm to
+#'   re-order subject indices according to weights such for \eqn{j} in
+#'  \eqn{1,...,n - 1}, subject \eqn{j + 1} is the most similar in terms of their
+#'  extraneous covariate to subject \eqn{j}. Helps visualize the continuity
+#'  with which the edge probabilities are modeled with respect to the the
+#'  extraneous covariates
+## -----------------------------RETURNS-----------------------------------------
+#' @return Returns `ggplot2` visualization of inclusion probability curve
+## -----------------------------EXAMPLES----------------------------------------
 #' @examples
+#' set.seed(1)
+#' n <- 100
+#' p <- 4
+#'
+#' # generate the extraneous covariate
+#' Z_neg <- sort(runif(n / 2) * -1)
+#' Z_pos <- sort(runif(n / 2))
+#' Z <- c(Z_neg, Z_pos)
+#' summary(Z)
+#'
+#' # create true covariance structure for 2 groups: positive Z and negative Z
+#' true_graph_pos <- true_graph_neg <- matrix(0, p + 1, p + 1)
+#' true_graph_pos[1, 2] <- true_graph_pos[2, 1] <- 1
+#' true_graph_neg[1, 3] <- true_graph_neg[3, 1] <- 1
+#'
+#' # visualize the true covariance structures
+#' (gg_adjMat(true_graph_neg) +
+#'     ggplot2::ggtitle("True graph for individuals with negative Z"))
+#' (gg_adjMat(true_graph_pos, color1 = "steelblue") +
+#'     ggplot2::ggtitle("True graph for individuals with positive Z"))
+#'
+#' # generate the covariance matrices as a function of Z
+#' sigma_mats_neg <- lapply(Z_neg, function(z) z * true_graph_neg + diag(p + 1))
+#' sigma_mats_pos <- lapply(Z_pos, function(z) z * true_graph_pos + diag(p + 1))
+#' sigma_mats <- c(sigma_mats_neg, sigma_mats_pos)
+#'
+#' # generate the data using the covariance matrices
+#' data_mat <- t(sapply(sigma_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+#'
+#' # visualize the sample correlation
+#' gg_adjMat(abs(cor(data_mat[1:(n / 2), ])) - diag(p + 1))
+#' gg_adjMat(abs(cor(data_mat[(n / 2 + 1):n, ])) - diag(p + 1),
+#'           color1 = "dodgerblue")
+#'
+#' # estimate the covariance structure
+#' out <- covdepGE(data_mat, Z)
+#'
+#' # analyze results
+#' gg_adjMat(out, 1)
+#' gg_adjMat(out, 50, color1 = "tomato")
+#' gg_adjMat(out, 54, color1 = "steelblue")
+#' gg_adjMat(out, 100, color1 = "dodgerblue")
+#'
+#' gg_inclusionCurve(out, 1, 2)
+#' gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
+## -----------------------------------------------------------------------------
 gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
                               line_size = 0.5, line_color = "black",
                               point_shape = 21, point_size = 1.5,

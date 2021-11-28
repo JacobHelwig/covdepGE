@@ -2,7 +2,7 @@
 % Please edit documentation in R/covdepGE_main.R
 \name{covdepGE}
 \alias{covdepGE}
-\title{Title}
+\title{covdepGE: Covariate Dependent Graph Estimation}
 \usage{
 covdepGE(
   data_mat,
@@ -29,11 +29,169 @@ covdepGE(
 )
 }
 \arguments{
-\item{CS}{}
+\item{data_mat}{\eqn{n} x \eqn{(p + 1)} matrix; data}
+
+\item{Z}{\eqn{n} x \eqn{p'} matrix; extraneous covariates}
+
+\item{tau}{scalar in \eqn{(0, Inf)} OR \eqn{n} x \eqn{1} vector, entries in
+\eqn{(0, Inf)}; bandwidth parameter. Greater values allow for more
+information to be shared between individuals. Allows for global or
+individual-specific specification. If \code{kde = T}, this argument is ignored.
+\code{0.1} by default}
+
+\item{kde}{logical scalar; if \code{T}, use 2-step KDE methodology as described in
+(2) to calculate individual-specific bandwidths in place of global bandwidth
+parameter \code{tau.} \code{T} by default}
+
+\item{alpha}{scalar in \eqn{[0, 1]}; global initialization value for the
+variational parameters \code{alpha_matrices} (approximates probabilities of
+inclusion). \code{0.2} by default}
+
+\item{mu}{scalar; global initialization value for the variational parameters
+\code{mu_matrices} (approximates regression coefficients). 0 by default}
+
+\item{sigmasq}{scalar in \eqn{(0, Inf)}; variance hyperparameter for
+spike-and-slab. \code{0.5} by default}
+
+\item{sigmabetasq_vec}{\code{n_sigma} x \eqn{1} vector, entries in\eqn{ (0, Inf)};
+candidate values of \code{sigmabeta_sq}, the slab variance. \code{NULL} by default}
+
+\item{var_min}{scalar in \eqn{(0, Inf)}; if \code{sigmabetasq_vec} is \code{NULL},
+\code{var_min} is the lower bound of the auto-generated \code{sigmabetasq_vec}. \code{0.01}
+by default}
+
+\item{var_max}{scalar in \eqn{(0, Inf)}; if \code{sigmabetasq_vec} is \code{NULL},
+\code{var_max} is the upper bound of the auto-generated \code{sigmabetasq_vec}. \code{10} by
+default}
+
+\item{n_sigma}{scalar in \eqn{{1, 2,...}}; if \code{sigmabetasq_vec} is \code{NULL},
+\code{n_sigma} is the number of candidate \code{sigmabetasq} that will be
+auto-generated as:
+
+\code{sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_sigma))}
+
+\code{8} by default}
+
+\item{pi_vec}{\code{n_pi} x \eqn{1} vector, entries in \eqn{[0, 1]}; candidate
+values of \code{pi}. \code{0.2} by default}
+
+\item{norm}{scalar in \eqn{[1, Inf]}; norm to use when calculating weights.
+\code{Inf} results in infinity norm. \code{2} by default}
+
+\item{scale}{logical scalar; if \code{T}, center and scale extraneous covariates
+to mean 0, standard deviation 1 prior to calculating the weights. \code{T} by
+default}
+
+\item{tolerance}{scalar in \eqn{(0, Inf)}; end the variational update loop
+when the square root of the sum of squared changes to the elements of the
+alpha matrix are within tolerance. \code{1e-9} by default}
+
+\item{max_iter}{scalar in \eqn{{1, 2,...}}; if the tolerance criteria has not
+been met by \code{max_iter} iterations, end the variational update loop. \code{100} by
+default}
+
+\item{edge_threshold}{scalar in \eqn{(0, 1)}; when post-processing the
+inclusion probabilities, an edge will be added to the graph if the
+\eqn{(i, j)} edge has probability of inclusion greater than \code{edge_threshold}.
+\code{0.5} by default}
+
+\item{sym_method}{character scalar in \{\code{"mean"}, \code{"max"}, \code{"min"}\}; to
+symmetrize the alpha matrices, the \eqn{i,j = j,i} entry is
+\code{sym_method}\eqn{((i,j entry), (j,i entry))}. \code{"mean"} by default}
+
+\item{print_time}{logical scalar; if \code{T}, function run time is printed. \code{F}
+by default}
+
+\item{warnings}{logical scalar; if \code{T}, convergence and grid warnings will be
+displayed. Convergence warnings occur when the tolerance exit condition has
+not been met by \code{max_iter} iterations. Grid warnings occur when, for either
+\code{sigmabetasq_vec} or \code{pi_vec}, the grid is longer than 2 candidates, and the
+final model selects a candidate value on the grid boundary. \code{T} by default}
+
+\item{CS}{logical scalar; if \code{T}, \code{pi_vec} and \code{sigma_sq} will be scalars
+selected according to Carbonetto-Stephens. \code{F} by default}
 }
 \value{
-
+Returns \code{list} with the following values:
+\enumerate{
+\item \code{graphs}: \code{list} of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices; the
+\eqn{l}-th matrix is the adjacency matrix for the \eqn{l}-th individual
+(obtained from \code{inclusion_probs} according to \code{edge_threshold})
+\item \code{inclusion_probs}: list of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices;
+the \eqn{l}-th matrix is a symmetric matrix of inclusion probabilities for
+the \eqn{l}-th individual (obtained by symmetrizing the \code{alpha_matrices}
+according to \code{sym_method})
+\item \code{alpha_matrices}: list of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices;
+the \eqn{l}-th matrix is an asymmetric matrix of inclusion probabilities for
+the \eqn{l}-th individual
+\item \code{ELBO}: list of \eqn{(p + 1)} \code{lists}; the \eqn{j}-th list corresponds to
+the \eqn{j}-th predictor and contains 3 values - the final values of \code{pi}
+and \code{sigmabeta_sq} that maximized ELBO over all individuals with the
+\eqn{j}-th predictor fixed as the response and the maximum value of ELBO
+\item \code{weights}: \eqn{n} x \eqn{n} matrix; the \eqn{j, i} entry is the weighting
+of the \eqn{j}-th individual with respect to the \eqn{i}-th individual using
+the \eqn{i}-th individual's bandwidth
+\item \code{bandwidths}: \eqn{n} x \eqn{1} vector; individual-specific bandwidths
+}
 }
 \description{
-Title
+Model the conditional dependence structure of data as a function
+of extraneous covariates as described in (1). The final model uses the
+candidate pair of \code{pi} and \code{sigmabeta_sq} that maximize the ELBO for each
+variable
+}
+\examples{
+set.seed(1)
+n <- 100
+p <- 4
+
+# generate the extraneous covariate
+Z_neg <- sort(runif(n / 2) * -1)
+Z_pos <- sort(runif(n / 2))
+Z <- c(Z_neg, Z_pos)
+summary(Z)
+
+# create true covariance structure for 2 groups: positive Z and negative Z
+true_graph_pos <- true_graph_neg <- matrix(0, p + 1, p + 1)
+true_graph_pos[1, 2] <- true_graph_pos[2, 1] <- 1
+true_graph_neg[1, 3] <- true_graph_neg[3, 1] <- 1
+
+# visualize the true covariance structures
+(gg_adjMat(true_graph_neg) +
+    ggplot2::ggtitle("True graph for individuals with negative Z"))
+(gg_adjMat(true_graph_pos, color1 = "steelblue") +
+    ggplot2::ggtitle("True graph for individuals with positive Z"))
+
+# generate the covariance matrices as a function of Z
+sigma_mats_neg <- lapply(Z_neg, function(z) z * true_graph_neg + diag(p + 1))
+sigma_mats_pos <- lapply(Z_pos, function(z) z * true_graph_pos + diag(p + 1))
+sigma_mats <- c(sigma_mats_neg, sigma_mats_pos)
+
+# generate the data using the covariance matrices
+data_mat <- t(sapply(sigma_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+
+# visualize the sample correlation
+gg_adjMat(abs(cor(data_mat[1:(n / 2), ])) - diag(p + 1))
+gg_adjMat(abs(cor(data_mat[(n / 2 + 1):n, ])) - diag(p + 1),
+          color1 = "dodgerblue")
+
+# estimate the covariance structure
+out <- covdepGE(data_mat, Z)
+
+# analyze results
+gg_adjMat(out, 1)
+gg_adjMat(out, 50, color1 = "tomato")
+gg_adjMat(out, 54, color1 = "steelblue")
+gg_adjMat(out, 100, color1 = "dodgerblue")
+
+gg_inclusionCurve(out, 1, 2)
+gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
+}
+\references{
+\enumerate{
+\item Dasgupta S., Ghosh P., Pati D., Mallick B., \emph{An approximate Bayesian
+approach to covariate dependent graphical modeling}, 2021
+\item Dasgupta S., Pati D., Srivastava A., \emph{A Two-Step Geometric Framework For
+Density Modeling}, Statistica Sinica, 2020
+}
 }

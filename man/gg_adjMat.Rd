@@ -2,7 +2,7 @@
 % Please edit documentation in R/gg_covdepGE.R
 \name{gg_adjMat}
 \alias{gg_adjMat}
-\title{Title}
+\title{gg_adjMat}
 \usage{
 gg_adjMat(
   out,
@@ -19,11 +19,94 @@ gg_adjMat(
 )
 }
 \arguments{
-\item{font_color1}{}
+\item{out}{\code{list} OR \code{matrix}; return of \code{covdepGE} function OR an adjacency
+matrix}
+
+\item{l}{scalar in \eqn{{1, 2, ..., n}}; individual index for which the
+adjacency matrix will be visualized. Ignored if \code{out} is a
+\code{matrix}. \code{1} by default}
+
+\item{prob_shade}{logical scalar; if \code{T}, then entries will be shaded
+according to posterior inclusion probabilities on a gradient ranging from
+\code{color0} (probability 0) to \code{color1} (probability 1); if \code{F}, binary
+coloring is used. Ignored if \code{out} is a \code{matrix}. \code{T} by default}
+
+\item{color0}{scalar; color for 0 entries. \code{"white"} by default}
+
+\item{color1}{scalar; color for 1 entries. \code{"#500000"} by default}
+
+\item{grid_color}{scalar; color of grid lines. \code{"black"} by default}
+
+\item{incl_probs}{logical scalar; if \code{T}, the posterior inclusion probability
+will be displayed for each entry. Ignored if \code{out} is a \code{matrix} with 2 or
+less unique entries. \code{T} by default}
+
+\item{prob_prec}{scalar in \eqn{{1, 2, ...}}; number of decimal places to
+round probabilities to if \code{incl_probs = T}. Ignored if \code{out} is a \code{matrix}
+with 2 or less unique entries. \code{2} by default}
+
+\item{font_size}{font_size: scalar in \eqn{(0, Inf)}; size of font if
+\code{incl_probs = T}. Ignored if \code{out} is a \code{matrix} with 2 or less unique entries.
+\code{3} by default}
+
+\item{font_color0}{scalar; color of font for 0 entries if \code{incl_probs = T}.
+Ignored if \code{out} is a \code{matrix} with 2 or less unique entries. \code{"black"} by
+default}
+
+\item{font_color1}{scalar; color of font for 1 entries if \code{incl_probs = T}.
+Ignored if \code{out} is a \code{matrix} with 2 or less unique entries. \code{"white"} by
+default}
 }
 \value{
-
+Returns \code{ggplot2} visualization of adjacency matrix
 }
 \description{
-Title
+Create a visualization of an adjacency matrix
+}
+\examples{
+set.seed(1)
+n <- 100
+p <- 4
+
+# generate the extraneous covariate
+Z_neg <- sort(runif(n / 2) * -1)
+Z_pos <- sort(runif(n / 2))
+Z <- c(Z_neg, Z_pos)
+summary(Z)
+
+# create true covariance structure for 2 groups: positive Z and negative Z
+true_graph_pos <- true_graph_neg <- matrix(0, p + 1, p + 1)
+true_graph_pos[1, 2] <- true_graph_pos[2, 1] <- 1
+true_graph_neg[1, 3] <- true_graph_neg[3, 1] <- 1
+
+# visualize the true covariance structures
+(gg_adjMat(true_graph_neg) +
+    ggplot2::ggtitle("True graph for individuals with negative Z"))
+(gg_adjMat(true_graph_pos, color1 = "steelblue") +
+    ggplot2::ggtitle("True graph for individuals with positive Z"))
+
+# generate the covariance matrices as a function of Z
+sigma_mats_neg <- lapply(Z_neg, function(z) z * true_graph_neg + diag(p + 1))
+sigma_mats_pos <- lapply(Z_pos, function(z) z * true_graph_pos + diag(p + 1))
+sigma_mats <- c(sigma_mats_neg, sigma_mats_pos)
+
+# generate the data using the covariance matrices
+data_mat <- t(sapply(sigma_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+
+# visualize the sample correlation
+gg_adjMat(abs(cor(data_mat[1:(n / 2), ])) - diag(p + 1))
+gg_adjMat(abs(cor(data_mat[(n / 2 + 1):n, ])) - diag(p + 1),
+          color1 = "dodgerblue")
+
+# estimate the covariance structure
+out <- covdepGE(data_mat, Z)
+
+# analyze results
+gg_adjMat(out, 1)
+gg_adjMat(out, 50, color1 = "tomato")
+gg_adjMat(out, 54, color1 = "steelblue")
+gg_adjMat(out, 100, color1 = "dodgerblue")
+
+gg_inclusionCurve(out, 1, 2)
+gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
 }
