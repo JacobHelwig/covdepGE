@@ -15,7 +15,7 @@ gg_inclusionCurve(
   point_size = 1.5,
   point_color = "#500000",
   point_fill = "white",
-  sort = T
+  sort = F
 )
 }
 \arguments{

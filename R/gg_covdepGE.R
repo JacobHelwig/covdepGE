@@ -2,30 +2,62 @@
 ## _____________________________gg_adjMat_______________________________________
 ## _____________________________________________________________________________
 ## -----------------------------DESCRIPTION-------------------------------------
-## creates a visualization of the adjacency matrix for the specified individual
+## function for visualizing an adjacency matrix
 ## -----------------------------ARGUMENTS---------------------------------------
-## out: list; return of covdepGE function
-## l: scalar in {1, 2, ..., n}; the individual for which the adjacency matrix
-## is desired
-## prob_shade: logical; if T, then entries will be shaded according to posterior
-## inclusion probabilities on a gradient ranging from color0 (0 probability) to
-## color1 (probability 1); if F, binary coloring is used. T by default
-## color0: character; color for 0 entries. "white" by default
-## color1: character; color for 1 entries. "#500000" by default
-## grid_color: character; color of grid lines. "black" by default
-## incl_probs: logical; whether the posterior inclusion probability should be
-## displayed for each entry. T by default
-## prob_prec: scalar in {1, 2, ...}; number of decimal places to round
-## probabilities to if incl_probs = T. 2 by default
-## font_size: scalar in (0, Inf); size of font if incl_probs = T. 3 by default
-## font_color0: character; color of font for 0 entries if incl_probs = T. "black"
-## by default
-## font_color1: character; color of font for 1 entries if incl_probs = T. "white"
-## by default
+## out: list OR matrix; return of covdepGE function OR an adjacency matrix
 ##
+## l: scalar in {1, 2, ..., n}; individual index for which the adjacency matrix
+## is desired. ignored if out is a matrix. 1 by default
+##
+## prob_shade: logical scalar; if T, then entries will be shaded according to posterior
+## inclusion probabilities on a gradient ranging from color0 (probability 0) to
+## color1 (probability 1); if F, binary coloring is used. ignored if out is a
+## matrix. T by default
+##
+## color0: scalar; color for 0 entries. "white" by default
+##
+## color1: scalar; color for 1 entries. "#500000" by default
+##
+## grid_color: scalar; color of grid lines. "black" by default
+##
+## incl_probs: logical scalar; if T, the posterior inclusion probability will be
+## displayed for each entry. ignored if out is a matrix with 2 or less unique
+## entries. T by default
+##
+## prob_prec: scalar in {1, 2, ...}; number of decimal places to round
+## probabilities to if incl_probs = T. ignored if out is a matrix with 2 or less
+## unique entries. 2 by default
+##
+## font_size: scalar in (0, Inf); size of font if incl_probs = T. ignored if
+## out is a matrix with 2 or less unique entries. 3 by default
+##
+## font_color0: scalar; color of font for 0 entries if incl_probs = T.
+## ignored if out is a matrix with 2 or less unique entries. "black" by default
+##
+## font_color1: scalar; color of font for 1 entries if incl_probs = T.
+## ignored if out is a matrix with 2 or less unique entries. "white" by default
 ## -----------------------------RETURNS-----------------------------------------
 ## returns visualization of adjacency matrix
-gg_adjMat <- function(out, l, prob_shade = T, color0 = "white",
+##
+#' Title
+#'
+#' @param out
+#' @param l
+#' @param prob_shade
+#' @param color0
+#' @param color1
+#' @param grid_color
+#' @param incl_probs
+#' @param prob_prec
+#' @param font_size
+#' @param font_color0
+#' @param font_color1
+#'
+#' @return
+#' @export
+#'
+#' @examples
+gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
                       color1 = "#500000", grid_color = "black", incl_probs = T,
                       prob_prec = 2, font_size = 3, font_color0 = "black",
                       font_color1 = "white"){
@@ -34,10 +66,10 @@ gg_adjMat <- function(out, l, prob_shade = T, color0 = "white",
   adjMat_checks(out, l, prob_shade, color0, color1, grid_color, incl_probs,
                 prob_prec, font_size, font_color0, font_color1)
 
-  if (prob_shade){
+  if (prob_shade & is.list(out)){
 
-    # visualize the adjacency matrix shaded darker for entries with higher
-    # inclusion probabilities
+    # out is return of covdepGE; color the matrix using a gradient corresponding
+    # to inclusion probabilities
 
     # get the posterior inclusion probability matrix for individual l
     probs <- out$inclusion_probs[[l]]
@@ -45,8 +77,8 @@ gg_adjMat <- function(out, l, prob_shade = T, color0 = "white",
     # melt to long form
     long_probs <- reshape2::melt(probs)
 
-    # if probabilities are to be displayed, get the adjacency matrix for individual
-    # l and add the long version to long_probs for font coloring
+    # if probabilities are to be displayed, get the adjacency matrix for
+    # individual l and add the long version to long_probs for font coloring
     if (incl_probs){
       graph <- out$graphs[[l]]
       long_graph <- reshape2::melt(graph)
@@ -76,10 +108,9 @@ gg_adjMat <- function(out, l, prob_shade = T, color0 = "white",
     }
 
 
-  }else{
+  }else if (is.list(out)){
 
-    # color the entries in the adjacency matrix color0 if they do not correspond
-    # to connected nodes, and color1 otherwise
+    # out is return of covdepGE; color the matrix using a binary pallete
 
     # get the adjacency matrix for individual l
     graph <- out$graphs[[l]]
@@ -118,6 +149,57 @@ gg_adjMat <- function(out, l, prob_shade = T, color0 = "white",
     }
 
 
+  }else{
+
+    # out is an adjacency matrix
+
+    # melt to long form
+    long_graph <- reshape2::melt(out)
+
+    # if the adjacency matrix has greater than 2 values, color using a gradient
+    if (length(unique(as.vector(out))) > 2){
+
+      # if probabilities are to be displayed, add an indicator to edges for the
+      # squares that will be darker
+      if (incl_probs){
+        long_graph$graph <- ifelse(long_graph$value >
+                                     mean(setdiff(long_graph$value, 0)), 1, 0)
+        long_graph$graph <- as.factor(long_graph$graph)
+      }
+
+      vis <- (ggplot2::ggplot(long_graph, ggplot2::aes(Var1, Var2, fill = value)) +
+                ggplot2::geom_tile(color = grid_color) +
+                ggplot2::scale_fill_gradient(low = color0, high = color1) +
+                ggplot2::theme_classic() + ggplot2::xlab("") + ggplot2::ylab("") +
+                ggplot2::ggtitle("") +
+                ggplot2::theme(legend.title = ggplot2::element_blank(),
+                               plot.title = ggplot2::element_text(hjust = 0.5)) +
+                ggplot2::scale_x_continuous(breaks = 1:nrow(out)) +
+                ggplot2::scale_y_continuous(breaks = 1:nrow(out)))
+
+      # if probabilities are to be displayed, add them
+      if (incl_probs){
+        vis <- (vis + ggplot2::geom_text(ggplot2::aes(label = round(value, prob_prec),
+                                                      color = graph),
+                                         show.legend = F, size = font_size) +
+                  ggplot2::scale_color_manual(values = c(font_color0, font_color1)))
+      }
+    }else{
+      # out has 2 or less unique values; color using a binary pallete
+
+      # factor the edges - specifies a discrete scale to ggplot2
+      long_graph$value <- as.factor(long_graph$value)
+
+      vis <- (ggplot2::ggplot(long_graph, ggplot2::aes(Var1, Var2, fill = value)) +
+                ggplot2::geom_tile(color = grid_color) +
+                ggplot2::scale_fill_manual(values = c(color0, color1)) +
+                ggplot2::theme_classic() + ggplot2::xlab("") + ggplot2::ylab("") +
+                ggplot2::ggtitle("") +
+                ggplot2::theme(legend.title = ggplot2::element_blank(),
+                               plot.title = ggplot2::element_text(hjust = 0.5)) +
+                ggplot2::scale_x_continuous(breaks = 1:nrow(out)) +
+                ggplot2::scale_y_continuous(breaks = 1:nrow(out)))
+    }
   }
 
   return(vis)
@@ -127,30 +209,59 @@ gg_adjMat <- function(out, l, prob_shade = T, color0 = "white",
 ## _____________________________gg_inclusionCurve_______________________________
 ## _____________________________________________________________________________
 ## -----------------------------DESCRIPTION-------------------------------------
-## function to create a visualization of the individual-specific probabilities
-## of inclusion of an edge between two variables across all n individuals
+## function to create a visualization of the probabilities of inclusion of an
+## edge between two variables across all n individuals
 ## -----------------------------ARGUMENTS---------------------------------------
 ## out: list; return of covdepGE function
+##
 ## col_idx1: scalar in {1, 2, ..., p + 1}; column index of the first variable
+##
 ## col_idx2: scalar in {1, 2, ..., p + 1}; column index of the second variable
-## line_type: character; ggplot2 line type to interpolate the probabilities.
+##
+## line_type: scalar; ggplot2 line type to interpolate the probabilities.
 ## "solid" by default
+##
 ## line_size: scalar in (0, Inf); thickness of the interpolating line. 0.5 by
 ## default
-## line_color: character; color of interpolating line. "black" by default
-## point_shape: scalar in {1, 2,...}; shape of the points denoting individual
-## -specific probabilities; 21 by default
+##
+## line_color: scalar; color of interpolating line. "black" by default
+##
+## point_shape: scalar; shape of the points denoting individual-specific
+## inclusion probabilities; 21 by default
+##
 ## point_size: scalar in (0, Inf); size of probability points. 1.5 by default
-## point_color: character; color of probability points. "#500000" by default
-## point_fill: character; fill of probability points. Only applies to select
+##
+## point_color: scalar; color of probability points. "#500000" by default
+##
+## point_fill: scalar; fill of probability points. Only applies to select
 ## shapes. "white" by default
-## sort: logical; when T, rearranges the subject index so that individuals that
-## are similar in terms of extraneous covariates have neighboring indices to
-## demonstrate the continuity with which the edge probabilities are modeled with
-## respect to the the extraneous covariates. otherwise, the indexing is left
-## as is
+##
+## sort: logical scalar; if T, applies a piori sorting algorithm to re-order
+## subject indices according to weights such for j in 1,...,n - 1, subject j + 1
+## is the most similar in terms of their extraneous covariate to subject j.
+## demonstrates the continuity with which the edge probabilities are modeled
+## with respect to the the extraneous covariates
 ## -----------------------------RETURNS-----------------------------------------
-## returns visualization of adjacency matrix
+## returns visualization of inclusion probability curve
+##
+#' Title
+#'
+#' @param out
+#' @param col_idx1
+#' @param col_idx2
+#' @param line_type
+#' @param line_size
+#' @param line_color
+#' @param point_shape
+#' @param point_size
+#' @param point_color
+#' @param point_fill
+#' @param sort
+#'
+#' @return
+#' @export
+#'
+#' @examples
 gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
                               line_size = 0.5, line_color = "black",
                               point_shape = 21, point_size = 1.5,
@@ -168,18 +279,18 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 
   if (sort){
 
-    # indv_sorted will be an arrangement of the individuals in the sample sorted
-    # such that neighboring individuals in the vector are the most similar to
-    # each other (have the highest weighting)
-    indv_sorted <- c(1, rep(NA, nrow(out$D) - 1))
+    # indv_sorted will be a vector of subject indices sorted such that the
+    # individuals corresponding to neighboring indices are most similar to each
+    # other (have the highest weighting)
+    indv_sorted <- c(1, rep(NA, nrow(out$weights) - 1))
 
-    for (l in 2:nrow(out$D)){
+    for (l in 2:nrow(out$weights)){
       # get the index of the last individual that was added to ind_sorted
       last_indv_idx <- indv_sorted[l - 1]
 
       # find the individual whose weight is largest with respect to the last
       # individual, excluding those who are already in indv_sorted
-      next_indv_idx <- setdiff(order(out$D[ , last_indv_idx], decreasing = T),
+      next_indv_idx <- setdiff(order(out$weights[ , last_indv_idx], decreasing = T),
                                indv_sorted)[1]
 
       # add this individual to the sorted list
@@ -217,7 +328,8 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
               paste("Inclusion probability of an edge between $x_",
                     col_idx1, "$ and $x_", col_idx2, "$"))) +
             ggplot2::theme_bw() +
-            ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)))
+            ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
+            ggplot2::ylim(c(0, 1)))
 
   return(vis)
 }

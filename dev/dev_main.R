@@ -9,71 +9,104 @@ source("dev_checks.R")
 ## _____________________________________________________________________________
 ## -----------------------------DESCRIPTION-------------------------------------
 ## Function to model the conditional dependence structure of data as a function
-## of individual-specific extranesous covariates as described in (1)
-## "An approximate Bayesian approach to covariate dependent graphical modeling"
+## of extraneous covariates as described in (1)
+## "An approximate Bayesian approach to covariate dependent graphical modeling".
+## The final model uses the candidate pair of pi and sigmabeta_sq that maximize
+## the ELBO for each variable
 ## -----------------------------ARGUMENTS---------------------------------------
 ## data_mat: n x (p + 1) matrix; data
+##
 ## Z: n x p' matrix; extraneous covariates
+##
 ## tau: scalar in (0, Inf) OR n x 1 vector, entries in (0, Inf); bandwidth
-## parameter. greater values allow for more information to be shared between
+## parameter. Greater values allow for more information to be shared between
 ## individuals. Allows for global or individual-specific specification. If
-## kde = T, this argument is ignored. 0.1 by default.
-## kde: logical; if T, use 2-step KDE methodology described in (2) to calculate
-## individual-specific bandwidths in place of global bandwidth parameter tau.
-## T by default
+## kde = T, this argument is ignored. 0.1 by default
+##
+## kde: logical scalar; if T, use 2-step KDE methodology as described in (2) to
+## calculate individual-specific bandwidths in place of global bandwidth
+## parameter tau. T by default
+##
 ## alpha: scalar in [0, 1]; global initialization value for the variational
-## parameter alpha (approximates probability of inclusion). 0.2 by default
-## mu: scalar; global initialization value for the variational parameter mu
+## parameters alpha (approximates probabilities of inclusion). 0.2 by default
+##
+## mu: scalar; global initialization value for the variational parameters mu
 ## (approximates regression coefficients). 0 by default
+##
 ## sigmasq: scalar in (0, Inf); variance hyperparameter for spike-and-slab.
 ## 0.5 by default
+##
 ## sigmabetasq_vec: n_sigma x 1 vector, entries in (0, Inf); candidate values of
-## sigmabeta_sq. NULL by default
+## sigmabeta_sq, the slab variance. NULL by default
+##
 ## var_min: scalar in (0, Inf); if sigmabetasq_vec is NULL, var_min is the lower
 ## bound of the auto-generated sigmabetasq_vec. 0.01 by default
+##
 ## var_max: scalar in (0, Inf); if sigmabetasq_vec is NULL, var_max is the upper
 ## bound of the auto-generated sigmabetasq_vec. 10 by default
-## n_sigma: scalar in {1, 2,...}; if sigmabetasq_vec is NULL, auto-generate it
-## as sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_sigma))
-## 8 by default. Ex: for default values, sigmabeta_sq is:
-## > round(exp(seq(log(var_max), log(var_min), length = n_sigma)), 3)
-## [1] 10.000  3.728  1.389  0.518  0.193  0.072  0.027  0.010
+##
+## n_sigma: scalar in {1, 2,...}; if sigmabetasq_vec is NULL, it will be
+## auto-generated as:
+## sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_sigma))
+## 8 by default.
+##
 ## pi_vec: n_pi x 1 vector, entries in [0, 1]; candidate values of pi. 0.2 by
 ## default
+##
 ## norm: scalar in [1, Inf]; norm to use when calculating weights. Inf results
 ## in infinity norm. 2 by default
-## scale: logical; if T, center and scale extraneous covariates to 0 mean,
+##
+## scale: logical scalar; if T, center and scale extraneous covariates to mean 0,
 ## standard deviation 1 prior to calculating the weights. T by default
+##
 ## tolerance: scalar in (0, Inf); end the variational update loop when the
 ## square root of the sum of squared changes to the elements of the alpha matrix
 ## are within tolerance. 1e-9 by default
+##
 ## max_iter: scalar in {1, 2,...} if the tolerance criteria has not been met by
 ## max_iter iterations, end the variational update loop. 100 by default
+##
 ## edge_threshold: scalar in (0, 1); when processing the inclusion
-## probabilities, add an edge to the graph if the (i, j) edge has probability
-## of inclusion greater than edge_threshold. 0.5 by default
-## sym_method: character in {"mean", "max", "min"}; to symmetrize the alpha
-## matrices, the i,j = j,i entry is sym_method((i,j entry), (j,i) entry). "mean"
-## by default
-## print_time: logical; if T, function run time is printed. F by default
-## warnings: logical; if T, convergence and grid warnings will be displayed.
+## probabilities, an edge will be added to the graph if the (i, j) edge has
+## probability of inclusion greater than edge_threshold. 0.5 by default
+##
+## sym_method: character scalar in {"mean", "max", "min"}; to symmetrize the
+## alpha matrices, the i,j = j,i entry is sym_method((i,j entry), (j,i entry)).
+## "mean" by default
+##
+## print_time: logical scalar; if T, function run time is printed. F by default
+##
+## warnings: logical scalar; if T, convergence and grid warnings will be displayed.
 ## Convergence warnings occur when the tolerance exit condition has not been
 ## met by max_iter iterations. Grid warnings occur when, for either
 ## sigmabetasq_vec or pi_vec, the grid is longer than 2 candidates, and the
 ## final model selects a candidate value on the grid boundary. T by default
+##
+## CS: logical scalar; if T, pi_vec and sigma_sq will be scalars selected according to
+## Carbonetto-Stephens
+##
 ## -----------------------------RETURNS-----------------------------------------
-## graphs: list of n (p + 1) x (p + 1) matrices; the l-th element is the graph
-## for the l-th individual (obtained from inclusion_probs according to
-## edge_threshold)
+## graphs: list of n (p + 1) x (p + 1) matrices; the l-th matrix is the
+## adjacency matrix for the l-th individual (obtained from inclusion_probs
+## according to edge_threshold)
+##
 ## inclusion_probs: list of n (p + 1) x (p + 1) matrices; the l-th element is a
 ## symmetric matrix of inclusion probabilities for the l-th individual
 ## (obtained by symmetrizing alpha_matrices according to sym_method)
+##
 ## alpha_matrices: list of n (p + 1) x (p + 1) matrices; the l-th element is an
 ## asymmetric matrix of inclusion probabilities
+##
 ## ELBO: list of (p + 1) lists; the j-th list corresponds to the j-th predictor
 ## and contains 3 elements - the final values of pi and sigmabeta_sq that
 ## maximized ELBO over all individuals with the j-th predictor fixed as the
 ## response and the maximum value of ELBO
+##
+## weights: n x n matrix; j, i entry is the weighting of the j-th individual
+## with respect to the i-th individual using the i-th individual's bandwidth
+##
+## bandwidths: n x 1 vector; individual-specific bandwidths
+##
 covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                      sigmasq = 0.5, sigmabetasq_vec = NULL, var_min = 0.01,
                      var_max = 10, n_sigma = 8, pi_vec = 0.2, norm = 2,
@@ -134,7 +167,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
     alpha_mat <- matrix(alpha, n, p)
     mu_mat <- matrix(mu, n, p)
 
-    E <- rnorm(n, 0, 1) # removing this causes discrepency in discrete case
+    E <- stats::rnorm(n, 0, 1) # removing this causes discrepency in discrete case
 
     # If CS, choose pi and sigmasq according to the Carbonetto-Stephens model
     if (CS){

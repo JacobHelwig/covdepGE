@@ -6,7 +6,7 @@
 \usage{
 gg_adjMat(
   out,
-  l,
+  l = 1,
   prob_shade = T,
   color0 = "white",
   color1 = "#500000",

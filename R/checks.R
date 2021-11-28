@@ -2,28 +2,48 @@
 ## _____________________________covdepGE_checks_________________________________
 ## _____________________________________________________________________________
 ## -----------------------------DESCRIPTION-------------------------------------
-## Function to check compatiibility of arguments of covdepGE
+## function to check compatiibility of arguments of covdepGE
 ## -----------------------------ARGUMENTS---------------------------------------
 ## data_mat: n x (p + 1) matrix; data
+##
 ## Z: n x p' matrix; extraneous covariates
+##
 ## tau: scalar in (0, Inf) OR n x 1 vector, entries in (0, Inf)
+##
 ## kde: logical; if T, use 2-step KDE methodology
+##
 ## alpha: scalar in [0, 1]; global initialization value
+##
 ## mu: scalar; global initialization value
+##
 ## sigmasq: scalar in (0, Inf); variance hyperparameter for spike-and-slab.
+##
 ## sigmabetasq_vec: n_sigma x 1 vector, entries in (0, Inf); candidate values
+##
 ## var_min: scalar in (0, Inf); lower bound of sigmabetasq_vec
+##
 ## var_max: scalar in (0, Inf); upper bound of sigmabetasq_vec
+##
 ## n_sigma: scalar in {1, 2,...}
+##
 ## pi_vec: n_pi x 1 vector, entries in [0, 1]; candidate values of pi
+##
 ## norm: scalar in [1, Inf]; norm to use when calculating weights
+##
 ## scale: logical; if T, center and scale extraneous covariates
+##
 ## tolerance: scalar in (0, Inf); end the variational update loop
+##
 ## max_iter: scalar in {1, 2,...}; end the variational update loop
+##
 ## edge_threshold: scalar in (0, 1)
+##
 ## sym_method: character in {"mean", "max", "min"}
+##
 ## print_time: logical; if T, function run time is printed
+##
 ## warnings: logical; if T, convergence and grid warnings will be displayed
+##
 covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                             sigmabetasq_vec, var_min, var_max, n_sigma, pi_vec,
                             norm, scale, tolerance, max_iter, edge_threshold,
@@ -230,20 +250,30 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
 ## _____________________________adjMat_checks___________________________________
 ## _____________________________________________________________________________
 ## -----------------------------DESCRIPTION-------------------------------------
-## Function to check compatibility of arguments to gg_adjMat
+## function to check compatibility of arguments to gg_adjMat
 ## -----------------------------ARGUMENTS---------------------------------------
-## out: list; return of covdepGE function
+## out: list OR matrix; return of covdepGE function OR adjacency matrix
+##
 ## l: scalar in {1, 2, ..., n}; individual index
-## prob_shade: logical; if T, entries will be shaded according probabilities
-## color1 (probability 1); if F, binary coloring is used
-## color0: character; color for 0 entries
-## color1: character; color for 1 entries
-## grid_color: character; color of grid lines
+##
+## prob_shade: logical scalar; if T, entries will be shaded probability-wise
+##
+## color0: scalar; color for 0 entries
+##
+## color1: scalar; color for 1 entries
+##
+## grid_color: scalar; color of grid lines
+##
 ## incl_probs: logical; display posterior inclusion probability
+##
 ## prob_prec: scalar in {1, 2, ...}; number of decimal places to round
+##
 ## font_size: scalar in (0, Inf); size of font if incl_probs = T
-## font_color0: character; color of font for 0 entries if incl_probs = T
-## font_color1: character; color of font for 1 entries if incl_probs = T.
+##
+## font_color0: scalar; color of font for 0 entries if incl_probs = T
+##
+## font_color1: scalar; color of font for 1 entries if incl_probs = T
+##
 adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
                           incl_probs, prob_prec, font_size, font_color0,
                           font_color1){
@@ -330,18 +360,23 @@ adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
     stop(paste0(non_positive, " should have all positive entries"))
   }
 
-  # ensure out is a list
-  if (!is.list(out)){
-    stop(paste0("out is of class ", class(out)[1], "; expected list"))
+  # ensure out is a list OR a matrix
+  if (!(is.list(out) | is.matrix(out))){
+    stop(paste0("out is of class ", class(out)[1], "; expected list or matrix"))
   }
 
-  # ensure out has inclusion_probs and graphs
-  if (!(all(c("inclusion_probs", "graphs") %in% names(out)))){
+  # ensure out has inclusion_probs and graphs if it is a list
+  if (!(all(c("inclusion_probs", "graphs") %in% names(out))) & is.list(out)){
     stop(paste0("out should be return of function covdepGE"))
   }
 
+  # ensure out has numeric entries if it is a matrix
+  if (!is.numeric(out) & is.matrix(out)){
+    stop(paste0("out is of type ", typeof(out), "; expected numeric"))
+  }
+
   # ensure l in 1,...,n
-  n <- length(out$graphs)
+  n <- ifelse(is.list(out), length(out$graphs), 1)
   if (!(l %in% 1:n)){
     stop(paste0("l should be in 1, 2, ..., ", n))
   }
@@ -350,26 +385,36 @@ adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
   if ((prob_prec %% 1) != 0){
     stop("prob_prec should be integer-valued")
   }
-
 }
 
 ## _____________________________________________________________________________
 ## _____________________________inclusionCurve_checks___________________________
 ## _____________________________________________________________________________
 ## -----------------------------DESCRIPTION-------------------------------------
-## Function to check compatibility of arguments to gg_inclusionCurve
+## function to check compatibility of arguments to gg_inclusionCurve
 ## -----------------------------ARGUMENTS---------------------------------------
 ## out: list; return of covdepGE function
+##
 ## col_idx1: scalar in {1, 2, ..., p + 1}; column index of the first variable
+##
 ## col_idx2: scalar in {1, 2, ..., p + 1}; column index of the second variable
-## line_type: character; ggplot2 line type
+##
+## line_type: scalar; ggplot2 line type
+##
 ## line_size: scalar in (0, Inf); thickness of the interpolating line
-## line_color: character; color of interpolating line
-## point_shape: scalar in {1, 2,...}; shape of the points
+##
+## line_color: scalar; color of interpolating line
+##
+## point_shape: scalar; shape of the points
+##
 ## point_size: scalar in (0, Inf); size of probability points
-## point_color: character; color of probability points
-## point_fill: character; fill of probability points
-## sort: logical; sort the subject indices for smooth inclusion curve
+##
+## point_color: scalar; color of probability points
+##
+## point_fill: scalar; fill of probability points
+##
+## sort: logical scalar; sort the subject indices for smooth inclusion curve
+##
 inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
                                   line_color, point_shape, point_size,
                                   point_color, point_fill, sort){

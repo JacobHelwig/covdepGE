@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.23 (MiKTeX 21.8) (preloaded format=pdflatex 2021.11.10)  27 NOV 2021 01:42
+This is pdfTeX, Version 3.141592653-2.6-1.40.23 (MiKTeX 21.8) (preloaded format=pdflatex 2021.11.10)  27 NOV 2021 18:52
 entering extended mode
 **./README.tex
 (README.tex
@@ -409,7 +409,7 @@ Here is how much of TeX's memory you used:
  26970 multiletter control sequences out of 15000+600000
  410268 words of font info for 53 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 60i,10n,66p,531b,395s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 60i,10n,66p,531b,391s stack positions out of 5000i,500n,10000p,200000b,80000s
  <C:\Users\jacob\AppData\Local\MiKTeX\fonts/pk/ljfour/jknappen/ec/dpi600\tcrm
 1200.pk><C:/Users/jacob/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfon
 ts/cm/cmbx12.pfb><C:/Users/jacob/AppData/Local/Programs/MiKTeX/fonts/type1/publ
@@ -423,7 +423,7 @@ cob/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/
 Users/jacob/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmtt12
 .pfb><C:/Users/jacob/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/
 symbols/msbm10.pfb>
-Output written on README.pdf (2 pages, 116622 bytes).
+Output written on README.pdf (2 pages, 117988 bytes).
 PDF statistics:
  101 PDF objects out of 1000 (max. 8388607)
  12 named destinations out of 1000 (max. 500000)

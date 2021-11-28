@@ -21,4 +21,5 @@ Imports:
     stats,
     ggplot2,
     latex2exp,
-    grDevices
+    grDevices,
+    reshape2

@@ -356,11 +356,17 @@ gg_adjMat(out, 1)
 
 ## -----------------------------out---------------------------------------------
 
-# non-list
+# non-list/ matrix
 gg_adjMat(7, 1)
 
 # list without proper values
 gg_adjMat(list(7), 1)
+
+# matrix with non-numerics
+gg_adjMat(matrix(sample(letters, 25), 5))
+
+# matrix with more than two values
+gg_adjMat(matrix(rnorm(100), 10), color1 = "dodgerblue", grid_color = "tomato")
 
 ## -----------------------------l-----------------------------------------------
 

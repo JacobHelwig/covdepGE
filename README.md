@@ -56,11 +56,14 @@ the *i*-th variable and the node representing the *j*-th variable.
 
 ## To-do
 
+-   How to refer to *σ*<sup>2</sup> (regression coefficient variance?)
+    and *σ*<sub>*β*</sub><sup>2</sup> (slab variance?)
+
 -   Complete documentation
 
--   Add compatibility checks for visualization functions
-
 -   Create a vignette demonstrating usage on a simple simulated dataset.
+
+-   Model details in return
 
 -   Change the `idmod` probs to logbase 10
 

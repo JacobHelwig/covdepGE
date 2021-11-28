@@ -24,6 +24,7 @@ covdepGE(
   edge_threshold = 0.5,
   sym_method = "mean",
   print_time = F,
+  warnings = T,
   CS = F
 )
 }
