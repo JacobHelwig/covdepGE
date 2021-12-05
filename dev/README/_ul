@@ -1,0 +1,325 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta http-equiv="r-e-f-r-e-s-h" content="0; url=https://ctan.org/tex-archive">
+   <title>The CTAN archive</title>
+    <style type="text/css">
+html { background:#dddddd;
+       background: -o-linear-gradient(90deg, white 0%, #dddddd 6%);
+       background: -moz-linear-gradient(90deg, white 0%, #dddddd 6%);
+       background: -webkit-linear-gradient(90deg, white 0%, #dddddd 6%);
+       background: linear-gradient(90deg, white 0%, #dddddd 6%);
+}
+a{color:navy; }
+a:visited{color:firebrick; }
+body{ font-family: sans-serif;
+      padding:1em 2em 1em 2em;
+      margin:2em 2em 2em 4em;
+      border:solid 1pt #aaaaaa;
+      background:white;
+      min-width:16em;
+      max-width:60em;
+}
+body {
+      box-shadow:4pt 4pt 6pt #999999;
+      -o-box-shadow:4pt 4pt 6pt #999999;
+      -moz-box-shadow:4pt 4pt 6pt #999999;
+      -webkit-box-shadow:4pt 4pt 6pt #999999;
+      border-radius:.8em;
+      -o-border-radius:.8em;
+      -moz-border-radius:.8em;
+      -webkit-border-radius:.8em;
+}
+form {
+      box-shadow:2pt 2pt 3pt #999999;
+      -o-box-shadow:2pt 2pt 3pt #999999;
+      -moz-box-shadow:2pt 2pt 3pt #999999;
+      -webkit-box-shadow:2pt 2pt 3pt #999999;
+      border-radius:.6em;
+      -o-border-radius:.6em;
+      -moz-border-radius:.6em;
+      -webkit-border-radius:.6em;
+}
+input{ font-size:120%; }
+.e{    text-transform:uppercase;
+       font-size:92%;
+       vertical-align: -0.45ex;
+       margin-left: -0.2em;
+       margin-right: -0.1em;
+       line-height: 0;
+}
+.EE {
+      font-size:92%;
+      right: -0.04em;
+      position: relative;
+      top: 0.5ex;
+      margin-left: -0.1em;
+      margin-right: -0.1em;
+}
+.a{   text-transform:uppercase;
+      font-size:76%;
+      vertical-align: 0.45ex;
+      margin-left: -0.36em;
+      margin-right: -0.15em;
+}
+a .e, a .e:hover{text-decoration:none;}
+address{font-size:80%;
+      border-top: 2pt solid #cccccc;
+      margin-top:3ex;
+}
+h1,h2{ color:navy;
+       margin-top:.75em;}
+h1{ font-size:172.8%;}
+h2{ font-size:144%;}
+dt{ font-weight: bold;}
+dd{ margin:.2em 0pt .6em 3em;}
+address p {
+    margin:0pt;
+    padding-left:1em;
+}
+.phrase{width:100%;}
+form{background:#eee;padding:1em;border:solid .1em #cccccc;}
+    </style>
+  </head>
+  <body>
+    <h1>Comprehensive T<span class="e">e</span>X Archive Network</h1>
+    <h2>The CTAN root directory</h2>
+
+    <p>
+      This is the root of the <a href="https://ctan.org">Comprehensive
+      T<span class="e">e</span>X Archive Network</a> directory tree.
+      Most information in CTAN is contained in subdirectories:
+    </p>
+
+    <dl>
+      <dt><a href="biblio/">biblio</a></dt>
+      <dd>
+        Systems for maintaining and presenting bibliographies within documents
+        typeset using T<span class="e">e</span>X
+      </dd>
+
+      <dt><a href="digests/">digests</a></dt>
+      <dd> Collections of
+        T<span class="e">e</span>X mailing list digests,
+        T<span class="e">e</span>X-related electronic magazines, and indexes,
+        etc., of printed publications
+      </dd>
+
+      <dt><a href="dviware/">dviware</a></dt>
+      <dd>
+        Printer drivers and previewers, etc., for .dvi files
+      </dd>
+
+      <dt><a href="fonts/">fonts</a></dt>
+      <dd>
+        Fonts written in Metafont, and support for using fonts from other
+        sources (e.g., those in Adobe Type 1 format)
+      </dd>
+
+      <dt><a href="graphics/">graphics</a></dt>
+      <dd>
+        Systems and T<span class="e">e</span>X macros for producing graphics
+      </dd>
+
+      <dt><a href="help/">help</a></dt>
+      <dd>
+        FAQs
+        (<a href="help/de-tex-faq/">de</a>
+        <a href="help/LaTeX-FAQ-francaise/">fr</a>
+        <a href="help/uk-tex-faq/">uk</a>)
+        and similar direct assistance
+      </dd>
+
+      <dt><a href="indexing/">indexing</a></dt>
+      <dd>
+        Systems for maintaining and presenting indexes of documents typeset
+        using T<span class="e">e</span>X
+      </dd>
+
+      <dt><a href="info/">info</a></dt>
+      <dd>
+        Manuals and extended how-to information; errata for
+        T<span class="e">e</span>X-related publications, collections of project
+        (e.g., L<span class="a">a</span>T<span class="e">e</span>X and NTS)
+        documents, etc.
+      </dd>
+
+      <dt><a href="install/">install</a></dt>
+      <dd>
+        ZIP files of ready-to-install CTAN packages. The package contained in
+        CTAN directory <tt>a/b/c/d/</tt> appears as
+        <tt>install/a/b/c/d.tds.zip</tt> &ndash; each such file may be unzipped
+        directly into
+        a <a href="tds/tds.html">TDS</a>
+        tree, and should contain no &ldquo;tree prefix&rdquo;
+      </dd>
+
+      <dt><a href="language/">language</a></dt>
+      <dd>
+        Support for various languages; hyphenation patterns
+      </dd>
+
+      <dt><a href="macros/">macros</a></dt>
+      <dd> T<span class="e">e</span>X
+        macros; several directories have significant sub-trees:
+        <dl>
+          <dt><a href="macros/context/">context</a></dt>
+          <dd>
+            The ConT<span class="e">e</span>Xt distribution
+            and contributed material
+          </dd>
+
+          <dt><a href="macros/generic/">generic</a></dt>
+          <dd> Macros that work in several environments</dd>
+
+          <dt><a href="macros/latex/">latex</a></dt>
+          <dd>
+            The L<span class="a">a</span>T<span class="e">e</span>X
+            distribution and contributed material
+          </dd>
+
+          <dt><a href="macros/luatex/">luatex</a></dt>
+          <dd>Macros that require the LuaT<span class="e">e</span>X engine</dd>
+
+          <dt><a href="macros/plain/">plain</a></dt>
+          <dd> Donald Knuth's example macro set and contributed material</dd>
+
+          <dt><a href="macros/xetex/">xetex</a></dt>
+          <dd>Macros that require the X<span class="EE">Ǝ</span>T<span class="e">e</span>X engine</dd>
+        </dl>
+      </dd>
+
+      <dt><a href="obsolete/">obsolete</a></dt>
+      <dd>
+        Material which is now obsolete, but which needs to remain
+        on the archive for some reason (such as the 1992
+        L<span class="a">a</span>T<span class="e">e</span>X&nbsp;2.09
+        distribution). The tree maintains a &ldquo;shadow hierarchy&rdquo;
+        &ndash; for example <a href="obsolete/macros/">obsolete/macros</a>
+        has the same basic structures <a href="macros/">macros</a>.
+      </dd>
+
+      <dt><a href="support/">support</a></dt>
+      <dd>
+        T<span class="e">e</span>X support environments and the like
+      </dd>
+
+      <dt><a href="systems/">systems</a></dt>
+      <dd>
+        T<span class="e">e</span>X systems;
+        organised by operating environment, but also including:
+
+        <dl>
+          <dt><a href="systems/knuth/">knuth</a></dt>
+          <dd>Donald Knuth's current distribution.</dd>
+
+          <dt><a href="systems/generic/">generic</a></dt>
+          <dd>
+            Complete systems that can potentially operate in more than one
+            operating environment.
+          </dd>
+
+          <dt><a href="systems/mac/mactex/">MacT<span class="e">e</span>X</a></dt>
+          <dd>The distribution of MacTeX for Mac OS X</dd>
+
+          <dt>
+            <a href="systems/texlive/">T<span class="e">e</span>X Live</a>
+          </dt>
+          <dd>
+            The Live collection of freely distributable T<span class="e">e</span>X
+            material, including the <a href="systems/texlive/tlnet/">T<span class="e">e</span>X
+            Live on-line installer</a>.
+          </dd>
+
+          <dt><a href="systems/win32/miktex/">MiKT<span class="e">e</span>X</a></dt>
+          <dd>
+            The distribution of MiKT<span class="e">e</span>X; CTAN provides a
+            home for MiKT<span class="e">e</span>X's package repository, part
+            of <em>its</em> online installer.
+          </dd>
+        </dl>
+      </dd>
+  
+      <dt><a href="tds/">tds</a></dt>
+      <dd>
+        The T<span class="e">e</span>X Directory Structure standard
+        (the output of the TUG TDS working group)
+      </dd>
+
+      <dt><a href="usergrps/">usergrps</a></dt>
+      <dd> Information supplied by T<span class="e">e</span>X User Groups</dd>
+
+      <dt><a href="web/">web</a></dt>
+      <dd>
+        Literate Programming tools and systems
+      </dd>
+    </dl>
+
+    <h2>CTAN on the Web</h2>
+    <p>
+      The home page for CTAN is at
+      <a href="https://ctan.org">https://ctan.org</a>,
+      which provides several features:
+    </p>
+    <ul>
+      <li>
+        <a href="https://ctan.org/tex-archive">Browsing the CTAN
+        directory</a>
+      </li>
+      <li>
+        Browsing in the Catalogue
+        (by <a href="https://ctan.org/pkg">package</a>, <a href="https://ctan.org/author">author</a>,
+        or <a href="https://ctan.org/topic">topic</a>)
+      </li>
+      <li>
+        <a href="https://ctan.org/search">Searching in the
+        Catalogue</a>
+      </li>
+      <li>
+        <a href="https://ctan.org/mirrors/">An extensive list of mirrors</a>
+      </li>
+    </ul>
+
+    <h2>Searching CTAN</h2>
+    <p>
+      You can search the content of the Catalogue with the
+      following form on the CTAN site:
+    </p>
+    <form method="get" action="https://ctan.org/search">
+      <input name="phrase" class="phrase" type="text" size="24" value="" autofocus="autofocus"/>
+     <input type="submit" value="Search" />
+    </form>
+
+<!--
+    <p>
+      The CTAN team also strongly recommend use of
+      the <a href="help/Catalogue/index.html">T<span class="e">e</span>X
+      Catalogue Online, CTAN Edition</a>
+    </p>
+-->
+    <p>
+      In addition, CTAN archives maintain lists of their contents
+      as plain text files, in a number of ways:
+    </p>
+    <ol>
+      <li>
+        <a href="FILES.byname">Sorted by name</a>
+        (This is a <em>big</em> file&hellip;around 20M bytes).
+      </li>
+      <li>
+        <a href="FILES.last07days">New or changed in the last 7 days</a>
+        (This is usually a more manageable size&hellip;)
+      </li>
+    </ol>
+    
+    <address>
+      <p>
+        This is an experimental page. Comments, to
+        <a href="mailto:ctan@ctan.org">the CTAN team</a>,
+        will be most welcome.
+      </p>
+      <p>Last updated 2020-03-31</p>
+    </address>
+  </body>
+</html>
