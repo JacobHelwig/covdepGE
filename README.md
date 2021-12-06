@@ -13,9 +13,13 @@ Suppose **X** ∈ ℝ<sup>*n* × *p*</sup> is a data matrix of independe
 observations **X** = (**x**<sub>1</sub>,...,**x**<sub>*p*</sub>), where,
 for *j* ∈ 1, ..., *p*:
 
+           **x**<sub>*j*</sub> ∼ 𝒩(*μ*<sub>*j*</sub>,*Σ*<sub>*j*, *j*</sub>), **x**<sub>*j*</sub> ∈ ℝ<sup>*n*</sup>      **X** ∼ 𝒩(*μ*,*Σ*)
+
 The conditional dependence structure of
 **x**<sub>**1**</sub>, ..., **x**<sub>**p**</sub> can be modeled as an
 undirected graph 𝒢 such that:
+
+               𝒢<sub>*i*, *j*</sub> = 𝕀(Cov(**x**<sub>**i**</sub>,**x**<sub>**j**</sub>)≠0)
 
 That is, there is an edge between the **x**<sub>**i**</sub> and
 **x**<sub>**j**</sub> nodes if, and only if, these variables are
@@ -38,9 +42,9 @@ associated with cancer,
 
 ## Functionality
 
-The main function, `covdepGE::covdepGE($\pmb X,\pmb Z$`)\`, estimates
-the posterior distribution of the graphical structure 𝒢<sub>*l*</sub>
-for each of the *n* individuals using a variational mean-field
+The main function, `covdepGE::covdepGE(`**X**, **Z**`)`, estimates the
+posterior distribution of the graphical structure 𝒢<sub>*l*</sub> for
+each of the *n* individuals using a variational mean-field
 approximation. The function will output *n* *p* × *p* symmetric matrices
 𝒜<sub>*l*</sub>, where 𝒜<sub>*i*, *j*</sub><sup>(*l*)</sup> is the
 posterior inclusion probability of an edge between the node representing
@@ -176,7 +180,7 @@ out <- covdepGE(
     ## 1e-04, : For 5/5 responses, the selected value of pi was on the grid boundary.
     ## See return value ELBO for details
 
-    ## Time difference of 3.61106 secs
+    ## Time difference of 3.65831 secs
 
 ``` r
 # grid search results

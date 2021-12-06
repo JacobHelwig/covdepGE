@@ -15,20 +15,11 @@ Run the following in `R`:
 
 Suppose $\pmb{X}\in \mathbb{R}^{n\times p}$ is a data matrix of independent observations $\pmb{X} = \left(\pmb{x}_1,..., \pmb{x}_p\right)$, where, for $j\in1,...,p$:
 
-\begin{equation}
-\pmb{x}_j\sim\mathcal N(\mu_j, \Sigma_{j,j}), \pmb x_j\in \mathbb{R}^n\hspace{2cm}\pmb{X}\sim\mathcal N(\mu, \Sigma)
-\end{equation}
+$\hspace{4cm}\pmb{x}_j\sim\mathcal N(\mu_j, \Sigma_{j,j}), \pmb x_j\in \mathbb{R}^n\hspace{2cm}\pmb{X}\sim\mathcal N(\mu, \Sigma)$
 
 The conditional dependence structure of $\pmb{x_1},...,\pmb{x_p}$ can be modeled as an undirected graph $\mathcal{G}$ such that:
 
-\begin{equation}
-\mathcal G_{i,j} = 
-\begin{cases}
-	1 & \iff \mathrm{Cov}(\pmb{x_i}, \pmb{x_j})\neq 0 
-	\\
-	0 & \textrm{otherwise} 
-\end{cases}
-\end{equation}
+$\hspace{6cm}\mathcal G_{i,j} = \mathbb I (\mathrm{Cov}(\pmb{x_i}, \pmb{x_j})\neq 0)$
 
 That is, there is an edge between the $\pmb{x_i}$ and $\pmb{x_j}$ nodes if, and only if, these variables are dependent on each other given all other variables.
  
@@ -38,7 +29,7 @@ Let $\pmb{Z}$ be an $n\times p'$ matrix of extraneous covariates. Further suppos
 
 ## Functionality
 
-The main function, `covdepGE::covdepGE($\pmb X,\pmb Z$`)`, estimates the posterior distribution of the graphical structure $\mathcal G_l$ for each of the $n$ individuals using a variational mean-field approximation. The function will output $n$ $p\times p$ symmetric matrices $\mathcal{A}_l$, where ${\mathcal{A}_{i,j}^{(l)}}$ is the posterior inclusion probability of an edge between the node representing the $i$-th variable and the node representing the $j$-th variable. 
+The main function, `covdepGE::covdepGE(`$\pmb X,\pmb Z$`)`, estimates the posterior distribution of the graphical structure $\mathcal G_l$ for each of the $n$ individuals using a variational mean-field approximation. The function will output $n$ $p\times p$ symmetric matrices $\mathcal{A}_l$, where ${\mathcal{A}_{i,j}^{(l)}}$ is the posterior inclusion probability of an edge between the node representing the $i$-th variable and the node representing the $j$-th variable. 
 
 There are also two plotting functions, `gg_adjMat` and `gg_inclusionCurve`, for visualizing the result of `covdepGE`. The primary functionality of `gg_adjMat` is to visualize the estimate to a specified individuals conditional dependence structure, however, it can also be used to visualize any numeric matrix. `gg_inclusionCurve` plots the posterior inclusion probability of an edge between two specified variables across all $n$ individuals.    
 
