@@ -176,7 +176,7 @@ out <- covdepGE(
     ## 1e-04, : For 5/5 responses, the selected value of pi was on the grid boundary.
     ## See return value ELBO for details
 
-    ## Time difference of 3.594765 secs
+    ## Time difference of 3.61106 secs
 
 ``` r
 # grid search results
