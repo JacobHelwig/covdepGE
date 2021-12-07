@@ -97,6 +97,10 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
                       prob_prec = 2, font_size = 3, font_color0 = "black",
                       font_color1 = "white"){
 
+  # takes care of no visible bindings
+  Var1 <- Var2 <- value <- NULL
+  rm(list = c("Var1", "Var2", "value"))
+
   # run compatibility checks
   adjMat_checks(out, l, prob_shade, color0, color1, grid_color, incl_probs,
                 prob_prec, font_size, font_color0, font_color1)
@@ -337,6 +341,10 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
                               point_shape = 21, point_size = 1.5,
                               point_color = "#500000", point_fill = "white",
                               sort = F){
+
+  # takes care of "no visible bindings" note
+  idx <- prob <- NULL
+  rm(list = c("idx", "prob"))
 
   # run compatibility checks
   inclusionCurve_checks(out, col_idx1, col_idx2, line_type, line_size,

@@ -1,5 +1,7 @@
 ^covdepGE\.Rproj$
 ^\.Rproj\.user$
-^\dev$
+^dev$
 ^LICENSE\.md$
-^\README_files$
+^README_files$
+^README\.Rmd$
+^README\.pdf$
