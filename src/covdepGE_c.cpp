@@ -171,14 +171,14 @@ void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
                              + (arma::pow(mu, 2) / alpha_logit_term2_denom)
                              + alpha_logit_term3);
 
-                             // transform from logit to probabilities of inclusion; update alpha_mat
-                             arma::mat exp_logit = arma::exp(alpha_logit);
-                             alpha = exp_logit / (1 + exp_logit);
+   // transform from logit to probabilities of inclusion; update alpha_mat
+   arma::mat exp_logit = arma::exp(alpha_logit);
+   alpha = exp_logit / (1 + exp_logit);
 
-                             // handle NA's due to division by infinity resulting from exponentiation of
-                             // large values; these probabilities are indescernible from 1
-                             arma::uvec index1 = arma::find(alpha_logit > upper_limit); // find large values
-                             alpha.elem(index1) = arma::vec(index1.n_rows, arma::fill::ones); // replace them
+   // handle NA's due to division by infinity resulting from exponentiation of
+   // large values; these probabilities are indescernible from 1
+   arma::uvec index1 = arma::find(alpha_logit > upper_limit); // find large values
+   alpha.elem(index1) = arma::vec(index1.n_rows, arma::fill::ones); // replace them
 }
 
 // _____________________________________________________________________________
