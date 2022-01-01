@@ -1,7 +1,7 @@
 ---
 output:
-  github_document: default
   pdf_document: default
+  github_document: default
 ---
 # `covdepGE:` Covariate Dependent Graph Estimation
 
@@ -13,13 +13,9 @@ Run the following in `R`:
 
 ## Overview
 
-Suppose $\pmb{X}\in \mathbb{R}^{n\times p}$ is a data matrix of independent observations $\pmb{X} = \left(\pmb{x}_1,..., \pmb{x}_p\right)$, where, for $j\in1,...,p$:
+Suppose $\pmb{X}\in \mathbb{R}^{n\times p}$ is a data matrix of independent observations $\pmb{X} = \left(\pmb{x}_1,..., \pmb{x}_p\right)$ such that $\pmb{X}\sim\mathcal N(\mu, \Sigma)$. Then, using Gaussian graphical modeling techniques, the conditional dependence structure of $\pmb{x_1},...,\pmb{x_p}$ can be modeled as an undirected graph $\mathcal{G}$ such that:
 
-$\hspace{4cm}\pmb{x}_j\sim\mathcal N(\mu_j, \Sigma_{j,j}), \pmb x_j\in \mathbb{R}^n\hspace{2cm}\pmb{X}\sim\mathcal N(\mu, \Sigma)$
-
-The conditional dependence structure of $\pmb{x_1},...,\pmb{x_p}$ can be modeled as an undirected graph $\mathcal{G}$ such that:
-
-$\hspace{6cm}\mathcal G_{i,j} = \mathbb I (\mathrm{Cov}(\pmb{x_i}, \pmb{x_j})\neq 0)$
+$\hspace{7cm}\mathcal G_{i,j} = \mathbb I \left(\pmb{x_i}\bot\pmb{x_j}\quad\vert\{\pmb{x_1},\ldots,\pmb{x_p}\}\setminus\{\pmb{x_i, x_j}\}\right)$
 
 That is, there is an edge between the $\pmb{x_i}$ and $\pmb{x_j}$ nodes if, and only if, these variables are dependent on each other given all other variables.
  
@@ -176,6 +172,12 @@ num_neg <- length(true_graph_pos) * n - num_pos
 -   Create a vignette demonstrating usage on a simple simulated dataset
 
 -   Model details in return
+
+-   Add number of unique graphs obtained
+
+-   Look into specifying constant `Z` to obtain a homogeneous estimate
+
+-   ELBO monitoring 
 
 -   Change the `idmod` probs to logbase 10
 

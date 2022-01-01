@@ -10,16 +10,13 @@ Run the following in `R`:
 ## Overview
 
 Suppose **X** ∈ ℝ<sup>*n* × *p*</sup> is a data matrix of independent
-observations **X** = (**x**<sub>1</sub>,...,**x**<sub>*p*</sub>), where,
-for *j* ∈ 1, ..., *p*:
-
-           **x**<sub>*j*</sub> ∼ 𝒩(*μ*<sub>*j*</sub>,*Σ*<sub>*j*, *j*</sub>), **x**<sub>*j*</sub> ∈ ℝ<sup>*n*</sup>      **X** ∼ 𝒩(*μ*,*Σ*)
-
-The conditional dependence structure of
+observations **X** = (**x**<sub>1</sub>,...,**x**<sub>*p*</sub>) such
+that **X** ∼ 𝒩(*μ*,*Σ*). Then, using Gaussian graphical modeling
+techniques, the conditional dependence structure of
 **x**<sub>**1**</sub>, ..., **x**<sub>**p**</sub> can be modeled as an
 undirected graph 𝒢 such that:
 
-               𝒢<sub>*i*, *j*</sub> = 𝕀(Cov(**x**<sub>**i**</sub>,**x**<sub>**j**</sub>)≠0)
+                  𝒢<sub>*i*, *j*</sub> = 𝕀(**x**<sub>**i**</sub>⊥**x**<sub>**j**</sub>  \|{**x**<sub>**1**</sub>,…,**x**<sub>**p**</sub>}\\{**x**<sub>**i**</sub>**,** **x**<sub>**j**</sub>})
 
 That is, there is an edge between the **x**<sub>**i**</sub> and
 **x**<sub>**j**</sub> nodes if, and only if, these variables are
@@ -167,7 +164,7 @@ out <- covdepGE(
     ## 1e-04, : Response 2: final model did not converge in 200 iterations
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : Response 3: 17/50 candidate models did not converge in 200 iterations
+    ## 1e-04, : Response 3: 16/50 candidate models did not converge in 200 iterations
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
     ## 1e-04, : Response 3: final model did not converge in 200 iterations
@@ -180,7 +177,7 @@ out <- covdepGE(
     ## 1e-04, : For 5/5 responses, the selected value of pi was on the grid boundary.
     ## See return value ELBO for details
 
-    ## Time difference of 3.65831 secs
+    ## Time difference of 4.727993 secs
 
 ``` r
 # grid search results
@@ -292,6 +289,12 @@ num_neg <- length(true_graph_pos) * n - num_pos
 -   Create a vignette demonstrating usage on a simple simulated dataset
 
 -   Model details in return
+
+-   Add number of unique graphs obtained
+
+-   Look into specifying constant `Z` to obtain a homogeneous estimate
+
+-   ELBO monitoring
 
 -   Change the `idmod` probs to logbase 10
 
