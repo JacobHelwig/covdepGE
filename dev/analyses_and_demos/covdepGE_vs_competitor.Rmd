@@ -146,9 +146,9 @@ annotate_figure(ggarrange(plotlist = graph_viz), top = text_grob("Covariate Depe
 
 Gaussian Mixture Model clustering will first be applied to the extraneous covariate. The number of clusters is selected by optimizing BIC.
 
-For all of the individuals within each of the clusters identified by GMM, the shared graph will be estimated using the method of Carbonetto-Stephens. 
+For all of the individuals within each of the clusters identified by GMM, the shared graph will be estimated by applying `covdepGE` using a constant value for the extraneous covariate. Using a constant value for the extraneous covariate will result in the same estimate for all individuals within each cluster. 
 
-```{r, fig.width = 11, fig.height = 9}
+```{r}
 # estimate the dependence structure independent of the covariate
 
 # apply Gaussian Mixture model clustering; selects number of clusters based on the model that results in the best BIC
@@ -159,36 +159,9 @@ fossil::rand.index(gmm$classification, as.numeric(cov_df$interval))
 
 # find number of clusters in final clustering
 (num_clusters <- length(unique(gmm$classification)))
+```
 
-# function for gaussian graphical modeling using CS
-ggm_CS <- function(X, edge_threshold = 0.5){
-
-  p <- ncol(X)
-
-  # initialize the inclusion probabilities matrix
-  alpha <- matrix(0, p, p)
-
-  # iterate over the variables in X
-  for (j in 1:p){
-
-    # fix the j-th column as the predictor and remove it from X
-    X_j <- X[ , -j]
-    y <- X[ , j]
-
-    # get the posterior inclusion probabilties and add them to the j-th row of alpha
-    alpha[j, -j] <- varbvs(X_j, NULL, y, verbose = F)$pip
-  }
-
-  # symmetrize alpha by taking the mean of (i, j) and (j, i)
-  pip <- (t(alpha) + alpha) / 2
-
-  # create the graph using the edge threshold
-  graph <- (pip > edge_threshold) * 1
-
-  return(list(graph = graph, alpha = alpha, pip = pip))
-}
-
-# list for storing the adjacency matrix for each cluster
+```{r}
 out_indep <- vector("list", num_clusters)
 
 # iterate over each of the clusters identified by GMM
@@ -196,20 +169,41 @@ for (k in 1:num_clusters){
 
   # fix the datapoints in the k-th cluster
   data_mat_k <- data_mat[gmm$classification == k, ]
+  
+  # use varbvs to get the hyperparameter sigma
+  sigmasq_k <- sapply(1:(p + 1), function (col_ind) mean(varbvs(data_mat_k[ , -col_ind], NULL, data_mat_k[ , col_ind], verbose = F)$sigma))
+  
+  # apply the GGM using covdepGE with constant Z, save the resulting graph
+  out_indep[[k]] <- covdepGE(data_mat_k,
+                             rep(0, nrow(data_mat_k)), # extraneous covariates
+                             sigmasq = mean(sigmasq_k), # hyperparameter residual variance
+                             var_min = 1e-3, # smallest sigmabeta_sq grid value
+                             var_max = 5, # largest sigmabeta_sq grid value
+                             n_sigma = 50, # length of the sigmabeta_sq grid
+                             pi_vec = 0.1, # prior inclusion probability
+                             tolerance = 1e-10, # variational parameter exit condition 1
+                             max_iter = 1e3, # variational parameter exit condition 2
+                             print_time = T, 
+                             kde = F, # whether to use kde to calculate bandwidths
+                             scale = F # whether to scale the extraneous covariates
+                             )
 
-  # apply the GGM using CS, save the resulting graph
-  out_indep[[k]] <- ggm_CS(data_mat_k)
 }
+```
 
-# extract the pip and adj mats 
-pip_mats <- lapply(out_indep, `[[`, "pip")
-adj_mats <- lapply(out_indep, `[[`, "graph")
+```{r, fig.width = 11, fig.height = 9}
+# get the graphs and pip matrices for each cluster
+pip_mats <- sapply(out_indep, function(out) unique(out$inclusion_probs))
+adj_mats <- sapply(out_indep, function(out) unique(out$graphs))
+if(length(pip_mats) != num_clusters | length(adj_mats) != num_clusters){
+  stop("Too many graphs")
+}
 
 # find the individuals in each of the clusters
 clust_inds <- lapply(1:num_clusters, function(cl_ind) which(gmm$classification == cl_ind))
 clust_inds_sum <- sapply(clust_inds, function(clust) paste0(lapply(split(clust, cumsum(c(1, diff(clust) != 1))), function(idx_seq) paste0(min(idx_seq), ",...,", max(idx_seq))), collapse = ","))
 
-# create a list of n graphs according to the ggm_cs result for each cluster and the gmm cluster assignment for each individual
+# create a list of n graphs according to the independent estimate for each cluster and the gmm cluster assignment for each individual
 indep_graphs <- sapply(1:n, function(ind_idx) adj_mats[gmm$classification[ind_idx]])
 
 # create  a list of n posterior inclusion probabilities
@@ -228,7 +222,7 @@ annotate_figure(ggarrange(plotlist = cl_gr_vis), top = text_grob("Covariate Inde
 # analyze results
 
 # visualize the posterior inclusion probabilties for both models
-annotate_figure(ggarrange(gg_inclusionCurve(out_dep, 1, 2), gg_inclusionCurve(out_dep, 1, 3, point_color = "dodgerblue")), top = text_grob("Posterior Inclusion Probabilties, Dependent Model"))
+annotate_figure(ggarrange(gg_inclusionCurve(out_dep, 1, 2), gg_inclusionCurve(out_dep, 1, 3, point_color = "dodgerblue")), top = text_grob("Posterior Inclusion Probabilties, Dependent Model", size = 15))
 
 out_dep_copy <- out_dep
 out_dep_copy$inclusion_probs <- indep_pip
@@ -275,83 +269,3 @@ accuracy_indep <- (TN_indep + TP_indep) / num_entries
 y_lower <- floor(min(perf_res_df$performance) * 10) / 10
 ggplot(perf_res_df, aes(metric, performance, fill = method)) + geom_bar(stat = "identity", position = position_dodge()) + coord_cartesian(ylim = c(y_lower, 1)) + theme_bw() + ggsci::scale_fill_jco()
 ```
-
-
-<!--
-  # brute force model selection
-
-  # find all elements that may be in the edge set
-  possible_edges <- matrix(apply(expand.grid(names(df), names(df)), 1, paste, collapse = ":"), p + 1, p + 1)
-(possible_edges <- possible_edges[upper.tri(possible_edges)])
-
-# find all possible models (2^(sum(1:p)) total models)
-
-# the j-th element of each row in the following data.frame will be true if the j-th edge
-models <- expand.grid(rep(list(c(T, F)), length(possible_edges)))
-models <- apply(models, 1, function(row) possible_edges[row])
-
-# remove the independence model
-models <- models[sapply(models, length) != 0]
-
-length(models)
-head(models)
-
-# variables for tracking the best AIC and the best model within each of the intervals
-best_aic <- rep(Inf, num_intervals)
-best_formula <- vector("list", num_intervals)
-
-# iterate over each of the intervals identified by GMM
-for (k in 1:num_intervals){
-
-  # fix the datapoints in the k-th interval
-  df_k <- df[gmm$classification == k, ]
-
-  # fit all of the possible models to this data
-  for (model in models){
-
-    # construct the model formula
-    model_formula <- as.formula(paste0("~", paste0(model, collapse = "+")))
-
-    # fit the ggm
-    ggm <- gRim::cmod(model_formula, df_k)
-
-    # get the AIC
-    aic <- ggm$fitinfo$bic
-
-    # if the AIC is lower than the current best AIC, save the AIC and the formula
-    if (aic < best_aic[k]){
-      best_aic[k] <- aic
-      best_formula[[k]] <- model_formula
-    }
-  }
-}
-best_aic
-best_formula
-
-# using gRim
-df <- data.frame(data_mat)
-
-# list for storing the adjacency matrix for each interval
-adj_mats <- vector("list", num_intervals)
-
-# iterate over each of the intervals identified by GMM
-for (k in 1:num_intervals){
-
-  # fix the datapoints in the k-th interval
-  df_k <- df[gmm$classification == k, ]
-
-  # create the independence model (empty edge set)
-  ggm_indep <- cmod(~.^1, df_k)
-
-  # perform forward selection; k = ln(n) gives BIC as the objective function
-  ggm_fwd <- forward(ggm_indep, k = log(nrow(df_k)), details = 0)
-
-  # save the resulting adjacency matrix
-  adj_mats[[k]] <- as(ggm_fwd, "matrix")
-}
-
-# visualize individual index by intervals
-cov_df$pos <- cov_df$individual_index - c(rep(0, n1), rep(n1, n2), rep(n1 + n2, n3))
-indiv_clust <- ggplot() + geom_text(data = cov_df, mapping = aes(interval, pos, label = individual_index, color = interval), size = 2) + theme_classic() + ggsci::scale_color_jco() + theme(axis.text.y = element_blank(), axis.ticks.y = element_blank(), legend.position = "none") + ylab("Individual Index") + labs(title = "Individual Index by interval")
-
--->

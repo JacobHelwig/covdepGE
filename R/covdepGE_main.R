@@ -260,10 +260,10 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
 
     # Select the value of sigma_beta that maximizes the ELBO
     sigmabeta_sq <- sigmabetasq_vec[which(elbo_sigmaXpi
-                                          == max(elbo_sigmaXpi), T)[,"row"]]
+                                          == max(elbo_sigmaXpi), T)[,"row"]][1]
 
     # Select the value of pi that maximizes the ELBO
-    pi_est <- pi_vec[which(elbo_sigmaXpi == max(elbo_sigmaXpi), T)[,"col"]]
+    pi_est <- pi_vec[which(elbo_sigmaXpi == max(elbo_sigmaXpi), T)[,"col"]][1]
 
     # fit another model using these values of sigma_beta and pi_est
     result <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,

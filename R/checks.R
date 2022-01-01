@@ -235,6 +235,11 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
     stop("norm should be greater than or equal to 1")
   }
 
+  # if scale is true, ensure that the standard deviation of is covariates is positive
+  if ((scale | kde) & isTRUE(all.equal(0, as.numeric(var(Z))))){
+    stop("Constant Z; set `scale = F` and `kde = F`")
+  }
+
   # ensure that edge_threshold is in (0, 1)
   if (!(0 < edge_threshold & edge_threshold < 1)){
     stop("edge_threshold should be in the interval (0, 1)")

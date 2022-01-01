@@ -192,6 +192,12 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
 
     # out is an adjacency matrix
 
+    # save col and row names and remove them
+    colnames <- rownames <- NULL
+    colnames <- colnames(out)
+    rownames <- rownames(out)
+    out <- unname(out)
+
     # melt to long form
     long_graph <- reshape2::melt(out)
 
@@ -238,6 +244,16 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
                                plot.title = ggplot2::element_text(hjust = 0.5)) +
                 ggplot2::scale_x_continuous(breaks = 1:nrow(out)) +
                 ggplot2::scale_y_continuous(breaks = 1:nrow(out)))
+    }
+
+    # check to see if there are col names or row names to be added
+    if (!is.null(colnames)){
+      vis <- suppressMessages(vis + ggplot2::scale_x_continuous(breaks = 1:nrow(out),
+                                                                labels = colnames))
+    }
+    if (!is.null(rownames)){
+      vis <- suppressMessages(vis + ggplot2::scale_y_continuous(breaks = 1:nrow(out),
+                                                                labels = rownames))
     }
   }
 

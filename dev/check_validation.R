@@ -1,11 +1,214 @@
-setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
+setwd("~/Jacob/covdepGE/dev")
+#setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
 rm(list = ls())
+
+package <- T # true if the package version is desired
+if (package){
+  rm(list = ls())
+  library(covdepGE)
+}else{
+  rm(list = ls())
+  if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
+  source("~/Jacob/covdepGE/R/covdepGE_main.R")
+  source("~/Jacob/covdepGE/R/weights.R")
+  source("~/Jacob/covdepGE/R/checks.R")
+  source("~/Jacob/covdepGE/R/gg_covdepGE.R")
+  # source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
+  # source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
+  # source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
+  Rcpp::sourceCpp("~/Jacob/covdepGE/src/covdepGE_c.cpp")
+}
+
 source("generate_data.R")
-library(covdepGE)
 
 cont <- generate_continuous()
 data_mat <- cont$data
 Z <- cont$covts
+
+
+## -----------------------------------------------------------------------------
+## -----------------------------bug correction----------------------------------
+## -----------------------------------------------------------------------------
+
+# BUG: named matrices to gg_adjMat
+mat <- matrix(1:9, 3)
+colnames(mat) <- row.names(mat) <- letters[1:3]
+gg_adjMat(mat)
+
+mat <- matrix(1:9, 3)
+colnames(mat) <- letters[1:3]
+gg_adjMat(mat)
+
+# BUG: too many sigma
+set.seed(1)
+n_neg <- 20
+n_pos <- 80
+n <- n_neg + n_pos
+p <- 4
+
+# generate the extraneous covariate
+Z_neg <- sort(-runif(n_neg))
+Z_pos <- sort(runif(n_pos))
+Z <- c(Z_neg, Z_pos)
+
+# create true covariance structure for 2 groups: positive Z and negative Z
+true_graph_pos <- true_graph_neg <- matrix(0, p + 1, p + 1)
+true_graph_pos[1, 2] <- true_graph_pos[2, 1] <- true_graph_neg[1, 3] <- true_graph_neg[3, 1] <- 1
+
+# generate the covariance matrices as a function of Z
+sigma_mats_neg <- lapply(Z_neg, function(z) z * true_graph_neg + diag(p + 1))
+sigma_mats_pos <- lapply(Z_pos, function(z) z * true_graph_pos + diag(p + 1))
+sigma_mats <- c(sigma_mats_neg, sigma_mats_pos)
+
+# generate the data using the covariance matrices
+data_mat <- t(sapply(sigma_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+
+# use varbvs to get the hyperparameter sigma
+sigmasq <- rep(NA, p + 1)
+for (j in 1:(p + 1)){
+  sigmasq[j] <- mean(varbvs::varbvs(data_mat[ , -j], Z, data_mat[ , j], verbose = F)$sigma)
+}
+
+# estimate the covariance structure
+out <- covdepGE(data_mat,
+                Z, # extraneous covariates
+                sigmasq = mean(sigmasq), # hyperparameter residual variance
+                var_min = 1e-16, # smallest sigmabeta_sq grid value
+                var_max = 0.5, # largest sigmabeta_sq grid value
+                n_sigma = 50, # length of the sigmabeta_sq grid
+                pi_vec = 0.1, # prior inclusion probability grid
+                tolerance = 1e-5, # variational parameter exit condition 1
+                max_iter = 1e3, # variational parameter exit condition 2
+                edge_threshold = 0.75, # minimum inclusion probability
+                sym_method = "min", # how to symmetrize the alpha matrices
+                print_time = T,
+)
+out$ELBO
+
+# BUG: constant covariate
+
+# create covariate for individuals in each of the three clusters
+
+# define the dimensions of the data
+n1 <- 60; n2 <- 60; n3 <- 60
+n <- sum(n1, n2, n3)
+p <- 4
+
+# define the limits of the covariate
+limits1 <- c(-.990, -.331)
+limits2 <- c(-.229, 0.329)
+limits3 <- c(0.431, 0.990)
+
+# define the covariate
+z1 <- seq(limits1[1], limits1[2], length = n %/% 3)
+z2 <- seq(limits2[1], limits2[2], length = n %/% 3)
+z3 <- seq(limits3[1], limits3[2], length = n %/% 3)
+Z <- matrix(c(z1, z2, z3), n, 1)
+
+# create the precision matrices for each individual
+
+# the shared part of the structure for all three clusters is a 2 on the diagonal and a 1 in the (2, 3) position
+common_str <- diag(p + 1)
+common_str[2, 3] <- 1
+
+# define constants for the structure of cluster 2
+const1 <- 0.23; const2 <- 0.56
+
+# cluster 2 has two different linear functions of Z in the (1, 2) and (1, 3) positions; define structures for each of these components
+cl2_str12 <- cl2_str13 <- matrix(0, p + 1, p + 1)
+cl2_str12[1, 2] <- cl2_str13[1, 3] <- 1
+
+# define the precision matrices for each of the individuals in cluster 2
+cl2_prec <- lapply(z2, function(z) common_str + ((1 - (z + const1) / const2) * cl2_str12) + ((z + const1) / const2 * cl2_str13))
+
+# cluster 1 has a 1 in the (1, 2) and cluster 3 has a 1 in the (1, 3) position; define structures for each of these components
+cl1_str12 <- cl3_str13 <- matrix(0, p + 1, p + 1)
+cl1_str12[1, 2] <- cl3_str13[1, 3] <- 1
+
+# define the precision matrices for each of the individuals in cluster 1 and cluster 3
+cl1_prec <- rep(list(common_str + cl1_str12), n1)
+cl3_prec <- rep(list(common_str + cl3_str13), n3)
+
+# put all of the precision matrices into one list
+prec_mats <- c(cl1_prec, cl2_prec, cl3_prec)
+
+# symmetrize them and invert to get the covariance matrices
+prec_mats <- lapply(prec_mats, function(mat) t(mat) + mat)
+cov_mats <- lapply(prec_mats, solve)
+
+# generate the data using the covariance matrices
+data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+
+# use varbvs to get the hyperparameter sigma
+sigmasq <- rep(NA, p + 1)
+for (j in 1:(p + 1)){
+  sigmasq[j] <- mean(varbvs::varbvs(data_mat[ , -j], Z, data_mat[ , j], verbose = F)$sigma)
+}
+
+# estimate the dependence structure independent of the covariate
+
+out_indep <- covdepGE(data_mat,
+                      rep(0, n), # extraneous covariates
+                      sigmasq = mean(sigmasq), # hyperparameter residual variance
+                      var_min = 1e-13, # smallest sigmabeta_sq grid value
+                      var_max = 0.4, # largest sigmabeta_sq grid value
+                      n_sigma = 100, # length of the sigmabeta_sq grid
+                      pi_vec = 0.1, # prior inclusion probability grid
+                      tolerance = 1e-12, # variational parameter exit condition 1
+                      max_iter = 1e3, # variational parameter exit condition 2
+                      edge_threshold = 0.75, # minimum inclusion probability
+                      sym_method = "min", # how to symmetrize the alpha matrices
+                      print_time = T,
+)
+
+out_indep <- covdepGE(data_mat,
+                      rep(0, n), # extraneous covariates
+                      sigmasq = mean(sigmasq), # hyperparameter residual variance
+                      var_min = 1e-13, # smallest sigmabeta_sq grid value
+                      var_max = 0.4, # largest sigmabeta_sq grid value
+                      n_sigma = 100, # length of the sigmabeta_sq grid
+                      pi_vec = 0.1, # prior inclusion probability grid
+                      tolerance = 1e-12, # variational parameter exit condition 1
+                      max_iter = 1e3, # variational parameter exit condition 2
+                      edge_threshold = 0.75, # minimum inclusion probability
+                      sym_method = "min", # how to symmetrize the alpha matrices
+                      print_time = T,
+                      scale = F
+)
+
+out_indep <- covdepGE(data_mat,
+                      rep(0, n), # extraneous covariates
+                      sigmasq = mean(sigmasq), # hyperparameter residual variance
+                      var_min = 1e-13, # smallest sigmabeta_sq grid value
+                      var_max = 0.4, # largest sigmabeta_sq grid value
+                      n_sigma = 100, # length of the sigmabeta_sq grid
+                      pi_vec = 0.1, # prior inclusion probability grid
+                      tolerance = 1e-12, # variational parameter exit condition 1
+                      max_iter = 1e3, # variational parameter exit condition 2
+                      edge_threshold = 0.75, # minimum inclusion probability
+                      sym_method = "min", # how to symmetrize the alpha matrices
+                      print_time = T,
+                      kde = F
+)
+
+out_indep <- covdepGE(data_mat,
+                      rep(1, n), # extraneous covariates
+                      sigmasq = mean(sigmasq), # hyperparameter residual variance
+                      var_min = 1e-15,
+                      var_max = 5,
+                      n_sigma = 50,
+                      pi_vec = 0.1, # prior inclusion probability grid
+                      tolerance = 1e-10, # variational parameter exit condition 1
+                      max_iter = 1e3, # variational parameter exit condition 2
+                      edge_threshold = 0.75, # minimum inclusion probability
+                      sym_method = "min", # how to symmetrize the alpha matrices
+                      print_time = T,
+                      scale = F,
+                      kde = F
+)
+
+out_indep$ELBO
+unique(out_indep$alpha_matrices)
 
 ## -----------------------------------------------------------------------------
 ## -----------------------------covdepGE----------------------------------------
