@@ -18,7 +18,6 @@ library(ggplot2)
 library(ggpubr)
 library(covdepGE)
 library(mclust)
-library(varbvs)
 
 set.seed(1)
 
@@ -112,7 +111,7 @@ data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
 
 ```{r}
 # use varbvs to get the hyperparameter sigma
-sigmasq <- sapply(1:(p + 1), function (col_ind) mean(varbvs(data_mat[ , -col_ind], Z, data_mat[ , col_ind], verbose = F)$sigma))
+sigmasq <- sapply(1:(p + 1), function (col_ind) mean(varbvs::varbvs(data_mat[ , -col_ind], Z, data_mat[ , col_ind], verbose = F)$sigma))
 sigmasq
 mean(sigmasq)
 ```
@@ -130,16 +129,9 @@ out_dep <- covdepGE(data_mat,
                     print_time = T)
 ```
 ```{r, fig.width = 11, fig.height = 9}
-# find the unique graphs and the individuals belonging to each
-unique_graphs <- unique(out_dep$graphs)
-length(unique_graphs)
-indiv_graphs <- lapply(1:length(unique_graphs), function(graph_ind) which(sapply(out_dep$graphs, identical, unique_graphs[[graph_ind]])))
-indiv_graphs_sum <- sapply(indiv_graphs, function(indv_idx) paste0(lapply(split(indv_idx, cumsum(c(1, diff(indv_idx) != 1))), function(idx_seq) paste0(min(idx_seq), ",...,", max(idx_seq))), collapse = ","))
-
 # visualize each of the unique graphs
 colors <- c("forestgreen", "tomato2", "goldenrod", "steelblue")
-graph_viz <- lapply(1:length(unique_graphs), function(graph_ind) gg_adjMat(unique_graphs[[graph_ind]], color1 = colors[[graph_ind]]) + labs(title = paste0("Individuals ", indiv_graphs_sum[graph_ind])))
-annotate_figure(ggarrange(plotlist = graph_viz), top = text_grob("Covariate Dependent Estimated Graphs", size = 15))
+annotate_figure(ggarrange(plotlist = gg_adjMats(out_dep, colors)), top = text_grob("Covariate Dependent Estimated Graphs", size = 15))
 ```
 
 # Covariate independent graph estimation 
@@ -171,7 +163,7 @@ for (k in 1:num_clusters){
   data_mat_k <- data_mat[gmm$classification == k, ]
   
   # use varbvs to get the hyperparameter sigma
-  sigmasq_k <- sapply(1:(p + 1), function (col_ind) mean(varbvs(data_mat_k[ , -col_ind], NULL, data_mat_k[ , col_ind], verbose = F)$sigma))
+  sigmasq_k <- sapply(1:(p + 1), function (col_ind) mean(varbvs::varbvs(data_mat_k[ , -col_ind], NULL, data_mat_k[ , col_ind], verbose = F)$sigma))
   
   # apply the GGM using covdepGE with constant Z, save the resulting graph
   out_indep[[k]] <- covdepGE(data_mat_k,

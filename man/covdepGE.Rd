@@ -16,11 +16,11 @@ covdepGE(
   var_min = 0.01,
   var_max = 10,
   n_sigma = 8,
-  pi_vec = 0.2,
+  pi_vec = 0.1,
   norm = 2,
   scale = T,
-  tolerance = 1e-09,
-  max_iter = 100,
+  tolerance = 1e-12,
+  max_iter = 10000,
   edge_threshold = 0.5,
   sym_method = "mean",
   print_time = F,
@@ -50,8 +50,9 @@ inclusion). \code{0.2} by default}
 \item{mu}{scalar; global initialization value for the variational parameters
 \code{mu_matrices} (approximates regression coefficients). 0 by default}
 
-\item{sigmasq}{scalar in \eqn{(0, Inf)}; variance hyperparameter for
-spike-and-slab. \code{0.5} by default}
+\item{sigmasq}{scalar in \eqn{(0, Inf)}; Error term variance for
+spike-and-slab. Algorithm scales this value by individual-specific weights.
+\code{0.5} by default}
 
 \item{sigmabetasq_vec}{\code{n_sigma} x \eqn{1} vector, entries in\eqn{ (0, Inf)};
 candidate values of \code{sigmabeta_sq}, the slab variance. \code{NULL} by default}
@@ -73,7 +74,7 @@ auto-generated as:
 \code{8} by default}
 
 \item{pi_vec}{\code{n_pi} x \eqn{1} vector, entries in \eqn{[0, 1]}; candidate
-values of \code{pi}. \code{0.2} by default}
+values of \code{pi}. \code{0.1} by default}
 
 \item{norm}{scalar in \eqn{[1, Inf]}; norm to use when calculating weights.
 \code{Inf} results in infinity norm. \code{2} by default}
@@ -84,10 +85,10 @@ default}
 
 \item{tolerance}{scalar in \eqn{(0, Inf)}; end the variational update loop
 when the square root of the sum of squared changes to the elements of the
-alpha matrix are within tolerance. \code{1e-9} by default}
+alpha matrix are within tolerance. \code{1e-12} by default}
 
 \item{max_iter}{scalar in \eqn{{1, 2,...}}; if the tolerance criteria has not
-been met by \code{max_iter} iterations, end the variational update loop. \code{100} by
+been met by \code{max_iter} iterations, end the variational update loop. \code{1e4} by
 default}
 
 \item{edge_threshold}{scalar in \eqn{(0, 1)}; when post-processing the
@@ -124,6 +125,19 @@ according to \code{sym_method})
 \item \code{alpha_matrices}: list of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices;
 the \eqn{l}-th matrix is an asymmetric matrix of inclusion probabilities for
 the \eqn{l}-th individual
+\item \code{unique_graphs}: list of \eqn{g} lists; \eqn{g} is the number of
+unique graphs. The \eqn{v}-th list has 3 values:
+}
+\itemize{
+\item \code{graph}: \eqn{(p + 1)} x \eqn{(p + 1)} matrix; the adjacency matrix for the
+\eqn{v}-th graph
+\item \code{individuals}: \eqn{u} x \eqn{1} vector; \eqn{u} is the number of
+individuals corresponding to the \eqn{v}-th graph. The elements of this
+vector are the individual indices corresponding to the \eqn{v}-th graph
+\item \code{individuals_summary}: character scalar; summarizes the individual indices
+in \code{individuals}
+}
+\enumerate{
 \item \code{ELBO}: list of \eqn{(p + 1)} \code{lists}; the \eqn{j}-th list corresponds to
 the \eqn{j}-th predictor and contains 3 values - the final values of \code{pi}
 and \code{sigmabeta_sq} that maximized ELBO over all individuals with the

@@ -1,7 +1,7 @@
 ---
 output:
-  pdf_document: default
   github_document: default
+  pdf_document: default
 ---
 # `covdepGE:` Covariate Dependent Graph Estimation
 
@@ -162,20 +162,11 @@ num_neg <- length(true_graph_pos) * n - num_pos
 # \____/\____/  \__/  \__/_____/_/    \____/_____/
 ```
 
--   Change the weight calculation loop so that the inner loop range is
-    constant, no matter `kde`
-
 -   Add Carbonetto-Stephens reference in documentation
-
--   Check how to refer to $\sigma^2$ (regression coefficient variance) and $\sigma^2_\beta$ (slab variance)  
 
 -   Create a vignette demonstrating usage on a simple simulated dataset
 
 -   Model details in return
-
--   Add number of unique graphs obtained
-
--   Look into specifying constant `Z` to obtain a homogeneous estimate
 
 -   ELBO monitoring 
 

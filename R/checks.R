@@ -523,3 +523,57 @@ inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
     stop(paste0("col_idx2 should be in 1, 2, ..., ", p))
   }
 }
+
+## _____________________________________________________________________________
+## _____________________________gg_adjMats_checks_______________________________
+## _____________________________________________________________________________
+## -----------------------------DESCRIPTION-------------------------------------
+## function to check compatibility of arguments to gg_adjMats
+## -----------------------------ARGUMENTS---------------------------------------
+## out: list; return of covdepGE function.
+##
+## graph_colors: g x 1 vector; g is the number of unique graphs from out. The
+## v-th element vector is the color for the v-th unique graph
+##
+## seed: scalar in (-Inf, Inf); when colors is NULL, the RNG seed for selecting
+## the color for each graph. 1 by default.
+##
+adjMats_checks <- function(out, seed, graph_colors){
+
+  # ensure out is a list
+  if (!is.list(out)){
+    stop(paste0("out is of class ", class(out)[1], "; expected list"))
+  }
+
+  # ensure out has inclusion_probs and graphs
+  if (!(all(c("inclusion_probs", "graphs") %in% names(out)))){
+    stop(paste0("out should be return of function covdepGE"))
+  }
+
+  # if graph_colors is not null, run compatibility checks
+  if(!is.null(graph_colors)){
+
+    # ensure graph_colors is a vector
+    if (!is.vector(graph_colors)){
+      stop(paste0(graph_colors, " is of class ", class(args_vector[[graph_colors]])[1],
+                  "; expected vector"))
+    }
+
+    # ensure that there are a sufficient number of colors in graph_colors
+    if(length(graph_colors) < length(out$unique_graphs)){
+      stop(paste0("graph_colors is of length ", length(graph_colors),
+                  "; should have at least ", length(out$unique_graphs), " elements"))
+    }
+  }
+
+  # ensure seed is numeric
+  if (!is.numeric(seed)){
+    stop(paste0("seed is of type ", typeof(seed), "; expected numeric"))
+  }
+
+  # ensure seed is finite
+  if (!all(is.finite(seed))){
+    stop(paste0("seed should have all finite entries"))
+  }
+}
+

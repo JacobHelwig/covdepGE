@@ -16,7 +16,7 @@ if (discrete_data) {
 data_mat <- dat$data
 Z <- dat$covts
 
-package <- F # true if the package version is desired
+package <- T # true if the package version is desired
 if (package){
   library(covdepGE)
   out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, print_time = T,

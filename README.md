@@ -177,7 +177,7 @@ out <- covdepGE(
     ## 1e-04, : For 5/5 responses, the selected value of pi was on the grid boundary.
     ## See return value ELBO for details
 
-    ## Time difference of 4.727993 secs
+    ## Time difference of 4.551104 secs
 
 ``` r
 # grid search results
@@ -278,21 +278,11 @@ num_neg <- length(true_graph_pos) * n - num_pos
 # \____/\____/  \__/  \__/_____/_/    \____/_____/
 ```
 
--   Change the weight calculation loop so that the inner loop range is
-    constant, no matter `kde`
-
 -   Add Carbonetto-Stephens reference in documentation
-
--   Check how to refer to *σ*<sup>2</sup> (regression coefficient
-    variance) and *σ*<sub>*β*</sub><sup>2</sup> (slab variance)
 
 -   Create a vignette demonstrating usage on a simple simulated dataset
 
 -   Model details in return
-
--   Add number of unique graphs obtained
-
--   Look into specifying constant `Z` to obtain a homogeneous estimate
 
 -   ELBO monitoring
 

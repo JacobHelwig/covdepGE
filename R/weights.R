@@ -137,15 +137,10 @@ get_weights <- function(Z, norm, kde, tau){
   # individual using the i-th individual's bandwidth
   for (i in 1:n) {
 
-    # if kde = F, then weights are symmetric (until column scaling);
-    # skip repeating unneccesary calculations
-    j_inds <- 1:n
-    if (!kde) j_inds <- i:n
-
     # fix the i-th individual's bandwidth
     tau_i <- tau[i]
 
-    for (j in j_inds) {
+    for (j in i:n) {
 
       # take the p-norm
       diff_vec <- Z[i, ] - Z[j, ]
@@ -165,11 +160,16 @@ get_weights <- function(Z, norm, kde, tau){
       }
 
 
-      # given the norm, find the weight using the normal density
+      # given the norm, find the weight of j with respect to i
       D[j, i] <- stats::dnorm(diff_norm, 0, tau_i)
 
       # if kde = F, then the weight matrix is symmetric up until scaling
-      if (!kde) D[i, j] <- D[j, i]
+      if (!kde){
+        D[i, j] <- D[j, i]
+      }else{
+        # otherwise, find the weight of i with respect to j
+        D[i, j] <- stats::dnorm(diff_norm, 0, tau[j])
+      }
     }
   }
 

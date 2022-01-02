@@ -427,3 +427,91 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 
   return(vis)
 }
+
+## -----------------------------------------------------------------------------
+#' @title gg_adjMats
+#' @export
+## -----------------------------------------------------------------------------
+## -----------------------------DESCRIPTION-------------------------------------
+#' @description Given the return value of covdepGE function, create a list of
+#'  visualizations of the adjacency matrix for each of the unique graphs
+## -----------------------------ARGUMENTS---------------------------------------
+#' @param out `list`; return of `covdepGE` function
+#'
+#' @param ## graph_colors: g x 1 vector; g is the number of unique graphs from
+#'  out. The v-th element vector is the color for the v-th unique graph
+#'
+#' @param seed scalar in (-Inf, Inf); when colors is NULL, the RNG seed for
+#'  selecting the color for each graph. 1 by default.
+## -----------------------------RETURNS-----------------------------------------
+#' @return Returns list of `ggplot2` visualizations of unique graph adjacency
+#'  matrices
+## -----------------------------EXAMPLES----------------------------------------
+#' @examples
+#' set.seed(1)
+#' n <- 100
+#' p <- 4
+#'
+#' # generate the extraneous covariate
+#' Z_neg <- sort(runif(n / 2) * -1)
+#' Z_pos <- sort(runif(n / 2))
+#' Z <- c(Z_neg, Z_pos)
+#' summary(Z)
+#'
+#' # create true covariance structure for 2 groups: positive Z and negative Z
+#' true_graph_pos <- true_graph_neg <- matrix(0, p + 1, p + 1)
+#' true_graph_pos[1, 2] <- true_graph_pos[2, 1] <- 1
+#' true_graph_neg[1, 3] <- true_graph_neg[3, 1] <- 1
+#'
+#' # visualize the true covariance structures
+#' (gg_adjMat(true_graph_neg) +
+#'     ggplot2::ggtitle("True graph for individuals with negative Z"))
+#' (gg_adjMat(true_graph_pos, color1 = "steelblue") +
+#'     ggplot2::ggtitle("True graph for individuals with positive Z"))
+#'
+#' # generate the covariance matrices as a function of Z
+#' sigma_mats_neg <- lapply(Z_neg, function(z) z * true_graph_neg + diag(p + 1))
+#' sigma_mats_pos <- lapply(Z_pos, function(z) z * true_graph_pos + diag(p + 1))
+#' sigma_mats <- c(sigma_mats_neg, sigma_mats_pos)
+#'
+#' # generate the data using the covariance matrices
+#' data_mat <- t(sapply(sigma_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+#'
+#' # visualize the sample correlation
+#' gg_adjMat(abs(cor(data_mat[1:(n / 2), ])) - diag(p + 1))
+#' gg_adjMat(abs(cor(data_mat[(n / 2 + 1):n, ])) - diag(p + 1),
+#'           color1 = "dodgerblue")
+#'
+#' # estimate the covariance structure
+#' out <- covdepGE(data_mat, Z)
+#'
+#' # analyze results
+#' gg_adjMats(out)
+#'
+#' gg_inclusionCurve(out, 1, 2)
+#' gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
+## -----------------------------------------------------------------------------
+gg_adjMats <- function(out, graph_colors = NULL, seed = 1){
+
+  # compatibility checks
+  adjMats_checks(out, seed, graph_colors)
+
+  # if no colors have been provided, select some randomly
+  if(is.null(graph_colors)){
+    set.seed(seed)
+    graph_colors <- colors()[sample(1:length(colors()), length(out$unique_graphs))]
+  }
+
+  # get the summary of individuals corresponding to each graph
+  indv_sum <- sapply(out$unique_graphs, `[[`, "individuals_summary")
+
+  # get the unique graphs
+  unique_graphs <- lapply(out$unique_graphs, `[[`,"graph")
+
+  # create a visualization for each graph and store it in a list
+  graph_viz <- lapply(1:length(unique_graphs), function(gr_idx) gg_adjMat(
+    unique_graphs[[gr_idx]], color1 = graph_colors[gr_idx]) + ggplot2::ggtitle(
+      paste("Individuals", indv_sum[gr_idx])))
+
+  return(graph_viz)
+}

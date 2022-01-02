@@ -29,8 +29,9 @@
 #' @param mu scalar; global initialization value for the variational parameters
 #' `mu_matrices` (approximates regression coefficients). 0 by default
 #'
-#' @param sigmasq scalar in \eqn{(0, Inf)}; variance hyperparameter for
-#' spike-and-slab. `0.5` by default
+#' @param sigmasq scalar in \eqn{(0, Inf)}; Error term variance for
+#' spike-and-slab. Algorithm scales this value by individual-specific weights.
+#' `0.5` by default
 #'
 #' @param sigmabetasq_vec `n_sigma` x \eqn{1} vector, entries in\eqn{ (0, Inf)};
 #' candidate values of `sigmabeta_sq`, the slab variance. `NULL` by default
@@ -52,7 +53,7 @@
 #' `8` by default
 #'
 #' @param pi_vec `n_pi` x \eqn{1} vector, entries in \eqn{[0, 1]}; candidate
-#' values of `pi`. `0.2` by default
+#' values of `pi`. `0.1` by default
 #'
 #' @param norm scalar in \eqn{[1, Inf]}; norm to use when calculating weights.
 #' `Inf` results in infinity norm. `2` by default
@@ -63,10 +64,10 @@
 #'
 #' @param tolerance scalar in \eqn{(0, Inf)}; end the variational update loop
 #'  when the square root of the sum of squared changes to the elements of the
-#'  alpha matrix are within tolerance. `1e-9` by default
+#'  alpha matrix are within tolerance. `1e-12` by default
 #'
 #' @param max_iter scalar in \eqn{{1, 2,...}}; if the tolerance criteria has not
-#' been met by `max_iter` iterations, end the variational update loop. `100` by
+#' been met by `max_iter` iterations, end the variational update loop. `1e4` by
 #' default
 #'
 #' @param edge_threshold scalar in \eqn{(0, 1)}; when post-processing the
@@ -105,16 +106,26 @@
 #' the \eqn{l}-th matrix is an asymmetric matrix of inclusion probabilities for
 #'  the \eqn{l}-th individual
 #'
-#' 4. `ELBO`: list of \eqn{(p + 1)} `lists`; the \eqn{j}-th list corresponds to
+#' 4. `unique_graphs`: list of \eqn{g} lists; \eqn{g} is the number of
+#' unique graphs. The \eqn{v}-th list has 3 values:
+#' - `graph`: \eqn{(p + 1)} x \eqn{(p + 1)} matrix; the adjacency matrix for the
+#'  \eqn{v}-th graph
+#' - `individuals`: \eqn{u} x \eqn{1} vector; \eqn{u} is the number of
+#'  individuals corresponding to the \eqn{v}-th graph. The elements of this
+#'  vector are the individual indices corresponding to the \eqn{v}-th graph
+#' - `individuals_summary`: character scalar; summarizes the individual indices
+#' in `individuals`
+#'
+#' 5. `ELBO`: list of \eqn{(p + 1)} `lists`; the \eqn{j}-th list corresponds to
 #'  the \eqn{j}-th predictor and contains 3 values - the final values of `pi`
 #'  and `sigmabeta_sq` that maximized ELBO over all individuals with the
 #'  \eqn{j}-th predictor fixed as the response and the maximum value of ELBO
 #'
-#' 5. `weights`: \eqn{n} x \eqn{n} matrix; the \eqn{j, i} entry is the weighting
+#' 6. `weights`: \eqn{n} x \eqn{n} matrix; the \eqn{j, i} entry is the weighting
 #'  of the \eqn{j}-th individual with respect to the \eqn{i}-th individual using
 #'  the \eqn{i}-th individual's bandwidth
 #'
-#' 6. `bandwidths`: \eqn{n} x \eqn{1} vector; individual-specific bandwidths
+#' 7. `bandwidths`: \eqn{n} x \eqn{1} vector; individual-specific bandwidths
 ## -----------------------------EXAMPLES----------------------------------------
 #' @examples
 #' set.seed(1)
@@ -172,8 +183,8 @@
 ## -----------------------------------------------------------------------------
 covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                      sigmasq = 0.5, sigmabetasq_vec = NULL, var_min = 0.01,
-                     var_max = 10, n_sigma = 8, pi_vec = 0.2, norm = 2,
-                     scale = T, tolerance = 1e-9, max_iter = 100,
+                     var_max = 10, n_sigma = 8, pi_vec = 0.1, norm = 2,
+                     scale = T, tolerance = 1e-12, max_iter = 1e4,
                      edge_threshold = 0.5, sym_method = "mean", print_time = F,
                      warnings = T, CS = F){
 
@@ -369,10 +380,32 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   # edge_threshold, denote an edge by 1; otherwise, 0
   graphs <- lapply(incl_probs, function(mat) (mat > edge_threshold) * 1)
 
+  # find the unique graphs
+  unique_graphs <- unique(graphs)
+
+  # find the individuals corresponding to each of the unique graphs
+  indv_graphs <- lapply(unique_graphs, function(unique_graph)
+    which(sapply(graphs, function(indv_graph) identical(indv_graph, unique_graph))))
+
+  # for each unique graph, create a summary of the individuals corresponding to
+  # that graph
+  indv_graphs_sum <- lapply(indv_graphs, function(indv_graph)
+    ifelse(length(indv_graph) > 3, paste0(sapply(split(indv_graph, cumsum(
+      c(1, diff(indv_graph) != 1))), function(idx_seq) paste0(
+        min(idx_seq), ",...," , max(idx_seq))), collapse = ","), paste0(
+          indv_graph, collapse = ",")))
+
+  # create a nested list where the j-th inner list has three values; the j-th
+  # unique graph, the individuals corresponding to that graph, and a summary of
+  # the individuals corresponding to that graph
+  unique_graphs <- lapply(1:length(unique_graphs), function(gr_idx)
+    list(graph = unique_graphs[[gr_idx]], individuals = indv_graphs[[gr_idx]],
+         individuals_summary = indv_graphs_sum[[gr_idx]]))
+
   # stop timer and see how much time has elapsed
   if (print_time) print(Sys.time() - start_time)
 
   return(list(graphs = graphs, inclusion_probs = incl_probs,
-              alpha_matrices = incl_probs_asym, ELBO = ELBO_p, weights = D,
-              bandwidths = bandwidths))
+              alpha_matrices = incl_probs_asym, unique_graphs = unique_graphs,
+              ELBO = ELBO_p, weights = D, bandwidths = bandwidths))
 }

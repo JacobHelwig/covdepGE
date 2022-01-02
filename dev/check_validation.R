@@ -2,7 +2,7 @@ setwd("~/Jacob/covdepGE/dev")
 #setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
 rm(list = ls())
 
-package <- T # true if the package version is desired
+package <- F # true if the package version is desired
 if (package){
   rm(list = ls())
   library(covdepGE)
@@ -877,3 +877,49 @@ gg_inclusionCurve(out, 1, 2, sort = 5.1)
 
 # logical vector
 gg_inclusionCurve(out, 1, 2, sort = c(T, T))
+
+## -----------------------------------------------------------------------------
+## -----------------------------gg_adjMats--------------------------------------
+## -----------------------------------------------------------------------------
+
+out <- covdepGE(data_mat, Z)
+gg_adjMats(out)
+
+## -----------------------------out---------------------------------------------
+
+# non-list
+gg_adjMats(7)
+
+# list without proper values
+gg_adjMats(list(7), 1, 2)
+
+## -----------------------------graph_colors------------------------------------
+
+# NA
+gg_adjMats(out, rep(NA, 4))
+
+# Inf
+gg_adjMats(out, rep(Inf, 4))
+
+# non-color
+gg_adjMats(out, rep("here", 4))
+
+# too short vector of colors
+gg_adjMats(out, c("red", "blue"))
+
+
+## -----------------------------seed--------------------------------------------
+
+# NA
+gg_adjMats(out, seed = NA)
+
+# Inf
+gg_adjMats(out, seed = Inf)
+
+# vector
+gg_adjMats(out, seed = c(5, 5))
+
+# non-numeric
+gg_adjMats(out, seed = matrix(c(1, "here")))
+
+

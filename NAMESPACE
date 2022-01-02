@@ -2,6 +2,7 @@
 
 export(covdepGE)
 export(gg_adjMat)
+export(gg_adjMats)
 export(gg_inclusionCurve)
 importFrom(Rcpp,evalCpp)
 useDynLib(covdepGE, .registration = TRUE)
