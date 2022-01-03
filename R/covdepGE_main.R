@@ -389,11 +389,10 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
 
   # for each unique graph, create a summary of the individuals corresponding to
   # that graph
-  indv_graphs_sum <- lapply(indv_graphs, function(indv_graph)
-    ifelse(length(indv_graph) > 3, paste0(sapply(split(indv_graph, cumsum(
-      c(1, diff(indv_graph) != 1))), function(idx_seq) paste0(
-        min(idx_seq), ",...," , max(idx_seq))), collapse = ","), paste0(
-          indv_graph, collapse = ",")))
+  indv_graphs_sum <- lapply(indv_graphs, function(indv_graph) paste0(sapply(
+    split(sort(indv_graph), cumsum(c(1, diff(sort(indv_graph)) != 1))), function(
+      idx_seq) ifelse(length(idx_seq) > 2, paste0(min(idx_seq), ",...,", max(
+        idx_seq)), paste0(idx_seq, collapse = ","))), collapse = ","))
 
   # create a nested list where the j-th inner list has three values; the j-th
   # unique graph, the individuals corresponding to that graph, and a summary of
