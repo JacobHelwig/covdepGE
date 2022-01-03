@@ -15,7 +15,7 @@ I repeated this experiment 9 times. In each experiment, I chose one of the three
 - Specificity: the percentage of non-edges recovered by the method
 - Accuracy
 
-```{r, fig.width = 11, fig.height = 13.5}
+```{r, fig.width = 11, fig.height = 13.5, echo = F}
 library(ggplot2)
 library(ggpubr)
 library(kableExtra)
@@ -23,12 +23,10 @@ library(kableExtra)
 # create a dataframe for aggregating results of experiments
 sparsity_levels <- 5 * 1:3
 sparse_intervals <- 1:3
-experiments <- expand.grid(
-  method = c("dependent", "independent"),
-  sparsity_level = sparsity_levels,
-  sparse_interval = sparse_intervals
-)
-metrics <- c("sensitivity", "specificity", "accuracy")
+experiments <- expand.grid(method = c("dependent", "independent"), 
+                           sparsity_level = sparsity_levels, 
+                           sparse_interval = sparse_intervals)
+metrics <- c("sensitivity", "specificity", "accuracy", "unique_graphs")
 perf_mat <- matrix(NA, nrow(experiments), length(metrics), dimnames = list(NULL, metrics))
 results <- cbind.data.frame(experiments, perf_mat)
 
@@ -36,10 +34,8 @@ results <- cbind.data.frame(experiments, perf_mat)
 viz <- vector("list")
 
 # list of color schemes
-color_schemes <- list(
-  ggsci::scale_fill_nejm(), ggsci::scale_fill_jama(),
-  ggsci::scale_fill_uchicago()
-)
+color_schemes <- list(ggsci::scale_fill_nejm(), ggsci::scale_fill_jama(),
+                      ggsci::scale_fill_uchicago())
 
 # iterate over the sparsity levels and intervals to add the corresponding data 
 # to results and create a visualization
@@ -47,28 +43,26 @@ for (sparse_interval in sparse_intervals) {
   for (sparsity_level in sparsity_levels) {
 
     # load the data corresponding to the interval and sparsity level
-    load(paste0(
-      "performance_data_int", sparse_interval, "_sparse",
-      sparsity_level, ".Rda"
-    ))
+    load(paste0("performance_data_int", sparse_interval, "_sparse", 
+                sparsity_level, ".Rda"))
 
     # reshape the data and clean column names
-    res_df_wide <- reshape(perf_res_df,
-      idvar = "method", timevar = "metric",
-      direction = "wide"
-    )
-    colnames(res_df_wide)[-1] <- sapply(sapply(
-      colnames(res_df_wide)[-1],
-      strsplit, "[.]"
-    ), `[[`, 2)
-
+    res_df_wide <- reshape(perf_res$perf_data, idvar = "method",
+                           timevar = "metric", direction = "wide")
+    colnames(res_df_wide)[-1] <- sapply(sapply(colnames(res_df_wide)[-1],
+      strsplit, "[.]"), `[[`, 2)
+    
+    # add unique graphs
+    res_df_wide <- cbind.data.frame(
+      res_df_wide, unique_graphs = perf_res$unique_graphs[res_df_wide$method])
+    
     # find the rows of result corresponding to the interval and sparsity level
     res_rows <- sapply(1:nrow(results), function(row_ind) all(
       results[row_ind, c("sparsity_level", "sparse_interval")] == 
         t(c(sparsity_level, sparse_interval))))
 
     # add the data for the dependent and independent methods
-    results[res_rows & results$method == "dependent", metrics] <- round(
+    results[res_rows & results$method == "dependent", c(metrics)] <- round(
       res_df_wide[res_df_wide$method == "dependent", metrics], 3
     )
     results[res_rows & results$method == "independent", metrics] <- round(
@@ -76,8 +70,8 @@ for (sparse_interval in sparse_intervals) {
     )
 
     # create a visualization
-    y_lower <- floor(min(perf_res_df$performance) * 10) / 10
-    viz[[length(viz) + 1]] <- ggplot(perf_res_df, aes(metric, performance, fill = method)) +
+    y_lower <- floor(min(perf_res$perf_data$performance) * 10) / 10
+    viz[[length(viz) + 1]] <- ggplot(perf_res$perf_data, aes(metric, performance, fill = method)) +
       geom_bar(stat = "identity", position = position_dodge()) +
       coord_cartesian(ylim = c(y_lower, 1)) +
       theme_bw() +
@@ -89,10 +83,12 @@ for (sparse_interval in sparse_intervals) {
 ggarrange(ggarrange(plotlist = viz[1:3], ncol = 3, nrow = 1, common.legend = T),
   ggarrange(plotlist = viz[4:6], ncol = 3, nrow = 1, common.legend = T),
   ggarrange(plotlist = viz[7:9], ncol = 3, nrow = 1, common.legend = T),
-  ncol = 1, nrow = 3
-)
+  ncol = 1, nrow = 3)
 
-kbl(results, booktabs = T, linesep = "") %>% 
+results <- tibble::tibble(results)
+colnames(results) <- gsub("_", " ", colnames(results))
+
+kbl(results, booktabs = T, linesep = "", align = "c") %>% 
   kable_styling(latex_options = c("striped", "scale_down"))
 
 # clear the environment
@@ -103,9 +99,9 @@ rm(list = ls())
 
 The extraneous covariate is created as the union of three disjoint intervals with nearly adjacent endpoints. Within each interval, the individuals' covariate values  are equally spaced.
 
-In this experiment, the second interval is the sparse part of the covariate space, with sparsity level 15. 
+For this demonstration, the second interval is the sparse part of the covariate space, with sparsity level 10. However, in the other 8 experiments, I varied the interval in which the sparsity occured and the degree of the sparisty.
 
-```{r, fig.width = 11, fig.height = 4.5}
+```{r, fig.width = 11, fig.height = 4.5, echo = F, message = F}
 library(covdepGE)
 library(mclust)
 
@@ -114,7 +110,7 @@ set.seed(1)
 # create covariate for individuals in each of the three intervals
 
 # define the dimensions of the data
-sparse_interval <- 1
+sparse_interval <- 2
 sparsity_level <- 10
 interval_n <- list(n1 = 60, n2 = 60, n3 = 60)
 interval_n[[sparse_interval]] <- sparsity_level
@@ -145,15 +141,17 @@ ggplot(cov_df, aes(Z, fill = interval)) +
 
 # individual index by interval
 ind_idx <- tapply(cov_df$individual_index, cov_df$interval, 
-                  function(indices) paste0(min(indices), ",...,", max(indices)))
-data.frame(interval = names(ind_idx), individual_indices = ind_idx)
+                  function(indices) paste0("$", min(indices), ",\\ldots,", max(indices), "$"))
+kbl(tibble::tibble("Interval" = names(ind_idx), "Individual Indices" = ind_idx), 
+    booktabs = T, linesep = "", align = "c", escape = F) %>% kable_styling(
+      latex_options = c("striped")) %>% column_spec(1:2, width = "4.5cm")
 ```
 
 All of the individuals in interval 1 have the same precision matrix, as do all of the individuals in interval 3. The first individual in interval 2 has the same precision matrix as those in interval 1. 
 
 As the individual index in interval 2 increases, the precision matrix continuously shifts from the precision matrix in interval 1 to the precision matrix in interval 3 such that the last individual in interval 2 has the same precision matrix as the individuals in interval 3.     
 
-```{r, fig.width = 11, fig.height = 4.5}
+```{r, fig.width = 11, fig.height = 4.5, echo = F}
 # create precision matrices
 
 # the shared part of the structure for all three intervals is a 2 on the diagonal
@@ -201,7 +199,7 @@ int3_g <- gg_adjMat(prec_mats[[n1 + n2 + 1]], color1 = "steelblue") +
 ggarrange(int1_g, int3_g)
 ```
 
-```{r, fig.width = 11, fig.height = 9}
+```{r, fig.width = 11, fig.height = 9, echo = F}
 # the first individual in interval 2 has the same precision matrix as the 
 # individuals in interval 1; as the subject index grows, the (1, 3)/ (3, 1) 
 # entry changes from 0 to 1 and the (1, 2)/ (2, 1) entry changes from 1 to 0. 
@@ -209,7 +207,7 @@ ggarrange(int1_g, int3_g)
 int2_g_inds <- n1 + c(1, 2 * n2 %/% 5, 4 * n2 %/% 5, n2)
 int2_graphs <- lapply(int2_g_inds, function(indv_idx) gg_adjMat(prec_mats[[indv_idx]]) + 
                         labs(title = paste0("Individual ", indv_idx)))
-annotate_figure(ggarrange(plotlist = int2_graphs), 
+annotate_figure(ggarrange(plotlist = int2_graphs, common.legend = T), 
                 top = text_grob("Precision matrices for interval 2", size = 15))
 
 # invert the precision matrices to get the covariance matrices
@@ -219,6 +217,8 @@ cov_mats <- lapply(prec_mats, solve)
 data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
 ```
 
+After creating the precision matrix for each individual, I inverted the matrices to obtain the covariance matrices. I then used the covariance matrices to generate each observation from a 5 dimensional Gaussian distribution centered at $\vec 0$.
+
 # Covariate dependent graph estimation 
 
 ```{r}
@@ -227,8 +227,7 @@ sigmasq <- sapply(1:(p + 1), function(col_ind) mean(varbvs::varbvs(
   data_mat[, -col_ind], Z, data_mat[, col_ind], verbose = F)$sigma))
 sigmasq
 mean(sigmasq)
-```
-```{r}
+
 # estimate the covariance structure dependent of the covariate
 out_dep <- covdepGE(data_mat,
   Z, # extraneous covariates
@@ -242,7 +241,7 @@ out_dep <- covdepGE(data_mat,
   print_time = T
 )
 ```
-```{r, fig.width = 11, fig.height = 9}
+```{r, fig.width = 11, fig.height = 9, echo = F}
 # visualize each of the unique graphs
 colors <- c("forestgreen", "tomato2", "goldenrod", "steelblue")
 annotate_figure(ggarrange(plotlist = gg_adjMats(out_dep, colors)), 
@@ -251,9 +250,9 @@ annotate_figure(ggarrange(plotlist = gg_adjMats(out_dep, colors)),
 
 # Covariate independent graph estimation 
 
-Gaussian Mixture Model clustering will first be applied to the extraneous covariate. The number of clusters is selected by optimizing BIC.
+I first applied Gaussian Mixture Model clustering to the extraneous covariate. The number of clusters is automatically selected by optimizing BIC.
 
-For all of the individuals within each of the clusters identified by GMM, the shared graph will be estimated by applying `covdepGE` using a constant value for the extraneous covariate. Using a constant value for the extraneous covariate will result in the same estimate for all individuals within each cluster. 
+For all of the individuals within each of the clusters identified by GMM, I estimated the shared graph by applying `covdepGE` using a constant value for the extraneous covariate, which will result in the same estimate for all individuals within each cluster. 
 
 ```{r}
 # estimate the dependence structure independent of the covariate
@@ -297,9 +296,12 @@ for (k in 1:num_clusters) {
     scale = F # whether to scale the extraneous covariates
   )
 }
+
+# show the unqiue weights for each of the clusters
+lapply(out_indep, function(out) unique(as.vector(out$weights)))
 ```
 
-```{r, fig.width = 11, fig.height = 9}
+```{r, fig.width = 11, fig.height = 9, echo = F}
 # get the graphs and pip matrices for each cluster
 pip_mats <- sapply(out_indep, function(out) unique(out$inclusion_probs))
 adj_mats <- sapply(out_indep, function(out) unique(out$graphs))
@@ -329,7 +331,7 @@ annotate_figure(ggarrange(plotlist = cl_gr_vis),
 
 # Performance Analysis
 
-```{r, fig.width = 11, fig.height = 4.5}
+```{r, fig.width = 11, fig.height = 4.5, echo = F}
 # analyze results
 
 # visualize the posterior inclusion probabilties for both models
@@ -389,10 +391,14 @@ accuracy_dep <- (TN_dep + TP_dep) / num_entries
 accuracy_indep <- (TN_indep + TP_indep) / num_entries
 
 # visualize performance
-(perf_res_df <- data.frame(performance = c(
+perf_res_df <- data.frame(performance = c(
   sensitivity_dep, sensitivity_indep, specificity_dep, specificity_indep, 
   accuracy_dep, accuracy_indep), method = rep(c("dependent", "independent"), 3),
-  metric = rep(c("sensitivity", "specificity", "accuracy"), each = 2)))
+  metric = rep(c("sensitivity", "specificity", "accuracy"), each = 2))
+perf_res_df_round <- perf_res_df[ , c("method", "metric", "performance")]
+perf_res_df_round$performance <- round(perf_res_df_round$performance, 3)
+kbl(perf_res_df_round, booktabs = T, align = "c", linesep = "") %>% kable_styling(
+  latex_options = c("striped", "hold_position")) %>% column_spec(1:3, width = "4.5 cm")
 y_lower <- floor(min(perf_res_df$performance) * 10) / 10
 ggplot(perf_res_df, aes(metric, performance, fill = method)) +
   geom_bar(stat = "identity", position = position_dodge()) +
@@ -400,8 +406,34 @@ ggplot(perf_res_df, aes(metric, performance, fill = method)) +
   theme_bw() +
   ggsci::scale_fill_jco()
 
+# add the number of unique graphs estimated by each method to the data.frame
+perf_res <- list(perf_data = perf_res_df, unique_graphs = c(dependent = length(out_dep$unique_graphs), independent = length(adj_mats)))
+
 # save the performance data
 setwd("~/Jacob/covdepGE/dev/analyses_and_demos")
-save(perf_res_df, file = paste0("performance_data_int", sparse_interval, 
+save(perf_res, file = paste0("performance_data_int", sparse_interval, 
                                 "_sparse", sparsity_level, ".Rda"))
+```
+
+# ELBO Monitoring
+
+The latest version of `covdepGE` includes `VB_details` in the return: 
+
+`VB_details`: list of $(p + 1)$ `lists`; the $j$-th list corresponds to the $j$-th predictor and contains 6 values:
+
+  - `sigma^2_beta`, `pi`: scalars; the final values of `pi` and `sigmabeta_sq` that maximized ELBO over all individuals with the $j$-th predictor fixed as the response
+  
+  - `ELBO`: scalar; the maximum value of ELBO for the final model
+  
+  - `converged_iter`: scalar; the number of iterations to attain convergence for the final model
+  
+  - `ELBO_history`: vector; ELBO history by iteration for the final model. If `monitor_final_elbo` is `F`, then this value will be `NULL`
+  
+  - `non_converged`: matrix; each row corresponds to the ELBO history for each of the candidate models that did not converge. If `monitor_cand_elbo` is `F`, then the ELBO history is omitted, and only the non-convergent `sigmabeta_sq` and `pi` values are provided. If all pairs resulted in convergence, then this value is `NULL`
+
+```{r}
+out <- covdepGE(data_mat, Z, max_iter = 50, tolerance = 1e-10, 
+                monitor_final_elbo = T, monitor_cand_elbo = T, 
+                monitor_period = 15, print_time = T)
+out$VB_details
 ```

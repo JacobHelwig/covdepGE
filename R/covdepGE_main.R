@@ -333,7 +333,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
         # row
         colnames(sigma_loop_out$non_converged_elbo) <-
           sigma_loop_out$non_converged_elbo[1, ]
-        sigma_loop_out$non_converged_elbo <- sigma_loop_out$non_converged_elbo[-1, ]
+        sigma_loop_out$non_converged_elbo <- sigma_loop_out$non_converged_elbo[-1, , drop = F]
 
         # set the row names
         row.names(sigma_loop_out$non_converged_elbo) <- formatted_nc_vals
