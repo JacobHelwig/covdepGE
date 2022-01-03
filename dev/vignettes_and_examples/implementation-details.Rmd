@@ -1,0 +1,123 @@
+---
+title: "Implementation-details"
+output: pdf_document
+---
+```{r}
+# install the package if necessary
+if  (!("covdepGE" %in% installed.packages())){
+  devtools::install_github("JacobHelwig/covdepGE")
+}
+library(covdepGE)
+?covdepGE
+
+set.seed(1)
+n <- 100
+p <- 4
+
+# generate the extraneous covariate
+Z_neg <- sort(runif(n / 2) * -1)
+Z_pos <- sort(runif(n / 2))
+Z <- c(Z_neg, Z_pos)
+summary(Z)
+
+# create true covariance structure for 2 groups: positive Z and negative Z
+true_graph_pos <- true_graph_neg <- matrix(0, p + 1, p + 1)
+true_graph_pos[1, 2] <- true_graph_pos[2, 1] <- 1
+true_graph_neg[1, 3] <- true_graph_neg[3, 1] <- 1
+
+# visualize the true covariance structures
+(gg_adjMat(true_graph_neg) +
+    ggplot2::ggtitle("True graph for individuals with negative Z (1,...,50)"))
+(gg_adjMat(true_graph_pos, color1 = "steelblue") +
+    ggplot2::ggtitle("True graph for individuals with positive Z (51,...,100)"))
+
+# generate the covariance matrices as a function of Z
+sigma_mats_neg <- lapply(Z_neg, function(z) z * true_graph_neg + diag(p + 1))
+sigma_mats_pos <- lapply(Z_pos, function(z) z * true_graph_pos + diag(p + 1))
+sigma_mats <- c(sigma_mats_neg, sigma_mats_pos)
+
+# generate the data using the covariance matrices
+data_mat <- t(sapply(sigma_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+
+# visualize the sample correlation
+(gg_adjMat(abs(cor(data_mat[1:(n / 2), ])) - diag(p + 1)) + 
+    ggplot2::ggtitle("Correlation Matrix for Negative Z (1,...,50)"))
+(gg_adjMat(abs(cor(data_mat[(n / 2 + 1):n, ])) - diag(p + 1),
+          color1 = "steelblue") + 
+    ggplot2::ggtitle("Correlation Matrix for Positive Z (51,...,100)"))
+
+# use varbvs to get the hyperparameter sigma
+sigmasq <- rep(NA, p + 1)
+for (j in 1:(p + 1)){
+  sigmasq[j] <- mean(varbvs::varbvs(data_mat[ , -j], Z, data_mat[ , j], verbose = F)$sigma)
+}
+sigmasq
+mean(sigmasq)
+```
+\newpage
+```{r}
+# estimate the covariance structure
+out <- covdepGE(
+                data_mat,
+                Z, # extraneous covariates
+                kde = T, # whether KDE should be used to calculate bandwidths 
+                sigmasq = mean(sigmasq), # hyperparameter residual variance 
+                var_min = 1e-4, # smallest sigmabeta_sq grid value
+                var_max = 1, # largest sigmabeta_sq grid value
+                n_sigma = 10, # length of the sigmabeta_sq grid
+                pi_vec = seq(0.1, 0.3, 0.05), # prior inclusion probability grid
+                norm = Inf, # norm to calculate the weights with 
+                scale = T, # whether the extraneous covariates should be scaled
+                tolerance = 1e-15, # variational parameter exit condition 1
+                max_iter = 1e5, # variational parameter exit condition 2
+                edge_threshold = 0.75, # minimum inclusion probability
+                sym_method = "min", # how to symmetrize the alpha matrices
+                print_time = T, 
+                warnings = T # whether warnings should be displayed
+                )
+```
+```{r}
+# grid search results
+out$ELBO
+
+# individual-specific bandwidths calculated using KDE
+out$bandwidths
+
+# analyze results
+?gg_adjMat
+gg_adjMat(out, 1, color1 = "coral1")
+gg_adjMat(out, 50, color1 = "tomato3")
+gg_adjMat(out, 60, color1 = "steelblue")
+gg_adjMat(out, 100, color1 = "deepskyblue3")
+
+?gg_inclusionCurve
+gg_inclusionCurve(out, 1, 2)
+gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
+
+# find sensitivity, specificity, and accuracy
+
+# true positives
+TP_neg <- sum(sapply(out$graphs[1:(n / 2)],
+                     function(graph) sum(graph == 1 & true_graph_neg == 1)))
+TP_pos <- sum(sapply(out$graphs[(n / 2 + 1):n],
+                     function(graph) sum(graph == 1 & true_graph_pos == 1)))
+TP <- TP_neg + TP_pos
+
+# total positives
+num_pos <- sum(true_graph_pos) * n / 2 + sum(true_graph_neg) * n / 2
+
+# true negatives
+TN_neg <- sum(sapply(out$graphs[1:(n / 2)],
+                     function(graph) sum(graph == 0 & true_graph_neg == 0)))
+TN_pos <- sum(sapply(out$graphs[(n / 2 + 1):n],
+                     function(graph) sum(graph == 0 & true_graph_pos == 0)))
+TN <- TN_neg + TN_pos
+
+# total negatives
+num_neg <- length(true_graph_pos) * n - num_pos
+
+(sensitivity <- TP / num_pos)
+(specificity <- TN / num_neg)
+(accuracy <- (TN + TP) / (num_pos + num_neg))
+
+```

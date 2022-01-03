@@ -266,9 +266,7 @@ fossil::rand.index(gmm$classification, as.numeric(cov_df$interval))
 
 # find number of clusters in final clustering
 (num_clusters <- length(unique(gmm$classification)))
-```
 
-```{r}
 out_indep <- vector("list", num_clusters)
 
 # iterate over each of the clusters identified by GMM
@@ -410,7 +408,7 @@ ggplot(perf_res_df, aes(metric, performance, fill = method)) +
 perf_res <- list(perf_data = perf_res_df, unique_graphs = c(dependent = length(out_dep$unique_graphs), independent = length(adj_mats)))
 
 # save the performance data
-setwd("~/Jacob/covdepGE/dev/analyses_and_demos")
+setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev/analyses_and_demos")
 save(perf_res, file = paste0("performance_data_int", sparse_interval, 
                                 "_sparse", sparsity_level, ".Rda"))
 ```
