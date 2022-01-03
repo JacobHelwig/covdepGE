@@ -12,8 +12,8 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // cov_vsvb_c
-Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X_mat, const arma::mat& mu_mat, const arma::mat& alpha_mat, double sigmasq, double sigmabeta_sq, double pi_est, double tolerance, int max_iter, double upper_limit);
-RcppExport SEXP _covdepGE_cov_vsvb_c(SEXP ySEXP, SEXP DSEXP, SEXP X_matSEXP, SEXP mu_matSEXP, SEXP alpha_matSEXP, SEXP sigmasqSEXP, SEXP sigmabeta_sqSEXP, SEXP pi_estSEXP, SEXP toleranceSEXP, SEXP max_iterSEXP, SEXP upper_limitSEXP) {
+Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X_mat, const arma::mat& mu_mat, const arma::mat& alpha_mat, double sigmasq, double sigmabeta_sq, double pi_est, double tolerance, int max_iter, bool monitor_elbo, int monitor_period, double upper_limit);
+RcppExport SEXP _covdepGE_cov_vsvb_c(SEXP ySEXP, SEXP DSEXP, SEXP X_matSEXP, SEXP mu_matSEXP, SEXP alpha_matSEXP, SEXP sigmasqSEXP, SEXP sigmabeta_sqSEXP, SEXP pi_estSEXP, SEXP toleranceSEXP, SEXP max_iterSEXP, SEXP monitor_elboSEXP, SEXP monitor_periodSEXP, SEXP upper_limitSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -27,14 +27,16 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type pi_est(pi_estSEXP);
     Rcpp::traits::input_parameter< double >::type tolerance(toleranceSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< bool >::type monitor_elbo(monitor_elboSEXP);
+    Rcpp::traits::input_parameter< int >::type monitor_period(monitor_periodSEXP);
     Rcpp::traits::input_parameter< double >::type upper_limit(upper_limitSEXP);
-    rcpp_result_gen = Rcpp::wrap(cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi_est, tolerance, max_iter, upper_limit));
+    rcpp_result_gen = Rcpp::wrap(cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq, pi_est, tolerance, max_iter, monitor_elbo, monitor_period, upper_limit));
     return rcpp_result_gen;
 END_RCPP
 }
 // sigma_loop_c
-Rcpp::List sigma_loop_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X_mat, const arma::mat& mu_mat, const arma::mat& alpha_mat, double sigmasq, const arma::colvec& sigmabeta_sq_vec, const arma::colvec& pi_vec, double tolerance, int max_iter, double upper_limit);
-RcppExport SEXP _covdepGE_sigma_loop_c(SEXP ySEXP, SEXP DSEXP, SEXP X_matSEXP, SEXP mu_matSEXP, SEXP alpha_matSEXP, SEXP sigmasqSEXP, SEXP sigmabeta_sq_vecSEXP, SEXP pi_vecSEXP, SEXP toleranceSEXP, SEXP max_iterSEXP, SEXP upper_limitSEXP) {
+Rcpp::List sigma_loop_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X_mat, const arma::mat& mu_mat, const arma::mat& alpha_mat, double sigmasq, const arma::colvec& sigmabeta_sq_vec, const arma::colvec& pi_vec, double tolerance, int max_iter, bool monitor_elbo, int monitor_period, double upper_limit);
+RcppExport SEXP _covdepGE_sigma_loop_c(SEXP ySEXP, SEXP DSEXP, SEXP X_matSEXP, SEXP mu_matSEXP, SEXP alpha_matSEXP, SEXP sigmasqSEXP, SEXP sigmabeta_sq_vecSEXP, SEXP pi_vecSEXP, SEXP toleranceSEXP, SEXP max_iterSEXP, SEXP monitor_elboSEXP, SEXP monitor_periodSEXP, SEXP upper_limitSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -48,15 +50,17 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::colvec& >::type pi_vec(pi_vecSEXP);
     Rcpp::traits::input_parameter< double >::type tolerance(toleranceSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< bool >::type monitor_elbo(monitor_elboSEXP);
+    Rcpp::traits::input_parameter< int >::type monitor_period(monitor_periodSEXP);
     Rcpp::traits::input_parameter< double >::type upper_limit(upper_limitSEXP);
-    rcpp_result_gen = Rcpp::wrap(sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq_vec, pi_vec, tolerance, max_iter, upper_limit));
+    rcpp_result_gen = Rcpp::wrap(sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq_vec, pi_vec, tolerance, max_iter, monitor_elbo, monitor_period, upper_limit));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_covdepGE_cov_vsvb_c", (DL_FUNC) &_covdepGE_cov_vsvb_c, 11},
-    {"_covdepGE_sigma_loop_c", (DL_FUNC) &_covdepGE_sigma_loop_c, 11},
+    {"_covdepGE_cov_vsvb_c", (DL_FUNC) &_covdepGE_cov_vsvb_c, 13},
+    {"_covdepGE_sigma_loop_c", (DL_FUNC) &_covdepGE_sigma_loop_c, 13},
     {NULL, NULL, 0}
 };
 

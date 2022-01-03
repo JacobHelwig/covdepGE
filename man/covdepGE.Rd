@@ -23,6 +23,9 @@ covdepGE(
   max_iter = 10000,
   edge_threshold = 0.5,
   sym_method = "mean",
+  monitor_final_elbo = F,
+  monitor_cand_elbo = F,
+  monitor_period = 1,
   print_time = F,
   warnings = T,
   CS = F
@@ -100,6 +103,17 @@ inclusion probabilities, an edge will be added to the graph if the
 symmetrize the alpha matrices, the \eqn{i,j = j,i} entry is
 \code{sym_method}\eqn{((i,j entry), (j,i entry))}. \code{"mean"} by default}
 
+\item{monitor_final_elbo}{logical scalar; if \code{T}, the ELBO history for the
+final model will be returned. \code{F} by default}
+
+\item{monitor_cand_elbo}{logical scalar; if \code{T}, the ELBO history for each of
+the candidate models that do not attain convergence within \code{max_iter}
+iterations will be returned}
+
+\item{monitor_period}{scalar in \eqn{{1, 2,..., max_iter}}; the periodicity
+with which the ELBO is recorded if \code{monitor_final_elbo} or \code{monitor_cand_elbo}
+is \code{T}. \code{1} by default}
+
 \item{print_time}{logical scalar; if \code{T}, function run time is printed. \code{F}
 by default}
 
@@ -138,10 +152,25 @@ vector are the individual indices corresponding to the \eqn{v}-th graph
 in \code{individuals}
 }
 \enumerate{
-\item \code{ELBO}: list of \eqn{(p + 1)} \code{lists}; the \eqn{j}-th list corresponds to
-the \eqn{j}-th predictor and contains 3 values - the final values of \code{pi}
+\item \code{VB_details}: list of \eqn{(p + 1)} \code{lists}; the \eqn{j}-th list corresponds to
+the \eqn{j}-th predictor and contains 6 values:
+}
+\itemize{
+\item \verb{sigma^2_beta}, \code{pi}: scalars; the final values of \code{pi}
 and \code{sigmabeta_sq} that maximized ELBO over all individuals with the
-\eqn{j}-th predictor fixed as the response and the maximum value of ELBO
+\eqn{j}-th predictor fixed as the response
+\item \code{ELBO}: scalar; the maximum value of ELBO for the final model
+\item \code{converged_iter}: scalar; the number of iterations to attain convergence
+for the final model
+\item \code{ELBO_history}: vector; ELBO history by iteration for the final model. If
+\code{monitor_final_elbo} is \code{F}, then this value will be \code{NULL}
+\item \code{non_converged}: matrix; each row corresponds to the ELBO history for each
+of the candidate models that did not converge. If \code{monitor_cand_elbo} is
+\code{F}, then the ELBO history is omitted, and only the non-convergent
+\code{sigmabeta_sq} and \code{pi} values are provided. If all pairs resulted in
+convergence, then this value is \code{NULL}
+}
+\enumerate{
 \item \code{weights}: \eqn{n} x \eqn{n} matrix; the \eqn{j, i} entry is the weighting
 of the \eqn{j}-th individual with respect to the \eqn{i}-th individual using
 the \eqn{i}-th individual's bandwidth
