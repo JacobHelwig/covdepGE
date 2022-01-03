@@ -528,6 +528,57 @@ covdepGE(data_mat, Z, sym_method = "Inf")
 # non-scalar
 covdepGE(data_mat, Z, sym_method = c("max", "min"))
 
+## -----------------------------monitor_final_elbo---------------------------------------------
+
+# NA
+covdepGE(data_mat, Z, monitor_final_elbo = NA)
+
+# non-logical
+covdepGE(data_mat, Z, monitor_final_elbo = 4)
+
+# bool vect
+covdepGE(data_mat, Z, monitor_final_elbo = c(T, F))
+
+# bool matrix
+covdepGE(data_mat, Z, monitor_final_elbo = matrix(c(T, F)))
+
+## -----------------------------monitor_cand_elbo---------------------------------------------
+
+# NA
+covdepGE(data_mat, Z, monitor_cand_elbo = NA)
+
+# non-logical
+covdepGE(data_mat, Z, monitor_cand_elbo = 4)
+
+# bool vect
+covdepGE(data_mat, Z, monitor_cand_elbo = c(T, F))
+
+# bool matrix
+covdepGE(data_mat, Z, monitor_cand_elbo = matrix(c(T, F)))
+
+## -----------------------------monitor_period----------------------------------------
+
+# NA
+covdepGE(data_mat, Z, monitor_period = NA)
+
+# Inf
+covdepGE(data_mat, Z, monitor_period = Inf)
+
+# negative
+covdepGE(data_mat, Z, monitor_period = -1)
+
+# non-integer
+covdepGE(data_mat, Z, monitor_period = 1.5)
+
+# non-scalar
+covdepGE(data_mat, Z, monitor_period = c(1, 2))
+
+# matrix
+covdepGE(data_mat, Z, monitor_period = matrix(rep(4, 4), 2))
+
+# greater than max_iter
+covdepGE(data_mat, Z, monitor_period = 1e7)
+
 ## -----------------------------print_time--------------------------------------
 
 # NA

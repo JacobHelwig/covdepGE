@@ -1,3 +1,7 @@
+# things that have changed since the "true" original version
+# 1. while(sqrt(sum(change_alpha^2))>tol & iter<=max_iter) to while(sqrt(sum(change_alpha^2))>tol & iter<max_iter)
+
+
 ##The core function that calculates the variational parameter updates and returns the final variational estimates
 ##for a single regression. So in the arguments, y plays the role of the response, i.e the j th variable whose
 ##conditional distribution given the remaining variables is being calculated.
@@ -31,7 +35,7 @@ cov_vsvb= function(y,X,Z,XtX,DXtX,Diff_mat,Xty,sigmasq,sigmabeta_sq,true_pi){
   max_iter <- 100
   iter=1
   Mu_vec=matrix(rep(mu,n),n*p,1)
-  while(sqrt(sum(change_alpha^2))>tol & iter<max_iter){#The max_iter controls the max number of iterations until convergence
+  while(sqrt(sum(change_alpha^2))>tol & iter<=max_iter){#The max_iter controls the max number of iterations until convergence
 
     alpha_int=alpha ##Initialization of inclusion probability parameter.
 

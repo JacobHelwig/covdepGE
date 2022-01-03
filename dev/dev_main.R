@@ -16,7 +16,7 @@ if (discrete_data) {
 data_mat <- dat$data
 Z <- dat$covts
 
-package <- T # true if the package version is desired
+package <- F # true if the package version is desired
 if (package){
   library(covdepGE)
   out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, print_time = T,
@@ -66,5 +66,5 @@ for (j in 1:length(out$inclusion_probs)) {
 same_probs
 
 # check for equality between ELBO
-all.equal(unname(unlist(lapply(out$ELBO, `[[`, 3))), out_original$original_ELBO)
+all.equal(unname(unlist(lapply(out$VB_details, `[[`, 3))), out_original$original_ELBO)
 

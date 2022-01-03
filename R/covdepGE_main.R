@@ -79,6 +79,17 @@
 #' symmetrize the alpha matrices, the \eqn{i,j = j,i} entry is
 #' `sym_method`\eqn{((i,j entry), (j,i entry))}. `"mean"` by default
 #'
+#' @param monitor_final_elbo logical scalar; if `T`, the ELBO history for the
+#' final model will be returned. `F` by default
+#'
+#' @param monitor_cand_elbo logical scalar; if `T`, the ELBO history for each of
+#' the candidate models that do not attain convergence within `max_iter`
+#' iterations will be returned
+#'
+#' @param monitor_period scalar in \eqn{{1, 2,..., max_iter}}; the periodicity
+#' with which the ELBO is recorded if `monitor_final_elbo` or `monitor_cand_elbo`
+#' is `T`. `1` by default
+#'
 #' @param print_time logical scalar; if `T`, function run time is printed. `F`
 #' by default
 #'
@@ -116,10 +127,21 @@
 #' - `individuals_summary`: character scalar; summarizes the individual indices
 #' in `individuals`
 #'
-#' 5. `ELBO`: list of \eqn{(p + 1)} `lists`; the \eqn{j}-th list corresponds to
-#'  the \eqn{j}-th predictor and contains 3 values - the final values of `pi`
+#' 5. `VB_details`: list of \eqn{(p + 1)} `lists`; the \eqn{j}-th list corresponds to
+#'  the \eqn{j}-th predictor and contains 6 values:
+#'  - `sigma^2_beta`, `pi`: scalars; the final values of `pi`
 #'  and `sigmabeta_sq` that maximized ELBO over all individuals with the
-#'  \eqn{j}-th predictor fixed as the response and the maximum value of ELBO
+#'  \eqn{j}-th predictor fixed as the response
+#'  - `ELBO`: scalar; the maximum value of ELBO for the final model
+#'  - `converged_iter`: scalar; the number of iterations to attain convergence
+#'  for the final model
+#'  - `ELBO_history`: vector; ELBO history by iteration for the final model. If
+#'  `monitor_final_elbo` is `F`, then this value will be `NULL`
+#'  - `non_converged`: matrix; each row corresponds to the ELBO history for each
+#'  of the candidate models that did not converge. If `monitor_cand_elbo` is
+#'  `F`, then the ELBO history is omitted, and only the non-convergent
+#'  `sigmabeta_sq` and `pi` values are provided. If all pairs resulted in
+#'  convergence, then this value is `NULL`
 #'
 #' 6. `weights`: \eqn{n} x \eqn{n} matrix; the \eqn{j, i} entry is the weighting
 #'  of the \eqn{j}-th individual with respect to the \eqn{i}-th individual using
@@ -185,15 +207,17 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                      sigmasq = 0.5, sigmabetasq_vec = NULL, var_min = 0.01,
                      var_max = 10, n_sigma = 8, pi_vec = 0.1, norm = 2,
                      scale = T, tolerance = 1e-12, max_iter = 1e4,
-                     edge_threshold = 0.5, sym_method = "mean", print_time = F,
-                     warnings = T, CS = F){
+                     edge_threshold = 0.5, sym_method = "mean",
+                     monitor_final_elbo = F, monitor_cand_elbo = F,
+                     monitor_period = 1, print_time = F, warnings = T, CS = F){
 
   start_time <- Sys.time()
 
   # run compatibility checks
   covdepGE_checks(data_mat, Z, tau, kde, alpha, mu, sigmasq, sigmabetasq_vec,
                   var_min, var_max, n_sigma, pi_vec, norm, scale, tolerance,
-                  max_iter, edge_threshold, sym_method, print_time, warnings)
+                  max_iter, edge_threshold, sym_method, monitor_final_elbo,
+                  monitor_cand_elbo, monitor_period, print_time, warnings)
 
   # ensure that data_mat and Z are matrices
   data_mat <- as.matrix(data_mat)
@@ -216,9 +240,9 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   # predictor fixed as the response
   alpha_matrices <- vector("list", p + 1)
 
-  # List for saving the final ELBO for each of the p responses
-  ELBO_p <- vector("list", p + 1)
-  names(ELBO_p) <- paste("Response", 1:(p + 1))
+  # List for saving the variational Bayes details for each of the p responses
+  VB_p <- vector("list", p + 1)
+  names(VB_p) <- paste("Response", 1:(p + 1))
 
   # if sigmabetasq_vec is NULL, instantiate the grid
   if(is.null(sigmabetasq_vec)){
@@ -253,7 +277,8 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
     # loop to optimize sigmabeta_sq; for each pair of candidate values of sigma in
     # sigmavec, pi in pi_vec, store the resulting ELBO
     sigma_loop_out <- sigma_loop_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
-                                   sigmabetasq_vec, pi_vec, tolerance, max_iter)
+                                   sigmabetasq_vec, pi_vec, tolerance, max_iter,
+                                   monitor_cand_elbo, monitor_period)
 
     # total number of models fit by sigma_loop_c
     total_models <- length(pi_vec) * length(sigmabetasq_vec)
@@ -278,22 +303,79 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
 
     # fit another model using these values of sigma_beta and pi_est
     result <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
-                         pi_est, tolerance, max_iter)
+                         pi_est, tolerance, max_iter, monitor_final_elbo,
+                         monitor_period)
 
     # if the final model did not converge, display a warning
-    if (!result$converged & warnings){
+    if (result$converged_iter == max_iter & warnings){
       warning(paste0("Response ", resp_index, ": final model did not converge in ",
                      max_iter, " iterations"))
     }
 
-    # save the final ELBO
-    ELBO_p[[resp_index]] <- list("sigma^2_beta" = sigmabeta_sq, "pi" = pi_est,
-                                 "ELBO" = result$var.elbo)
+    # if there are any non-convergent sigmabeta_sq and pi pairs, format these values
+    if (nrow(sigma_loop_out$non_converged_pairs) > 0){
+
+      # get the non-converged sigmabeta_sq and pi and format
+      nc_ssb_sq <- sigma_loop_out$non_converged_pairs[ , 1]
+      nc_pi <- sigma_loop_out$non_converged_pairs[ , 2]
+      nc_ssb_sq <- ifelse(round(nc_ssb_sq, 3) == 0, formatC(
+        nc_ssb_sq, format = "e", digits = 0), round(nc_ssb_sq, 3))
+      nc_pi <- ifelse(round(nc_pi, 3) == 0, formatC(
+        nc_pi, format = "e", digits = 0), round(nc_pi, 3))
+      formatted_nc_vals <- paste0("slab var: ", nc_ssb_sq, ", pi: ", nc_pi)
+
+      # if the elbo history for non-convergent models has been recorded, use the
+      # formatted values as row names for the non_converged_elbo matrix. Otherwise,
+      # simply set the non_converged_elbo matrix equal to the formatted values
+      if (monitor_cand_elbo){
+
+        # use the first row (iteration index) as the col names; drop the first
+        # row
+        colnames(sigma_loop_out$non_converged_elbo) <-
+          sigma_loop_out$non_converged_elbo[1, ]
+        sigma_loop_out$non_converged_elbo <- sigma_loop_out$non_converged_elbo[-1, ]
+
+        # set the row names
+        row.names(sigma_loop_out$non_converged_elbo) <- formatted_nc_vals
+
+      }else{
+        sigma_loop_out$non_converged_elbo <- formatted_nc_vals
+
+        # if there are no non_converged values, set to NULL
+        if(nrow(sigma_loop_out$non_converged_pairs) == 0){
+          sigma_loop_out$non_converged_elbo <- NULL
+        }
+      }
+    }else{
+
+      # otherwise, all pairs resulted in convergence; set this value to NULL
+      sigma_loop_out$non_converged_elbo <- NULL
+    }
+
+    # if the elbo history for the final model has been recorded, set the first
+    # column (iteration index) to the column names and remove it; then, add
+    # a rowname to denote ELBO
+    if (monitor_final_elbo){
+      colnames(result$elbo_history) <- result$elbo_history[1, ]
+      result$elbo_history <- result$elbo_history[-1, , drop = F]
+      rownames(result$elbo_history) <- "ELBO"
+    }else{
+
+      # otherwise, set this value to NULL
+      result$elbo_history <- NULL
+    }
+
+    # save the variational bayes details
+    VB_p[[resp_index]] <- list("sigma^2_beta" = sigmabeta_sq, "pi" = pi_est,
+                               "ELBO" = result$var_elbo,
+                               "converged_iter" = result$converged_iter,
+                               "ELBO_history" = result$elbo_history,
+                               "non_converged" = sigma_loop_out$non_converged_elbo)
 
     # var.alpha is an n by p matrix; the i,j-th entry is the probability of
     # inclusion for the i-th individual for the j-th variable according to the
     # regression on y
-    alpha_matrices[[resp_index]] <- result$var.alpha
+    alpha_matrices[[resp_index]] <- result$var_alpha
   }
 
   if (warnings){
@@ -306,7 +388,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
     if (length(sigmabetasq_vec) > 2){
 
       # get the selected values of sigmabeta_sq for each response
-      final_sigmabeta_sq <- unlist(lapply(ELBO_p, `[[`, 1))
+      final_sigmabeta_sq <- unlist(lapply(VB_p, `[[`, 1))
 
       # count the number of final_sigmabeta_sq that were on the boundary of the
       # grid
@@ -316,7 +398,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       # if any of the final sigma were on the boundary, display a warning
       if (on_boundary > 0){
         warning(paste0("For ", on_boundary, "/", p + 1,
-                       " responses, the selected value of sigmabeta_sq was on the grid boundary. See return value ELBO for details"))
+                       " responses, the selected value of sigmabeta_sq was on the grid boundary. See return value VB_details"))
       }
     }
 
@@ -324,7 +406,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
     if (length(pi_vec) > 2){
 
       # get the selected values of pi for each response
-      final_pi <- unlist(lapply(ELBO_p, `[[`, 2))
+      final_pi <- unlist(lapply(VB_p, `[[`, 2))
 
       # count the number of final_pi that were on the boundary of the grid
       grid_boundary <- pi_vec[c(1, length(pi_vec))]
@@ -333,7 +415,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       # if any of the final pi were on the boundary, display a warning
       if (on_boundary > 0){
         warning(paste0("For ", on_boundary, "/", p + 1,
-                       " responses, the selected value of pi was on the grid boundary. See return value ELBO for details"))
+                       " responses, the selected value of pi was on the grid boundary. See return value VB_details"))
       }
     }
   }
@@ -406,5 +488,5 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
 
   return(list(graphs = graphs, inclusion_probs = incl_probs,
               alpha_matrices = incl_probs_asym, unique_graphs = unique_graphs,
-              ELBO = ELBO_p, weights = D, bandwidths = bandwidths))
+              VB_details = VB_p, weights = D, bandwidths = bandwidths))
 }

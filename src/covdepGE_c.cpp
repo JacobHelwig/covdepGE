@@ -200,18 +200,26 @@ void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
 // tolerance: scalar; when the square root of the sum of squared changes in
 // the elements of alpha are within tolerance, stop iterating
 // max_iter: scalar; maximum number of iterations
+// monitor_elbo: bool; if true, elbo will be tracked and returned
+// monitor_period: scalar; dictates the periodicity of the elbo recording
 // upper_limit: scalar; during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1
 // -----------------------------RETURNS-----------------------------------------
-// var.alpha: n x (p - 1) matrix; final alpha values
-// var.ELB: scalar; final value of ELBO summed across all individuals
+// var_alpha: n x (p - 1) matrix; final alpha values
+// var_ELB: scalar; final value of ELBO summed across all individuals
+// converged_iter: scalar; number of iterations to reach convergence
+// elbo_history: 2 x d matrix OR 0 x 0 matrix; if monitor_elbo is false, 0 x 0
+// matrix; otherwise, d = floor(coverged_iter / monitor_period) +
+// (coverged_iter % monitor_period == 1). The first row is the iterations at
+// which the ELBO was recorded, and the second row is the ELBO measurements
 // _____________________________________________________________________________
 //[[Rcpp::export]]
 Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
                       const arma::mat& X_mat, const arma::mat& mu_mat,
                       const arma::mat& alpha_mat, double sigmasq,
-                      double sigmabeta_sq, double pi_est, double tolerance = 1e-9,
-                      int max_iter = 100, double upper_limit = 9) {
+                      double sigmabeta_sq, double pi_est, double tolerance,
+                      int max_iter, bool monitor_elbo, int monitor_period,
+                      double upper_limit = 9) {
 
   // instantiate matrices for updated variational parameters with starting
   // values dictated by the matrices passed as arguments
@@ -222,9 +230,23 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
   arma::mat alpha_last;
   arma::mat change_alpha;
 
-  // boolean that is true if the model reaches convergence in less than max_iter
-  // iteration
-  bool converged = false;
+  // integer for tracking the iteration at which convergence is reached
+  int converged_iter = max_iter;
+
+  // matrix for tracking elbo; construct this matrix if elbo is to be tracked
+  arma::mat elbo_history;
+  if (monitor_elbo){
+
+    // create a vector for indexing the iterations at which ELBO is recorded
+    arma::rowvec elbo_idx = arma::regspace<arma::rowvec>(1, monitor_period,
+                                                         max_iter);
+
+    // create the matrix for storing ELBO
+    elbo_history = arma::mat(2, elbo_idx.n_elem);
+
+    // in the first row, put the iteration indexing vector
+    elbo_history.row(0) = elbo_idx;
+  }
 
   // S_sq update
   arma::mat S_sq = (sigmasq * arma::pow(arma::pow(X_mat, 2).t() * D + 1 / sigmabeta_sq, -1)).t();
@@ -235,7 +257,7 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
   arma::mat alpha_logit_term2_denom = 2 * S_sq;
 
   // loop to optimize variational parameters
-  for (int k = 1; k < max_iter; k++){ // start counting at 1 to match
+  for (int k = 0; k < max_iter; k++){
 
     // mu update
     mu_update_c(y, D, X_mat, S_sq, mu, alpha, sigmasq);
@@ -246,13 +268,19 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
     alpha_last = alpha;
     alpha_update_c(mu, alpha, alpha_logit_term1, alpha_logit_term2_denom, alpha_logit_term3);
 
+    // if the iteration aligns with the monitor period, record the elbo
+    if ((k % monitor_period == 0) & monitor_elbo){
+      elbo_history(1, k / monitor_period) = total_ELBO_c(y, D, X_mat, S_sq, mu,
+                   alpha, sigmasq, sigmabeta_sq, pi_est);
+    }
+
     // calculate change in alpha
     change_alpha = alpha - alpha_last;
 
     // if the sum of squared changes in alpha is within the tolerance, break
     // from the for loop
     if (sqrt(arma::accu(arma::pow(change_alpha, 2))) < tolerance){
-      converged = true;
+      converged_iter = k;
       break;
     }
   }
@@ -260,10 +288,29 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
   // calculate ELBO across n individuals
   double ELBO = total_ELBO_c(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est);
 
-  // return matrices of variational parameters and the ELBO
-  return(Rcpp::List::create(Rcpp::Named("var.alpha") = alpha,
-                            Rcpp::Named("var.elbo") = ELBO,
-                            Rcpp::Named("converged") = converged));
+  // if ELBO is being tracked, remove the excess columns from elbo_history, and
+  // record the ELBO value at the last iteration if it is not already recorded
+  if (monitor_elbo){
+
+    // remove excess entries
+    elbo_history = elbo_history.cols(arma::find(elbo_history.row(0) <= converged_iter));
+
+    // assess whether the elbo value at the last iteration is in elbo_history
+    if((converged_iter - 1) % monitor_period != 0){
+
+      // the final ELBO is not in elbo_history; add another column to
+      // elbo_history with the final ELBO
+      elbo_history = arma::join_rows(
+        elbo_history, (arma::colvec){(double)converged_iter, ELBO});
+    }
+  }
+
+  // return final alpha matrix, the final ELBO, the number of iterations to
+  // converge, and the elbo history matrix
+  return(Rcpp::List::create(Rcpp::Named("var_alpha") = alpha,
+                            Rcpp::Named("var_elbo") = ELBO,
+                            Rcpp::Named("converged_iter") = converged_iter,
+                            Rcpp::Named("elbo_history") = elbo_history));
 }
 
 // _____________________________________________________________________________
@@ -287,6 +334,8 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 // tolerance: scalar; when the square root of the sum of squared changes in
 // the elements of alpha are within tolderance, stop iterating
 // max_iter: scalar; maximum number of iterations
+// monitor_elbo: bool; if true, elbo will be tracked and returned
+// monitor_period: scalar; dictates the periodicity of the elbo recording
 // upper_limit: scalar, during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1
 // -----------------------------RETURNS-----------------------------------------
@@ -297,41 +346,88 @@ Rcpp::List sigma_loop_c(const arma::colvec& y, const arma::mat& D,
                         const arma::mat& X_mat, const arma::mat& mu_mat,
                         const arma::mat& alpha_mat, double sigmasq,
                         const arma::colvec& sigmabeta_sq_vec,
-                        const arma::colvec& pi_vec,
-                        double tolerance = 1e-9, int max_iter = 100,
+                        const arma::colvec& pi_vec, double tolerance,
+                        int max_iter, bool monitor_elbo, int monitor_period,
                         double upper_limit = 9){
 
-  // get the number of sigmas that are being tried
+  // get the number of sigmas that are being considered
   int n_sigma = sigmabeta_sq_vec.n_elem;
 
-  // get the number of pi's that are being tried
+  // get the number of pi's that are being considered
   int n_pi = pi_vec.n_elem;
 
   // instantiate a matrix for storing the ELBO corresponding to each
   // sigma, pi pair
   arma::mat elbo_sigmaXpi(n_sigma, n_pi, arma::fill::zeros);
 
-  // store the resulting graphs
+  // instantiate a list to store the result of cov_vsvb_c
   Rcpp::List out;
 
-  // store the ELBO of the estimated graphs for each sigma, pi pair
+  // double to store the ELBO of the estimated graphs
   double elbo_graph;
+
+  // integer to store the number of iterations it took for cov_vsvb_c to converge
+  int converged_iter;
 
   // count the number of graphs for which convergence was attained
   int converged_ct = 0;
+
+  // instantiate a matrix for storing pi, sigmabeta_sq values that result in
+  // convergence not being attained
+  arma::mat non_converged_pairs;
+
+  // create a vector for storing the elbo_history vectors when convergence is
+  // not attained, and a matrix for storing these vectors
+  arma::rowvec nc_elbo_new_row;
+  arma::mat non_converged_elbo;
 
   // for each sigma, pi pair, estimate n graphs and record the total ELBO
   // summed across these n graphs
   for (int j = 0; j < n_sigma; j++){
     for (int k = 0; k < n_pi; k++){
 
-      // get the ELBO and convergence status for the graph
+      // get the ELBO and convergence status for cov_vsvb_c
       out = cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
                        sigmabeta_sq_vec(j), pi_vec(k), tolerance,
-                       max_iter, upper_limit);
-      elbo_graph = out["var.elbo"];
-      if (out["converged"]){
+                       max_iter, monitor_elbo, monitor_period, upper_limit);
+      elbo_graph = out["var_elbo"];
+
+      // if cov_vsvb_c has converged, increment the convergence count
+      converged_iter = out["converged_iter"];
+      if (converged_iter != max_iter){
         converged_ct++;
+      }
+      else{
+
+        // otherwise, convergence was not attained; add the sigabeta_sq and pi
+        // values to non_converged_pairs
+        // first, check to see if non_converged_pairs has any entries
+        if (non_converged_pairs.n_elem == 0){
+
+          // non_converged_pairs does not have any entries; the current pair
+          // will be the first entry
+          non_converged_pairs = (arma::rowvec){sigmabeta_sq_vec(j), pi_vec(k)};
+
+          // if elbo is being tracked, then the non_converged_elbo matrix also
+          // must be constructed
+          if (monitor_elbo){
+            non_converged_elbo = as<arma::mat>(out["elbo_history"]);
+          }
+        }
+        else{
+
+          // otherwise, non_converged_pairs already has some entries; add the
+          // latest non-converged pair as the last row
+          non_converged_pairs = arma::join_cols(non_converged_pairs,
+                                                (arma::rowvec){sigmabeta_sq_vec(j), pi_vec(k)});
+
+          // if elbo is being tracked, then the latest elbo history should be
+          // added as the last row of non_converged_elbo
+          if (monitor_elbo){
+            nc_elbo_new_row = (as<arma::mat>(out["elbo_history"])).row(1);
+            non_converged_elbo = arma::join_cols(non_converged_elbo, nc_elbo_new_row);
+          }
+        }
       }
 
       // add the ELBO to the matrix of ELBOs
@@ -339,6 +435,8 @@ Rcpp::List sigma_loop_c(const arma::colvec& y, const arma::mat& D,
     }
   }
 
-  return Rcpp::List::create(Rcpp::Named("elbo_grid") = elbo_sigmaXpi,
-                            Rcpp::Named("num_converged") = converged_ct);
+  return (Rcpp::List::create(Rcpp::Named("elbo_grid") = elbo_sigmaXpi,
+                            Rcpp::Named("num_converged") = converged_ct,
+                            Rcpp::Named("non_converged_pairs") = non_converged_pairs,
+                            Rcpp::Named("non_converged_elbo") = non_converged_elbo));
 }

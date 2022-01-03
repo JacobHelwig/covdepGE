@@ -40,14 +40,19 @@
 ##
 ## sym_method: character in {"mean", "max", "min"}
 ##
-## print_time: logical; if T, function run time is printed
+## monitor_final_elbo logical scalar; if `T`, monitor the final model ELBO
+##
+## monitor_cand_elbo logical scalar; if `T`, monitor the non-convergent ELBO history
+##
+## monitor_period scalar in \eqn{{1, 2,..., max_iter}}; the periodicity of ELBO monitoring
 ##
 ## warnings: logical; if T, convergence and grid warnings will be displayed
 ##
 covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                             sigmabetasq_vec, var_min, var_max, n_sigma, pi_vec,
                             norm, scale, tolerance, max_iter, edge_threshold,
-                            sym_method, print_time, warnings){
+                            sym_method, monitor_final_elbo, monitor_cand_elbo,
+                            monitor_period, print_time, warnings){
 
   # ensure vector input for parameters that are expected to be vectors
   args_vector <- list(tau = tau, pi_vec = pi_vec)
@@ -64,7 +69,10 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                       var_min = var_min, var_max = var_max, n_sigma = n_sigma,
                       norm = norm, scale = scale, tolerance = tolerance,
                       max_iter = max_iter, edge_threshold = edge_threshold,
-                      sym_method = sym_method, print_time = print_time,
+                      sym_method = sym_method,
+                      monitor_final_elbo = monitor_final_elbo,
+                      monitor_cand_elbo = monitor_cand_elbo,
+                      monitor_period = monitor_period, print_time = print_time,
                       warnings = warnings)
   if (any(!(sapply(args_scalar, length) == 1))){
 
@@ -79,7 +87,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                        mu = mu, sigmasq = sigmasq, var_min = var_min,
                        n_sigma = n_sigma, var_max = var_max, pi_vec = pi_vec,
                        norm = norm, tolerance = tolerance, max_iter = max_iter,
-                       edge_threshold = edge_threshold)
+                       edge_threshold = edge_threshold,
+                       monitor_period = monitor_period)
   if (any(!sapply(args_numeric, is.numeric))){
 
     # get the name of the non-numeric
@@ -95,7 +104,10 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                      pi_vec = pi_vec, norm = norm, scale = scale,
                      tolerance = tolerance, max_iter = max_iter,
                      edge_threshold = edge_threshold, sym_method = sym_method,
-                     print_time = print_time, warnings = warnings)
+                     monitor_final_elbo = monitor_final_elbo,
+                     monitor_cand_elbo = monitor_cand_elbo,
+                     monitor_period = monitor_period, print_time = print_time,
+                     warnings = warnings)
   if (any(sapply(args_nonNA, function (x) any(is.na(x))))){
 
     # get the name of the NA
@@ -107,7 +119,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   args_finite <- list(data_mat = data_mat, Z = Z, tau = tau, mu = mu,
                       sigmasq = sigmasq, var_min = var_min, var_max = var_max,
                       n_sigma = n_sigma, tolerance = tolerance,
-                      max_iter = max_iter)
+                      max_iter = max_iter, monitor_period = monitor_period)
   if (any(!sapply(args_finite, function (x) all(is.finite(x))))){
 
     # get the name of the non-finite
@@ -117,7 +129,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   }
 
   # ensure integer input for parameters that are expected to be integers
-  args_integers <- list(n_sigma = n_sigma, max_iter = max_iter)
+  args_integers <- list(n_sigma = n_sigma, max_iter = max_iter,
+                        monitor_period = monitor_period)
   if (any(!(sapply(args_integers, function(x) x %% 1) == 0))){
 
     # get the name of the non-integer
@@ -127,7 +140,10 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   }
 
   # ensure logical input for parameters that are expected to be logicals
-  args_logical <- list(kde = kde, scale = scale, print_time = print_time,
+  args_logical <- list(kde = kde, scale = scale,
+                       monitor_final_elbo = monitor_final_elbo,
+                       monitor_cand_elbo = monitor_cand_elbo,
+                       print_time = print_time,
                        warnings = warnings)
   if (any(!sapply(args_logical, is.logical))){
 
@@ -152,7 +168,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   args_positive <- list(tau = tau, sigmasq = sigmasq, var_min = var_min,
                         var_max = var_max, n_sigma = n_sigma,
                         tolerance = tolerance, max_iter = max_iter,
-                        edge_threshold = edge_threshold)
+                        edge_threshold = edge_threshold,
+                        monitor_period = monitor_period)
   if (any(!sapply(args_positive, function (x) all(x > 0)))){
 
     # get the name of the non-positive
@@ -248,6 +265,11 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   # ensure that sym_method is mean, min, or max
   if (!(sym_method %in% c("mean", "min", "max"))){
     stop("sym_method should be one of \"mean\", \"min\", or \"max\"")
+  }
+
+  # ensure that monitor_period is not greater than max_iter
+  if (monitor_period > max_iter){
+    stop("monitor_period is greater than max_iter")
   }
 }
 
