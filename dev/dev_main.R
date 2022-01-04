@@ -1,10 +1,9 @@
-setwd("~/Jacob/covdepGE/dev")
-#setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
+setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
 rm(list = ls())
 source("generate_data.R")
 
 # generate data and covariates
-discrete_data <- F # true if discrete example is desired
+discrete_data <- T # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter
@@ -24,14 +23,11 @@ if (package){
                             sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
 }else{
   if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
-  source("~/Jacob/covdepGE/R/covdepGE_main.R")
-  source("~/Jacob/covdepGE/R/weights.R")
-  source("~/Jacob/covdepGE/R/checks.R")
-  source("~/Jacob/covdepGE/R/gg_covdepGE.R")
-  # source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
-  # source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
-  # source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
-  Rcpp::sourceCpp("~/Jacob/covdepGE/src/covdepGE_c.cpp")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_main.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
+  Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
   out <- covdepGE(data_mat, Z, tau_, kde = F, print_time = T, CS = T, scale = F,
                   sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
 }
