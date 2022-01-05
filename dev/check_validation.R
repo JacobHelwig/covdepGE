@@ -1,5 +1,4 @@
-setwd("~/Jacob/covdepGE/dev")
-#setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
+setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
 rm(list = ls())
 
 package <- F # true if the package version is desired
@@ -9,14 +8,12 @@ if (package){
 }else{
   rm(list = ls())
   if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
-  source("~/Jacob/covdepGE/R/covdepGE_main.R")
-  source("~/Jacob/covdepGE/R/weights.R")
-  source("~/Jacob/covdepGE/R/checks.R")
-  source("~/Jacob/covdepGE/R/gg_covdepGE.R")
-  # source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
-  # source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
-  # source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
-  Rcpp::sourceCpp("~/Jacob/covdepGE/src/covdepGE_c.cpp")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_main.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/var_updates.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
+  Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
 }
 
 source("generate_data.R")
@@ -528,7 +525,58 @@ covdepGE(data_mat, Z, sym_method = "Inf")
 # non-scalar
 covdepGE(data_mat, Z, sym_method = c("max", "min"))
 
-## -----------------------------monitor_final_elbo---------------------------------------------
+## -----------------------------parallel------------------------------
+
+# NA
+covdepGE(data_mat, Z, parallel = NA)
+
+# non-logical
+covdepGE(data_mat, Z, parallel = 4)
+
+# bool vect
+covdepGE(data_mat, Z, parallel = c(T, F))
+
+# bool matrix
+covdepGE(data_mat, Z, parallel = matrix(c(T, F)))
+
+## -----------------------------num_workers---------------------------------------
+
+# NA
+covdepGE(data_mat, Z, num_workers = NA, parallel = T)
+
+# Inf
+covdepGE(data_mat, Z, num_workers = Inf, parallel = T)
+
+# negative
+covdepGE(data_mat, Z, num_workers = -1, parallel = T)
+
+# non-integer
+covdepGE(data_mat, Z, num_workers = 1.5, parallel = T)
+
+# non-scalar
+covdepGE(data_mat, Z, num_workers = c(1, 2), parallel = T)
+
+# matrix
+covdepGE(data_mat, Z, num_workers = matrix(rep(4, 4), 2), parallel = T)
+
+# more than the number of available workers
+covdepGE(data_mat, Z, num_workers = 1e5, parallel = T)
+
+## -----------------------------stop_cluster------------------------------
+
+# NA
+covdepGE(data_mat, Z, stop_cluster = NA)
+
+# non-logical
+covdepGE(data_mat, Z, stop_cluster = 4)
+
+# bool vect
+covdepGE(data_mat, Z, stop_cluster = c(T, F))
+
+# bool matrix
+covdepGE(data_mat, Z, stop_cluster = matrix(c(T, F)))
+
+## -----------------------------monitor_final_elbo------------------------------
 
 # NA
 covdepGE(data_mat, Z, monitor_final_elbo = NA)
@@ -542,7 +590,7 @@ covdepGE(data_mat, Z, monitor_final_elbo = c(T, F))
 # bool matrix
 covdepGE(data_mat, Z, monitor_final_elbo = matrix(c(T, F)))
 
-## -----------------------------monitor_cand_elbo---------------------------------------------
+## -----------------------------monitor_cand_elbo-------------------------------
 
 # NA
 covdepGE(data_mat, Z, monitor_cand_elbo = NA)
@@ -556,7 +604,7 @@ covdepGE(data_mat, Z, monitor_cand_elbo = c(T, F))
 # bool matrix
 covdepGE(data_mat, Z, monitor_cand_elbo = matrix(c(T, F)))
 
-## -----------------------------monitor_period----------------------------------------
+## -----------------------------monitor_period----------------------------------
 
 # NA
 covdepGE(data_mat, Z, monitor_period = NA)
@@ -681,7 +729,7 @@ gg_adjMat(out, 1, color1 = "here")
 # vector of colors
 gg_adjMat(out, 1, color1 = c("red", "blue"))
 
-## -----------------------------grid_color------------------------------------------
+## -----------------------------grid_color--------------------------------------
 
 # NA
 gg_adjMat(out, 1, grid_color = NA)
@@ -709,7 +757,7 @@ gg_adjMat(out, 1, incl_probs = 5)
 # logical vector
 gg_adjMat(out, 1, incl_probs = c(T, T))
 
-## -----------------------------prob_prec--------------------------------------
+## -----------------------------prob_prec---------------------------------------
 
 # NA
 gg_adjMat(out, 1, prob_prec = NA)

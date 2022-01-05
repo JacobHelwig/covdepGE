@@ -79,6 +79,25 @@
 #' symmetrize the alpha matrices, the \eqn{i,j = j,i} entry is
 #' `sym_method`\eqn{((i,j entry), (j,i entry))}. `"mean"` by default
 #'
+#' @param parallel logical scalar; if `T`, the variational updates for each
+#' response will be performed in parallel using `foreach`. Parallel backend may
+#' be registered prior to making a call to `covdepGE`. If no active parallel
+#' backend can be detected, then parallel backend will be automatically
+#' registered using `doParallel::registerDoParallel(num_workers)`
+#'
+#' @param num_workers scalar in {1, 2,...,parallel::detectCores()}; number of
+#' workers to pass to `doParallel::registerDoParallel` if `parallel = T` and no
+#' parallel backend is detected. `NULL` by default, which results in
+#' `num_workers = floor(parallel::detectCores() / 2)`
+#'
+#' @param stop_cluster: logical scalar; if `T`, run
+#' `doParallel::stopImplicitCluster()` after parallel exectution of variational
+#' updates has completed. This will stop the cluster created implicitly by
+#' `doParallel::registerDoParallel(num_workers)` and will shut down the unused
+#' workers. Setting `F` is useful when making multiple calls to `covdepGE` with
+#' `parallel = T`, as it avoids the overhead of creating a new cluster. `T` by
+#' default
+#'
 #' @param monitor_final_elbo logical scalar; if `T`, the ELBO history for the
 #' final model will be returned. `F` by default
 #'
@@ -207,17 +226,19 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                      sigmasq = 0.5, sigmabetasq_vec = NULL, var_min = 0.01,
                      var_max = 10, n_sigma = 8, pi_vec = 0.1, norm = 2,
                      scale = T, tolerance = 1e-12, max_iter = 1e4,
-                     edge_threshold = 0.5, sym_method = "mean",
-                     monitor_final_elbo = F, monitor_cand_elbo = F,
-                     monitor_period = 1, print_time = F, warnings = T, CS = F){
+                     edge_threshold = 0.5, sym_method = "mean", parallel = F,
+                     num_workers = NULL, stop_cluster = T, monitor_final_elbo = F,
+                     monitor_cand_elbo = F, monitor_period = 1, print_time = F,
+                     warnings = T, CS = F){
 
   start_time <- Sys.time()
 
   # run compatibility checks
   covdepGE_checks(data_mat, Z, tau, kde, alpha, mu, sigmasq, sigmabetasq_vec,
                   var_min, var_max, n_sigma, pi_vec, norm, scale, tolerance,
-                  max_iter, edge_threshold, sym_method, monitor_final_elbo,
-                  monitor_cand_elbo, monitor_period, print_time, warnings)
+                  max_iter, edge_threshold, sym_method, parallel, num_workers,
+                  stop_cluster, monitor_final_elbo, monitor_cand_elbo,
+                  monitor_period, print_time, warnings)
 
   # ensure that data_mat and Z are matrices
   data_mat <- as.matrix(data_mat)
@@ -239,33 +260,97 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
     sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_sigma))
   }
 
-  # list to store each of the results from var_updates
-  res <- vector("list", p + 1)
-
   # main loop over the predictors
-  for (resp_index in 1:(p + 1)) {
 
-    # Set variable number `resp_index` as the response
-    y <- data_mat[, resp_index]
+  # check if the variational updates are to be parallelized
+  if (parallel){
 
-    # Set the remaining p variables as predictors
-    X_mat <- data_mat[, -resp_index]
+    # check to see if parallel backend has been registered and is active
+    if (foreach::getDoParRegistered() & nrow(showConnections()) != 0){
+      if (warnings) message(paste("Detected", foreach::getDoParWorkers(),
+                                  "registered workers on an active cluster"))
+    }else{
 
-    E <- stats::rnorm(n, 0, 1) # removing this causes discrepency in discrete case
+      # otherwise, register parallel backend
 
-    # If CS, choose pi and sigmasq according to the Carbonetto-Stephens model
-    if (CS){
-      idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
-      sigmasq <- mean(idmod$sigma)
-      pi_vec <- mean(1 / (1 + exp(-idmod$logodds))) # need to convert to log base 10
+      # if num_workers has not been provided, get the number of workers
+      if (is.null(num_workers)){
+        num_workers <- floor(parallel::detectCores() / 2)
+      }
+
+      # registration
+      if (warnings) warning(paste("Active parallel backend not detected; registering doParallel with",
+                                  num_workers, "workers"))
+      doParallel::registerDoParallel(cores = num_workers)
     }
 
-    # perform the variational updates and save the results to res
-    res[[resp_index]] <- var_updates(X_mat, Z, D, y, alpha, mu, sigmasq,
-                                     sigmabetasq_vec, pi_vec, tolerance,
-                                     max_iter, monitor_final_elbo,
-                                     monitor_cand_elbo, monitor_period,
-                                     warnings, resp_index)
+    # attempt to execute the variational update in parallel
+    res <- tryCatch(
+      {
+        foreach::`%dopar%`(
+          foreach::foreach(resp_index = 1:(p + 1), .packages = "covdepGE"),
+          {
+
+            # Set variable number `resp_index` as the response
+            y <- data_mat[, resp_index]
+
+            # Set the remaining p variables as predictors
+            X_mat <- data_mat[, -resp_index]
+
+            E <- stats::rnorm(n, 0, 1) # removing this causes discrepency in discrete case
+
+            # If CS, choose pi and sigmasq according to the Carbonetto-Stephens model
+            if (CS){
+              idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
+              sigmasq <- mean(idmod$sigma)
+              pi_vec <- mean(1 / (1 + exp(-idmod$logodds))) # need to convert to log base 10
+            }
+
+            # perform the variational updates and save the results to res
+            var_updates(X_mat, Z, D, y, alpha, mu, sigmasq, sigmabetasq_vec,
+                        pi_vec, tolerance, max_iter, monitor_final_elbo,
+                        monitor_cand_elbo, monitor_period, warnings, resp_index)
+            }
+          )
+      },
+      error = function(msg) stop(paste(
+        "Parallel execution failed; error message: ", msg))
+    )
+
+    # shut down the workers if desired
+    if(stop_cluster) doParallel::stopImplicitCluster()
+
+  }else{
+
+    # otherwise, the variational update will be executed sequentially
+
+    # list to store each of the results from var_updates
+    res <- vector("list", p + 1)
+
+    for (resp_index in 1:(p + 1)) {
+
+      # Set variable number `resp_index` as the response
+      y <- data_mat[, resp_index]
+
+      # Set the remaining p variables as predictors
+      X_mat <- data_mat[, -resp_index]
+
+      E <- stats::rnorm(n, 0, 1) # removing this causes discrepency in discrete case
+
+      # If CS, choose pi and sigmasq according to the Carbonetto-Stephens model
+      if (CS){
+        idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
+        sigmasq <- mean(idmod$sigma)
+        pi_vec <- mean(1 / (1 + exp(-idmod$logodds))) # need to convert to log base 10
+      }
+
+      # perform the variational updates and save the results to res
+      res[[resp_index]] <- var_updates(X_mat, Z, D, y, alpha, mu, sigmasq,
+                                       sigmabetasq_vec, pi_vec, tolerance,
+                                       max_iter, monitor_final_elbo,
+                                       monitor_cand_elbo, monitor_period,
+                                       warnings, resp_index)
+    }
   }
 
   # gather the VB_details lists, alpha_matrix matrices, and warnings_vec vectors

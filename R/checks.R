@@ -40,6 +40,12 @@
 ##
 ## sym_method: character in {"mean", "max", "min"}
 ##
+## parallel: logical scalar; if `T`, parallelize variational updates
+##
+## num_workers: scalar in {1, 2,...,parallel::detectCores()}; number of workers
+##
+## stop_cluster: logical scalar; if `T`, run `doParallel::stopImplicitCluster()`
+##
 ## monitor_final_elbo logical scalar; if T, monitor the final model ELBO
 ##
 ## monitor_cand_elbo logical scalar; if T, monitor the non-convergent ELBO history
@@ -52,7 +58,8 @@
 covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                             sigmabetasq_vec, var_min, var_max, n_sigma, pi_vec,
                             norm, scale, tolerance, max_iter, edge_threshold,
-                            sym_method, monitor_final_elbo, monitor_cand_elbo,
+                            sym_method, parallel, num_workers, stop_cluster,
+                            monitor_final_elbo, monitor_cand_elbo,
                             monitor_period, print_time, warnings){
 
   # ensure vector input for parameters that are expected to be vectors
@@ -70,7 +77,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                       var_min = var_min, var_max = var_max, n_sigma = n_sigma,
                       norm = norm, scale = scale, tolerance = tolerance,
                       max_iter = max_iter, edge_threshold = edge_threshold,
-                      sym_method = sym_method,
+                      sym_method = sym_method, parallel = parallel,
+                      stop_cluster = stop_cluster,
                       monitor_final_elbo = monitor_final_elbo,
                       monitor_cand_elbo = monitor_cand_elbo,
                       monitor_period = monitor_period, print_time = print_time,
@@ -105,6 +113,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                      pi_vec = pi_vec, norm = norm, scale = scale,
                      tolerance = tolerance, max_iter = max_iter,
                      edge_threshold = edge_threshold, sym_method = sym_method,
+                     parallel = parallel, stop_cluster = stop_cluster,
                      monitor_final_elbo = monitor_final_elbo,
                      monitor_cand_elbo = monitor_cand_elbo,
                      monitor_period = monitor_period, print_time = print_time,
@@ -120,7 +129,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   args_finite <- list(data_mat = data_mat, Z = Z, tau = tau, mu = mu,
                       sigmasq = sigmasq, var_min = var_min, var_max = var_max,
                       n_sigma = n_sigma, tolerance = tolerance,
-                      max_iter = max_iter, monitor_period = monitor_period)
+                      max_iter = max_iter,
+                      monitor_period = monitor_period)
   if (any(!sapply(args_finite, function (x) all(is.finite(x))))){
 
     # get the name of the non-finite
@@ -144,8 +154,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   args_logical <- list(kde = kde, scale = scale,
                        monitor_final_elbo = monitor_final_elbo,
                        monitor_cand_elbo = monitor_cand_elbo,
-                       print_time = print_time,
-                       warnings = warnings)
+                       parallel = parallel, stop_cluster = stop_cluster,
+                       print_time = print_time, warnings = warnings)
   if (any(!sapply(args_logical, is.logical))){
 
     # get the name of the non-logical
@@ -266,6 +276,58 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   # ensure that sym_method is mean, min, or max
   if (!(sym_method %in% c("mean", "min", "max"))){
     stop("sym_method should be one of \"mean\", \"min\", or \"max\"")
+  }
+
+  # if the user has specified num_workers and parallelization, ensure that
+  # num_workers is of the proper form
+  if (!is.null(num_workers) & parallel){
+
+    # check that num_workers is numeric
+    if (!is.numeric(num_workers)){
+      stop(paste0("num_workers is of type ", typeof(num_workers),
+                  "; expected numeric"))
+    }
+
+    # check that num_workers is scalar
+    if (length(num_workers) != 1){
+      stop(paste0("num_workers is of length ", length(num_workers),
+                  "; expected scalar value"))
+    }
+
+    # check that num_workers is not NA
+    if (is.na(num_workers)){
+      stop("num_workers should be non-NA")
+    }
+
+    # check that num_workers is finite
+    if (is.infinite(num_workers)){
+      stop("num_workers should be finite")
+    }
+
+    # check that num_workers is positive
+    if (!(num_workers > 0)){
+      stop("num_workers should be positive")
+    }
+
+    # check that num_workers is an integer
+    if ((num_workers %% 1) != 0){
+      stop("num_workers should be integer-valued")
+    }
+
+    # ensure that num_workers is not greater than detect_workers
+    det_cores <- parallel::detectCores()
+    if (!is.na(det_cores) & det_cores < num_workers){
+      stop(paste0("Number of cores (", det_cores
+                  ,") is less than num_workers (", num_workers, ")"))
+    }
+  }
+
+  # if workers should be detected, ensure that detection is possible
+  if (parallel & is.null(num_workers)){
+    det_workers <- parallel::detectCores()
+    if (is.na(det_workers)){
+      stop("Number of workers could not be detected")
+    }
   }
 
   # ensure that monitor_period is not greater than max_iter

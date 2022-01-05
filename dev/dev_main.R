@@ -19,7 +19,8 @@ package <- T # true if the package version is desired
 if (package){
   out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, print_time = T,
                             CS = T, scale = F,
-                            sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
+                            sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
+                            parallel = T)
 }else{
   if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_main.R")
