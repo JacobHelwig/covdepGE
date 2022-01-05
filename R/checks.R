@@ -1,6 +1,6 @@
-## _____________________________________________________________________________
-## _____________________________covdepGE_checks_________________________________
-## _____________________________________________________________________________
+## -----------------------------------------------------------------------------
+## -----------------------------covdepGE_checks---------------------------------
+## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
 ## function to check compatiibility of arguments of covdepGE
 ## -----------------------------ARGUMENTS---------------------------------------
@@ -40,14 +40,15 @@
 ##
 ## sym_method: character in {"mean", "max", "min"}
 ##
-## monitor_final_elbo logical scalar; if `T`, monitor the final model ELBO
+## monitor_final_elbo logical scalar; if T, monitor the final model ELBO
 ##
-## monitor_cand_elbo logical scalar; if `T`, monitor the non-convergent ELBO history
+## monitor_cand_elbo logical scalar; if T, monitor the non-convergent ELBO history
 ##
-## monitor_period scalar in \eqn{{1, 2,..., max_iter}}; the periodicity of ELBO monitoring
+## monitor_period scalar in {1, 2,..., max_iter}; the periodicity of ELBO
+## monitoring
 ##
 ## warnings: logical; if T, convergence and grid warnings will be displayed
-##
+## -----------------------------------------------------------------------------
 covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                             sigmabetasq_vec, var_min, var_max, n_sigma, pi_vec,
                             norm, scale, tolerance, max_iter, edge_threshold,
@@ -273,9 +274,9 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   }
 }
 
-## _____________________________________________________________________________
-## _____________________________adjMat_checks___________________________________
-## _____________________________________________________________________________
+## -----------------------------------------------------------------------------
+## -----------------------------adjMat_checks-----------------------------------
+## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
 ## function to check compatibility of arguments to gg_adjMat
 ## -----------------------------ARGUMENTS---------------------------------------
@@ -300,7 +301,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
 ## font_color0: scalar; color of font for 0 entries if incl_probs = T
 ##
 ## font_color1: scalar; color of font for 1 entries if incl_probs = T
-##
+## -----------------------------------------------------------------------------
 adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
                           incl_probs, prob_prec, font_size, font_color0,
                           font_color1){
@@ -414,9 +415,9 @@ adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
   }
 }
 
-## _____________________________________________________________________________
-## _____________________________inclusionCurve_checks___________________________
-## _____________________________________________________________________________
+## -----------------------------------------------------------------------------
+## -----------------------------inclusionCurve_checks---------------------------
+## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
 ## function to check compatibility of arguments to gg_inclusionCurve
 ## -----------------------------ARGUMENTS---------------------------------------
@@ -441,7 +442,7 @@ adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
 ## point_fill: scalar; fill of probability points
 ##
 ## sort: logical scalar; sort the subject indices for smooth inclusion curve
-##
+## -----------------------------------------------------------------------------
 inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
                                   line_color, point_shape, point_size,
                                   point_color, point_fill, sort){
@@ -546,9 +547,9 @@ inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
   }
 }
 
-## _____________________________________________________________________________
-## _____________________________gg_adjMats_checks_______________________________
-## _____________________________________________________________________________
+## -----------------------------------------------------------------------------
+## -----------------------------gg_adjMats_checks-------------------------------
+## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
 ## function to check compatibility of arguments to gg_adjMats
 ## -----------------------------ARGUMENTS---------------------------------------
@@ -559,7 +560,7 @@ inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
 ##
 ## seed: scalar in (-Inf, Inf); when colors is NULL, the RNG seed for selecting
 ## the color for each graph. 1 by default.
-##
+## -----------------------------------------------------------------------------
 adjMats_checks <- function(out, seed, graph_colors){
 
   # ensure out is a list

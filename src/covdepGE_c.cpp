@@ -3,9 +3,9 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 using namespace Rcpp;
 
-// _____________________________________________________________________________
-// _____________________________ELBO_calculator_c_______________________________
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
+// -----------------------------ELBO_calculator_c-------------------------------
+// -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
 // Calculates ELBO for a fixed response j and individual l
 // -----------------------------ARGUMENTS---------------------------------------
@@ -21,7 +21,7 @@ using namespace Rcpp;
 // -----------------------------RETURNS-----------------------------------------
 // Returns: scalar; ELBO for the l-th individual and j-th column fixed as the
 // response
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
 double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
                           const arma::mat& X_mat, const arma::colvec& S_sq,
                           const arma::colvec& mu, const arma::colvec& alpha,
@@ -49,9 +49,9 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
   return(t1 + t2 + t3 + t4 + t5 + t6);
 }
 
-// _____________________________________________________________________________
-// _____________________________total_elbo_c____________________________________
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
+// -----------------------------total_elbo_c------------------------------------
+// -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
 // for a fixed response, calculate and sum the ELBO for all individuals in the
 // data
@@ -67,7 +67,7 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
 // -----------------------------RETURNS-----------------------------------------
 // elbo_tot: scalar; ELBO for the l-th individual with j-th column fixed as the
 // response
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
 double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
                      const arma::mat& X_mat, const arma::mat& S_sq,
                      const arma::mat& mu_mat, const arma::mat& alpha_mat,
@@ -92,9 +92,9 @@ double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
 
 }
 
-// _____________________________________________________________________________
-// _____________________________mu_update_c____________________________________
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
+// -----------------------------mu_update_c-------------------------------------
+// -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
 // for a fixed response, update mu matrix
 // -----------------------------ARGUMENTS---------------------------------------
@@ -105,7 +105,7 @@ double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
 // S_sq, mu, alpha: n x (p - 1) matrices; variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
 // sigmasq: scalar; spike and slab variance hyperparameter
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
 void mu_update_c (const arma::colvec& y, const arma::mat& D,
                   const arma::mat& X_mat, const arma::mat& S_sq, arma::mat& mu,
                   const arma::mat& alpha, const double sigmasq){
@@ -147,9 +147,9 @@ void mu_update_c (const arma::colvec& y, const arma::mat& D,
   }
 }
 
-// _____________________________________________________________________________
-// _____________________________alpha_update_c__________________________________
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
+// -----------------------------alpha_update_c----------------------------------
+// -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
 // for a fixed response, update alpha matrix
 // -----------------------------ARGUMENTS---------------------------------------
@@ -160,7 +160,7 @@ void mu_update_c (const arma::colvec& y, const arma::mat& D,
 // upper_limit: scalar; during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1; this avoids issues
 // with exponentiation of large numbers creating Infinity divided by Infinity
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
 void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
                     double alpha_logit_term1,
                     const arma::mat& alpha_logit_term2_denom,
@@ -181,9 +181,9 @@ void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
    alpha.elem(index1) = arma::vec(index1.n_rows, arma::fill::ones); // replace them
 }
 
-// _____________________________________________________________________________
-// _____________________________cov_vsvb_c______________________________________
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
+// -----------------------------cov_vsvb_c--------------------------------------
+// -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
 // The core function that calculates the variational parameter updates and
 // returns the final variational estimates of a single regression for each of
@@ -212,7 +212,7 @@ void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
 // matrix; otherwise, d = floor(coverged_iter / monitor_period) +
 // (coverged_iter % monitor_period == 1). The first row is the iterations at
 // which the ELBO was recorded, and the second row is the ELBO measurements
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
 //[[Rcpp::export]]
 Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
                       const arma::mat& X_mat, const arma::mat& mu_mat,
@@ -277,8 +277,8 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
     // calculate change in alpha
     change_alpha = alpha - alpha_last;
 
-    // if the sum of squared changes in alpha is within the tolerance, break
-    // from the for loop
+    // if the square root of the sum of squared changes in alpha is within the
+    // tolerance, break from the for loop
     if (sqrt(arma::accu(arma::pow(change_alpha, 2))) < tolerance){
       converged_iter = k;
       break;
@@ -313,9 +313,9 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
                             Rcpp::Named("elbo_history") = elbo_history));
 }
 
-// _____________________________________________________________________________
-// _____________________________sigma_loop_c______________________________________
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
+// -----------------------------sigma_loop_c------------------------------------
+// -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
 // for a fixed response, find the graph for each individual across a range
 // of sigmabeta_sq an pi values to choose the pair of sigmabeta_sq, pi that
@@ -340,7 +340,7 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 // than upper_limit will be assigned a probability of 1
 // -----------------------------RETURNS-----------------------------------------
 // returns n_sigma x n_pi matrix of ELBOs
-// _____________________________________________________________________________
+// -----------------------------------------------------------------------------
 // [[Rcpp::export]]
 Rcpp::List sigma_loop_c(const arma::colvec& y, const arma::mat& D,
                         const arma::mat& X_mat, const arma::mat& mu_mat,

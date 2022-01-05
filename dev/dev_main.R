@@ -17,13 +17,13 @@ Z <- dat$covts
 
 package <- T # true if the package version is desired
 if (package){
-  library(covdepGE)
   out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, print_time = T,
                             CS = T, scale = F,
                             sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
 }else{
   if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_main.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/var_updates.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
