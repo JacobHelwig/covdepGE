@@ -5,6 +5,7 @@
 # 4. Save the ELBO
 # 5. turn the alpha matrices into symmetric inclusion matrices
 # 6. save the alpha matrices, inclusion probability matrices, and ELBO
+# 7. Commented out E = rnorm(n, 1, 0)
 
 set.seed(1)
 rm(list=ls())
@@ -130,7 +131,7 @@ for(overiter in 1:MAXITER){
     # }
     #beta ### Done
     sigmasq=1
-    E <- rnorm(n,0,sigmasq)
+    #E <- rnorm(n,0,sigmasq)
     #snr=sd(X%*%as.vector(beta0))/sd(sigmasq*E)
 
     #y

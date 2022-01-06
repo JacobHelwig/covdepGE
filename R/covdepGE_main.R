@@ -247,7 +247,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   # get sample size and number of parameters
   n <- nrow(data_mat); p <- ncol(data_mat) - 1
 
-  # if the covariates should be centered and scaled, do so
+  # if the covariates should be centered and scaled, do so ([ , ] for attributes)
   if (scale) Z <- matrix(scale(Z)[ , ], n)
 
   # get weights
@@ -279,7 +279,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       }
 
       # registration
-      if (warnings) warning(paste("Active parallel backend not detected; registering doParallel with",
+      if (warnings) warning(paste("Registered workers on an active cluster not detected; registering doParallel with",
                                   num_workers, "workers"))
       doParallel::registerDoParallel(cores = num_workers)
     }
@@ -297,22 +297,16 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
             # Set the remaining p variables as predictors
             X_mat <- data_mat[, -resp_index]
 
-            E <- stats::rnorm(n, 0, 1) # removing this causes discrepency in discrete case
-
-            # If CS, choose pi and sigmasq according to the Carbonetto-Stephens model
-            if (CS){
-              idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
-              sigmasq <- mean(idmod$sigma)
-              pi_vec <- mean(1 / (1 + exp(-idmod$logodds))) # need to convert to log base 10
-            }
-
             # perform the variational updates and save the results to res
             var_updates(X_mat, Z, D, y, alpha, mu, sigmasq, sigmabetasq_vec,
                         pi_vec, tolerance, max_iter, monitor_final_elbo,
-                        monitor_cand_elbo, monitor_period, warnings, resp_index)
+                        monitor_cand_elbo, monitor_period, warnings, resp_index,
+                        CS)
             }
           )
       },
+
+      # if parallel execution did not finish successfully, display an error
       error = function(msg) stop(paste(
         "Parallel execution failed; error message: ", msg))
     )
@@ -335,21 +329,12 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       # Set the remaining p variables as predictors
       X_mat <- data_mat[, -resp_index]
 
-      E <- stats::rnorm(n, 0, 1) # removing this causes discrepency in discrete case
-
-      # If CS, choose pi and sigmasq according to the Carbonetto-Stephens model
-      if (CS){
-        idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
-        sigmasq <- mean(idmod$sigma)
-        pi_vec <- mean(1 / (1 + exp(-idmod$logodds))) # need to convert to log base 10
-      }
-
       # perform the variational updates and save the results to res
       res[[resp_index]] <- var_updates(X_mat, Z, D, y, alpha, mu, sigmasq,
                                        sigmabetasq_vec, pi_vec, tolerance,
                                        max_iter, monitor_final_elbo,
                                        monitor_cand_elbo, monitor_period,
-                                       warnings, resp_index)
+                                       warnings, resp_index, CS)
     }
   }
 

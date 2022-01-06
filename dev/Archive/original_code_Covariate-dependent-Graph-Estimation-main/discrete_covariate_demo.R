@@ -5,6 +5,8 @@
 # 4. Save the ELBO
 # 5. turn the alpha matrices into symmetric inclusion matrices
 # 6. save the alpha matrices, inclusion probability matrices, and ELBO
+# 7. Commented out E = rnorm(n, 1, 0)
+# 8. Set.seed(resp_index)
 
 set.seed(1)
 #rm(list=ls())
@@ -112,7 +114,7 @@ for(resp_index in 1:(p+1)){ #This loops over the p+1 variables
 
 
   sigmasq=1 #Initialization of the hyperparameter value
-  E <- rnorm(n,0,sigmasq)
+  #E <- rnorm(n,0,sigmasq)
 
 
   XtX=t(X)%*%X
@@ -191,6 +193,7 @@ for(resp_index in 1:(p+1)){ #This loops over the p+1 variables
   beta_matr=matrix(0,n,p)
 
   ####################tuning hyperparameters##################################
+  set.seed(resp_index)
   idmod=varbvs(X_mat,y,Z=Z[,1],verbose=FALSE)#Setting hyperparameter value as in Carbonetto Stephens model
   inprob=idmod$pip
   rest_index_set=setdiff(c(1:(p+1)),resp_index)

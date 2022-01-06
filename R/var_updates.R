@@ -57,8 +57,11 @@
 #' final model selects a candidate value on the grid boundary. T by default
 #'
 #' resp_index: scalar; the index of the column that is y in data_mat
+#'
+#' CS: logical scalar; if T, pi_vec and sigma_sq will be scalars selected
+#' according to Carbonetto-Stephens. F by default
 ## -----------------------------RETURNS-----------------------------------------
-#' @return Returns `list` with the following values:
+#' Returns `list` with the following values:
 #'
 #' 1. alpha_matrix: n x p matrix; the l, j entry is the variational
 #' approximation to the posterior inclusion probability of the j-th variable in
@@ -85,7 +88,8 @@
 ## -----------------------------------------------------------------------------
 var_updates <- function(X_mat, Z, D, y, alpha, mu, sigmasq, sigmabetasq_vec,
                         pi_vec, tolerance, max_iter, monitor_final_elbo,
-                        monitor_cand_elbo, monitor_period, warnings, resp_index){
+                        monitor_cand_elbo, monitor_period, warnings, resp_index,
+                        CS){
 
   # get the dimensions of the data
   n <- nrow(X_mat)
@@ -97,6 +101,15 @@ var_updates <- function(X_mat, Z, D, y, alpha, mu, sigmasq, sigmabetasq_vec,
   # respect to the l-th individual
   alpha_mat <- matrix(alpha, n, p)
   mu_mat <- matrix(mu, n, p)
+
+  # If CS, choose pi and sigmasq according to the Carbonetto-Stephens model
+  if (CS){
+    set.seed(resp_index)
+    idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
+    sigmasq <- mean(idmod$sigma)
+    pi_vec <- mean(1 / (1 + exp(-idmod$logodds))) # need to convert to log base 10
+  }
+
 
   # loop to optimize sigmabeta_sq; for each pair of candidate values of sigma in
   # sigmavec, pi in pi_vec, store the resulting ELBO
