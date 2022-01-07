@@ -2,78 +2,73 @@
 #-------------------FUNCTION TO GENERATE CONTINUOUS DATA------------------------
 #-------------------------------------------------------------------------------
 
-library(MASS)
-
-# function to create the covariance matrix for a p-dimensional gaussian given
-# the value of an extraneous covariate
-# takes the scalar value of the covariate, the number of predictors, and the
-# covariate bounds for each of the three clusters
-# returns the covariance matrix
-Var_cont <- function(z, p, limits1, limits2, limits3) {
-
-  STR <- 1
-
-  # determine the cluster of the given individual
-  cl1 <- (limits1[1] <= z & z <= limits1[2]) * 1
-  cl2 <- (limits2[1] <= z & z <= limits2[2]) * 1
-  cl3 <- (limits3[1] <= z & z <= limits3[2]) * 1
-
-  # create the precision matrix for the individual given their covariate
-  pr <- matrix(0, p + 1, p + 1)
-
-  # put 1 in the 2, 3 position
-  pr[2, 3] <- STR
-
-  # if the individual belongs to cluster 1 or 2, add a non-zero entry to the 1, 2 position
-  pr[1, 2] <- STR * cl1 + (STR - STR * ((z + .23) / .56)) * cl2
-
-  # if the individual belongs to cluster 2 or 3, add a non-zero entry to the 1, 3 position
-  pr[1, 3] <- (STR * ((z + .23) / .56)) * cl2 + (STR) * cl3
-
-  # symmetrize the matrix
-  pr <- pr + t(pr)
-
-  # add a 2 to the diagonal
-  diag(pr) <- 2
-
-  # find the covariance matrix from the precision matrix
-  Var <- solve(pr)
-
-  return(Var)
-}
-
 # function to generate the continuous data and covariates
-# takes a RNG seed, sample size, number of predictors, and bounds of the
-# extraneous covariate for each of the three clusters
-# returns the continuous data, covariates, and true covariance matrix
-generate_continuous <- function(seed = 1, n = 180, p = 4,
-                                limits1 = c(-.990, -.331),
-                                limits2 = c(-.229, 0.329),
-                                limits3 = c(0.431, 0.990)){
+# takes a RNG seed and sample size for each interval
+# returns the continuous data, covariates, and true precision matrices
+generate_continuous <- function(seed = 1, n1 = 60, n2 = 60, n3 = 60){
 
   set.seed(seed)
 
-  # create covariate for individuals in each of the three clusters
-  z1 <- seq(limits1[1], limits1[2], length = n %/% 3)
-  z2 <- seq(limits2[1], limits2[2], length = n %/% 3)
-  z3 <- seq(limits3[1], limits3[2], length = n %/% 3)
+  # create covariate for individuals in each of the three intervals
+
+  # define the dimensions of the data
+  n <- sum(n1, n2, n3)
+  p <- 4
+
+  # define the limits of the intervals
+  limits1 <- c(-.990, -.331)
+  limits2 <- c(-.229, 0.329)
+  limits3 <- c(0.431, 0.990)
+
+  # define the covariate values within each interval
+  z1 <- seq(limits1[1], limits1[2], length = n1)
+  z2 <- seq(limits2[1], limits2[2], length = n2)
+  z3 <- seq(limits3[1], limits3[2], length = n3)
   Z <- matrix(c(z1, z2, z3), n, 1)
 
-  # create the data matrix; each individual is generated from a MVN with 0 mean
-  # and covariance matrix depending on their extraneous covariate
-  data_mat <- matrix(0, n, p + 1)
-  sigma_mats <- vector("list", n)
-  for (l in 1:n) {
+  # create precision matrices
 
-    # generate the covariance matrix depending on the covariates
-    sigma_mats[[l]] <- Var_cont(Z[l], p, limits1, limits2, limits3)
+  # the shared part of the structure for all three intervals is a 2 on the
+  # diagonal and a 1 in the (2, 3) position
+  common_str <- diag(p + 1)
+  common_str[2, 3] <- 1
 
-    # draw from the multivariate normal
-    data_mat[l, ] <- MASS::mvrnorm(1, rep(0, p + 1), sigma_mats[[l]])
-  }
+  # define constants for the structure of interval 2
+  const1 <- 0.23
+  const2 <- 0.56
 
-  return(list(data = data_mat, covts = Z, true_covariance = sigma_mats))
+  # interval 2 has two different linear functions of Z in the (1, 2) position
+  # and (1, 3) positions; define structures for each of these components
+  int2_str12 <- int2_str13 <- matrix(0, p + 1, p + 1)
+  int2_str12[1, 2] <- int2_str13[1, 3] <- 1
 
+  # define the precision matrices for each of the individuals in interval 2
+  int2_prec <- lapply(z2, function(z) common_str +
+                        ((1 - (z + const1) / const2) * int2_str12) +
+                        ((z + const1) / const2 * int2_str13))
+
+  # interval 1 has a 1 in the (1, 2) and interval 3 has a 1 in the (1, 3) position;
+  # define structures for each of these components
+  int1_str12 <- int3_str13 <- matrix(0, p + 1, p + 1)
+  int1_str12[1, 2] <- int3_str13[1, 3] <- 1
+
+  # define the precision matrices for each of the individuals in interval 1 and interval 3
+  int1_prec <- rep(list(common_str + int1_str12), n1)
+  int3_prec <- rep(list(common_str + int3_str13), n3)
+
+  # put all of the precision matrices into one list
+  prec_mats <- c(int1_prec, int2_prec, int3_prec)
+
+  # symmetrize the precision matrices
+  prec_mats <- lapply(prec_mats, function(mat) t(mat) + mat)
+
+  # invert the precision matrices to get the covariance matrices
+  cov_mats <- lapply(prec_mats, solve)
+
+  # generate the data using the covariance matrices
+  data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+
+  return(list(data = data_mat, covts = Z, true_precision = prec_mats))
 }
 
 
@@ -111,8 +106,8 @@ generate_discrete <- function(seed = 1, n = 100, p = 10, lambda = 15,
 
   # create the data matrix; individuals in group j are generated from a MVN with
   # 0 mean vector and covariance matrix Var_j, j\in {1,2}
-  X1 <- mvrnorm(n %/% 2, rep(0, p + 1), Var1)
-  X2 <- mvrnorm(n %/% 2, rep(0, p + 1), Var2)
+  X1 <- MASS::mvrnorm(n %/% 2, rep(0, p + 1), Var1)
+  X2 <- MASS::mvrnorm(n %/% 2, rep(0, p + 1), Var2)
   data_mat <- rbind(X1, X2)
 
   return(list(data = data_mat, covts = Z, true_covariance = list(Var1, Var2)))

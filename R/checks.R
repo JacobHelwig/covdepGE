@@ -64,10 +64,11 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
 
   # ensure vector input for parameters that are expected to be vectors
   args_vector <- list(tau = tau, pi_vec = pi_vec)
-  if (any(!sapply(args_vector, is.vector))){
+  if (any(!sapply(args_vector, function(x) is.atomic(x) & is.null(dim(x))))){
 
     # get the name of the non-vector
-    non_vector <- names(which(!sapply(args_vector, is.vector)))[1]
+    non_vector <- names(which(!sapply(args_vector, function(x) is.atomic(x) &
+                                        is.null(dim(x)))))[1]
     stop(paste0(non_vector, " is of class ", class(args_vector[[non_vector]])[1],
                 "; expected vector"))
   }
@@ -204,7 +205,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   data_mat <- tryCatch(as.matrix(data_mat),
                        error = function(msg){
                          stop(paste("data_mat should be of class matrix or a class that is coercible to a matrix;",
-                                    class(data_mat), "is not coercible to a matrix"))})
+                                    class(data_mat)[1], "is not coercible to a matrix"))})
   Z <- tryCatch(as.matrix(Z),
                 error = function(msg){
                   stop(paste("Z should be of class matrix or a class that is coercible to a matrix;",

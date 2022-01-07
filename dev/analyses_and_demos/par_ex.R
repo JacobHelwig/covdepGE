@@ -27,11 +27,22 @@ benchmark(
 stopCluster(cluster)
 
 
-
-
 par_sleep <- function(stop_cluster = T){
 
-  if (!foreach::getDoParRegistered() | nrow(showConnections()) == 0){
+  registered <- tryCatch(
+    {
+      # return true if parallel backend is registered with more than 1 worker
+      foreach::`%dopar%`(foreach::foreach(NULL), NULL)
+      T & foreach::getDoParRegistered()
+      },
+
+    # return false if error
+    error = function(msg) F,
+
+    # return false if warning
+    warning = function(msg) F)
+
+  if (!registered){
     warning("Active parallel backend not detected; registering parallel backend using 3 cores")
     doParallel::registerDoParallel(cores = 3)
   } else{
@@ -40,20 +51,42 @@ par_sleep <- function(stop_cluster = T){
   start <- Sys.time()
   foreach::`%dopar%`(foreach::foreach(j = 1:3), Sys.sleep(1))
   print(Sys.time() - start)
-  if(stop_cluster) doParallel::stopImplicitCluster()
+  if(stop_cluster){
+    doParallel::stopImplicitCluster()
+  }
 }
 
 par_sleep()
 par_sleep(F)
 
-cl <- parallel::makeCluster(5)
-doParallel::registerDoParallel(cl)
-par_sleep()
-parallel::stopCluster(cl)
-par_sleep()
+registered <- function(){
+  tryCatch({
+    # return true if parallel backend is registered with more than 1 worker
+    foreach::`%dopar%`(foreach::foreach(NULL), NULL)
+    T & foreach::getDoParRegistered()
+  },
 
+  # return false if error
+  error = function(msg) F,
 
-par_sleep()
-par_sleep()
+  # return false if warning
+  warning = function(msg) F)
+}
 
+# should be F
+foreach::getDoParRegistered()
 
+# should be F
+registered()
+
+# register
+doParallel::registerDoParallel(4)
+
+# should be T
+registered()
+
+# stop the cluster
+doParallel::stopImplicitCluster()
+
+# should be F
+registered()

@@ -164,20 +164,20 @@ out <- covdepGE(
     ## 1e-04, : Response 2: final model did not converge in 200 iterations
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : Response 3: 16/50 candidate models did not converge in 200 iterations
+    ## 1e-04, : Response 3: 17/50 candidate models did not converge in 200 iterations
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
     ## 1e-04, : Response 3: final model did not converge in 200 iterations
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
     ## 1e-04, : For 1/5 responses, the selected value of sigmabeta_sq was on the grid
-    ## boundary. See return value ELBO for details
+    ## boundary. See return value VB_details
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
     ## 1e-04, : For 5/5 responses, the selected value of pi was on the grid boundary.
-    ## See return value ELBO for details
+    ## See return value VB_details
 
-    ## Time difference of 4.551104 secs
+    ## Time difference of 4.804732 secs
 
 ``` r
 # grid search results
@@ -284,21 +284,9 @@ num_neg <- length(true_graph_pos) * n - num_pos
 
 -   Model details in return
 
--   ELBO monitoring
-
 -   Change the `idmod` probs to logbase 10
 
 -   Remove `CS` argument
-
--   Parallelization of the “main loop” over the predictors in
-    `covdepGE_main.R`. This is complicated by the `C++` code, however,
-    two potential solutions are:
-
-    -   <span style="color: blu">[StackOverflow
-        suggestion](https://stackoverflow.com/questions/69789634/parallelization-of-rcpp-without-inline-creating-a-local-package?noredirect=1#comment123649680_69789634)</span>
-
-    -   <span
-        style="color: blu">[RcppParallel](https://cran.r-project.org/web/packages/RcppParallel/index.html)</span>
 
 ## Bibliography
 

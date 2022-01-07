@@ -265,10 +265,23 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   # check if the variational updates are to be parallelized
   if (parallel){
 
-    # check to see if parallel backend has been registered and is active
-    if (foreach::getDoParRegistered() & nrow(showConnections()) != 0){
+    # check to see if parallel backend has been registered
+    registered <- tryCatch(
+      {
+        # return true if parallel backend is registered with more than 1 worker
+        foreach::`%dopar%`(foreach::foreach(NULL), NULL)
+        T & foreach::getDoParRegistered()
+      },
+
+      # return false if error
+      error = function(msg) F,
+
+      # return false if warning
+      warning = function(msg) F)
+
+    if (registered){
       if (warnings) message(paste("Detected", foreach::getDoParWorkers(),
-                                  "registered workers on an active cluster"))
+                                  "workers"))
     }else{
 
       # otherwise, register parallel backend
@@ -278,8 +291,8 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
         num_workers <- floor(parallel::detectCores() / 2)
       }
 
-      # registration
-      if (warnings) warning(paste("Registered workers on an active cluster not detected; registering doParallel with",
+      # perform registration
+      if (warnings) warning(paste("No registered workers detected; registering doParallel with",
                                   num_workers, "workers"))
       doParallel::registerDoParallel(cores = num_workers)
     }

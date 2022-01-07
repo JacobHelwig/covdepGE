@@ -3,7 +3,7 @@ rm(list = ls())
 source("generate_data.R")
 
 # generate data and covariates
-discrete_data <- T # true if discrete example is desired
+discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter
