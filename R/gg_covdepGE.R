@@ -5,41 +5,40 @@
 ## -----------------------------DESCRIPTION-------------------------------------
 #' @description Create a visualization of an adjacency matrix
 ## -----------------------------ARGUMENTS---------------------------------------
-#' @param out `list` OR `matrix`; return of `covdepGE` function OR an adjacency
-#' matrix
+#' @param object of class `covdepGE` OR `matrix`; return of `covdepGE` function
+#' OR an adjacency matrix
 #'
-#' @param l scalar in \eqn{{1, 2, ..., n}}; individual index for which the
-#'  adjacency matrix will be visualized. Ignored if `out` is a
-#'  `matrix`. `1` by default
+#' @param l integer in \eqn{{1, 2, ..., n}}; individual index for which the
+#' adjacency matrix will be visualized. Ignored if `out` is a
+#' `matrix`. `1` by default
 #'
-#' @param prob_shade logical scalar; if `T`, then entries will be shaded
-#'  according to posterior inclusion probabilities on a gradient ranging from
-#'  `color0` (probability 0) to `color1` (probability 1); if `F`, binary
-#'  coloring is used. Ignored if `out` is a `matrix`. `T` by default
+#' @param prob_shade logical; if `T`, then entries will be shaded according to
+#' posterior inclusion probabilities on a gradient ranging from `color0`
+#' (probability 0) to `color1` (probability 1); if `F`, binary coloring is used.
+#' Ignored if `out` is a `matrix`. `T` by default
 #'
-#' @param color0 scalar; color for 0 entries. `"white"` by default
+#' @param color0 color; color for 0 entries. `"white"` by default
 #'
-#' @param color1 scalar; color for 1 entries. `"#500000"` by default
+#' @param color1 color; color for 1 entries. `"#500000"` by default
 #'
-#' @param grid_color scalar; color of grid lines. `"black"` by default
+#' @param grid_color color; color of grid lines. `"black"` by default
 #'
-#' @param incl_probs logical scalar; if `T`, the posterior inclusion probability
-#'  will be displayed for each entry. Ignored if `out` is a `matrix` with 2 or
-#'  less unique entries. `T` by default
+#' @param incl_probs logical; if `T`, the posterior inclusion probability
+#' will be displayed for each entry. Ignored if `out` is a `matrix` with 2 or
+#' less unique entries. `T` by default
 #'
-#' @param prob_prec scalar in \eqn{{1, 2, ...}}; number of decimal places to
-#' round probabilities to if `incl_probs = T`. Ignored if `out` is a `matrix`
-#' with 2 or less unique entries. `2` by default
+#' @param prob_prec positive integer; number of decimal places to round
+#' probabilities to if `incl_probs = T`. Ignored if `out` is a `matrix` with 2
+#' or less unique entries. `2` by default
 #'
-#' @param font_size font_size: scalar in \eqn{(0, Inf)}; size of font if
-#' `incl_probs = T`. Ignored if `out` is a `matrix` with 2 or less unique entries.
-#'  `3` by default
+#' @param font_size positive numeric; size of font if `incl_probs = T`. Ignored
+#' if `out` is a `matrix` with 2 or less unique entries. `3` by default
 #'
-#' @param font_color0 scalar; color of font for 0 entries if `incl_probs = T`.
+#' @param font_color0 color; color of font for 0 entries if `incl_probs = T`.
 #' Ignored if `out` is a `matrix` with 2 or less unique entries. `"black"` by
 #' default
 #'
-#' @param font_color1 scalar; color of font for 1 entries if `incl_probs = T`.
+#' @param font_color1 color; color of font for 1 entries if `incl_probs = T`.
 #' Ignored if `out` is a `matrix` with 2 or less unique entries. `"white"` by
 #' default
 ## -----------------------------RETURNS-----------------------------------------
@@ -230,6 +229,7 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
                   ggplot2::scale_color_manual(values = c(font_color0, font_color1)))
       }
     }else{
+
       # out has 2 or less unique values; color using a binary pallete
 
       # factor the edges - specifies a discrete scale to ggplot2
@@ -268,40 +268,38 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
 #' @description Create a visualization of the probabilities of inclusion of an
 #' edge between two variables across all \eqn{n} individuals
 ## -----------------------------ARGUMENTS---------------------------------------
-#' @param out `list`; return of `covdepGE` function
+#' @param out object of class `covdepGE`; return of `covdepGE` function
 #'
-#' @param col_idx1 scalar in \eqn{{1, 2, ..., p + 1}}; column index of the first
-#'  variable
+#' @param col_idx1 integer in \eqn{{1, 2, ..., p + 1}}; column index of the
+#' first variable
 #'
-#' @param col_idx2 scalar in \eqn{{1, 2, ..., p + 1}}; column index of the
-#'  second variable
+#' @param col_idx2 integer in \eqn{{1, 2, ..., p + 1}}; column index of the
+#' second variable
 #'
-#' @param line_type scalar; `ggplot2` line type to interpolate the
-#'  probabilities. `"solid"` by default
+#' @param line_type linetype; `ggplot2` line type to interpolate the
+#' probabilities. `"solid"` by default
 #'
-#' @param line_size scalar in \eqn{(0, Inf)}; thickness of the interpolating
-#'  line. `0.5` by default
+#' @param line_size positive numeric; thickness of the interpolating line. `0.5`
+#' by default
 #'
-#' @param line_color scalar; color of interpolating line. `"black"` by default
+#' @param line_color color; color of interpolating line. `"black"` by default
 #'
-#' @param point_shape scalar; shape of the points denoting individual-specific
-#'  inclusion probabilities; `21` by default
+#' @param point_shape shape; shape of the points denoting individual-specific
+#' inclusion probabilities; `21` by default
 #'
-#' @param point_size scalar in \eqn{(0, Inf)}; size of probability points. `1.5`
-#'  by default
+#' @param point_size positive numeric; size of probability points. `1.5` by
+#' default
 #'
-#' @param point_color scalar; color of probability points. `"#500000"` by
-#'  default
+#' @param point_color color; color of probability points. `"#500000"` by default
 #'
-#' @param point_fill scalar; fill of probability points. Only applies to select
-#'  shapes. `"white"` by default
+#' @param point_fill color; fill of probability points. Only applies to select
+#' shapes. `"white"` by default
 #'
-#' @param sort logical scalar; if `T`, applies a piori sorting algorithm to
-#'   re-order subject indices according to weights such for \eqn{j} in
-#'  \eqn{1,...,n - 1}, subject \eqn{j + 1} is the most similar in terms of their
-#'  extraneous covariate to subject \eqn{j}. Helps visualize the continuity
-#'  with which the edge probabilities are modeled with respect to the the
-#'  extraneous covariates
+#' @param sort logical; if `T`, applies a piori sorting algorithm to re-order
+#' subject indices according to weights such for \eqn{j} in \eqn{1,...,n - 1},
+#' subject \eqn{j + 1} is the most similar in terms of their extraneous
+#' covariate to subject \eqn{j}. Helps visualize the continuity with which the
+#' edge probabilities are modeled with respect to the the extraneous covariates
 ## -----------------------------RETURNS-----------------------------------------
 #' @return Returns `ggplot2` visualization of inclusion probability curve
 ## -----------------------------EXAMPLES----------------------------------------
@@ -429,23 +427,23 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 }
 
 ## -----------------------------------------------------------------------------
-#' @title gg_adjMats
+#' @title plot.covdepGE
 #' @export
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
 #' @description Given the return value of covdepGE function, create a list of
 #'  visualizations of the adjacency matrix for each of the unique graphs
 ## -----------------------------ARGUMENTS---------------------------------------
-#' @param out `list`; return of `covdepGE` function
+#' @param out object of class covdepGE; return of `covdepGE` function
 #'
-#' @param ## graph_colors: g x 1 vector; g is the number of unique graphs from
-#'  out. The v-th element vector is the color for the v-th unique graph
+#' @param graph_colors: vector of length g; g is the number of unique graphs
+#' from out. The v-th element vector is the color for the v-th unique graph
 #'
-#' @param seed scalar in (-Inf, Inf); when colors is NULL, the RNG seed for
-#'  selecting the color for each graph. 1 by default.
+#' @param seed numeric; when colors is NULL, the RNG seed for selecting the
+#' color for each graph. 1 by default.
 ## -----------------------------RETURNS-----------------------------------------
 #' @return Returns list of `ggplot2` visualizations of unique graph adjacency
-#'  matrices
+#' matrices
 ## -----------------------------EXAMPLES----------------------------------------
 #' @examples
 #' set.seed(1)
@@ -486,15 +484,15 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 #' out <- covdepGE(data_mat, Z)
 #'
 #' # analyze results
-#' gg_adjMats(out)
+#' plot(out)
 #'
 #' gg_inclusionCurve(out, 1, 2)
 #' gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
 ## -----------------------------------------------------------------------------
-gg_adjMats <- function(out, graph_colors = NULL, seed = 1){
+plot.covdepGE <- function(out, graph_colors = NULL, seed = 1){
 
   # compatibility checks
-  adjMats_checks(out, seed, graph_colors)
+  plot_checks(out, seed, graph_colors)
 
   # if no colors have been provided, select some randomly
   if(is.null(graph_colors)){

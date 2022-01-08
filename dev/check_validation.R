@@ -9,7 +9,7 @@ if (package){
   rm(list = ls())
   if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_main.R")
-  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/var_updates.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/cavi_search.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
@@ -75,12 +75,11 @@ out <- covdepGE(data_mat,
                 n_sigma = 50, # length of the sigmabeta_sq grid
                 pi_vec = 0.1, # prior inclusion probability grid
                 tolerance = 1e-5, # variational parameter exit condition 1
-                max_iter = 1e3, # variational parameter exit condition 2
+                max_iter_final = 1e3, # variational parameter exit condition 2
                 edge_threshold = 0.75, # minimum inclusion probability
                 sym_method = "min", # how to symmetrize the alpha matrices
-                print_time = T,
 )
-out$ELBO
+out
 
 # BUG: constant covariate
 
@@ -152,10 +151,9 @@ out_indep <- covdepGE(data_mat,
                       n_sigma = 100, # length of the sigmabeta_sq grid
                       pi_vec = 0.1, # prior inclusion probability grid
                       tolerance = 1e-12, # variational parameter exit condition 1
-                      max_iter = 1e3, # variational parameter exit condition 2
+                      max_iter_final = 1e3, # variational parameter exit condition 2
                       edge_threshold = 0.75, # minimum inclusion probability
                       sym_method = "min", # how to symmetrize the alpha matrices
-                      print_time = T,
 )
 
 out_indep <- covdepGE(data_mat,
@@ -166,10 +164,9 @@ out_indep <- covdepGE(data_mat,
                       n_sigma = 100, # length of the sigmabeta_sq grid
                       pi_vec = 0.1, # prior inclusion probability grid
                       tolerance = 1e-12, # variational parameter exit condition 1
-                      max_iter = 1e3, # variational parameter exit condition 2
+                      max_iter_final = 1e3, # variational parameter exit condition 2
                       edge_threshold = 0.75, # minimum inclusion probability
                       sym_method = "min", # how to symmetrize the alpha matrices
-                      print_time = T,
                       scale = F
 )
 
@@ -181,10 +178,9 @@ out_indep <- covdepGE(data_mat,
                       n_sigma = 100, # length of the sigmabeta_sq grid
                       pi_vec = 0.1, # prior inclusion probability grid
                       tolerance = 1e-12, # variational parameter exit condition 1
-                      max_iter = 1e3, # variational parameter exit condition 2
+                      max_iter_final = 1e3, # variational parameter exit condition 2
                       edge_threshold = 0.75, # minimum inclusion probability
                       sym_method = "min", # how to symmetrize the alpha matrices
-                      print_time = T,
                       kde = F
 )
 
@@ -196,15 +192,14 @@ out_indep <- covdepGE(data_mat,
                       n_sigma = 50,
                       pi_vec = 0.1, # prior inclusion probability grid
                       tolerance = 1e-10, # variational parameter exit condition 1
-                      max_iter = 1e3, # variational parameter exit condition 2
+                      max_iter_final = 1e3, # variational parameter exit condition 2
                       edge_threshold = 0.75, # minimum inclusion probability
                       sym_method = "min", # how to symmetrize the alpha matrices
-                      print_time = T,
                       scale = F,
                       kde = F
 )
 
-out_indep$ELBO
+out_indep$CAVI_details
 unique(out_indep$alpha_matrices)
 
 ## -----------------------------------------------------------------------------
@@ -424,7 +419,7 @@ covdepGE(data_mat, Z, pi_vec = c(Inf, 2))
 covdepGE(data_mat, Z, pi_vec = c(-0.5, 0.5))
 
 # non-numeric
-covdepGE(data_mat, Z, pi_vec = c(F, 0.5))
+covdepGE(data_mat, Z, pi_vec = c(F, 0.5)) # bug; fix 0 prior and NA issues
 
 # non-numeric scalar
 covdepGE(data_mat, Z, pi_vec = F)
@@ -474,25 +469,45 @@ covdepGE(data_mat, Z, tolerance = -1)
 # non-scalar
 covdepGE(data_mat, Z, tolerance = c(1, 2))
 
-## -----------------------------max_iter----------------------------------------
+## -----------------------------max_iter_grid-----------------------------------
 
 # NA
-covdepGE(data_mat, Z, max_iter = NA)
+covdepGE(data_mat, Z, max_iter_grid = NA)
 
 # Inf
-covdepGE(data_mat, Z, max_iter = Inf)
+covdepGE(data_mat, Z, max_iter_grid = Inf)
 
 # negative
-covdepGE(data_mat, Z, max_iter = -1)
+covdepGE(data_mat, Z, max_iter_grid = -1)
 
 # non-integer
-covdepGE(data_mat, Z, max_iter = 1.5)
+covdepGE(data_mat, Z, max_iter_grid = 1.5)
 
 # non-scalar
-covdepGE(data_mat, Z, max_iter = c(1, 2))
+covdepGE(data_mat, Z, max_iter_grid = c(1, 2))
 
 # matrix
-covdepGE(data_mat, Z, max_iter = matrix(rep(4, 4), 2))
+covdepGE(data_mat, Z, max_iter_grid = matrix(rep(4, 4), 2))
+
+## -----------------------------max_iter_final-----------------------------------
+
+# NA
+covdepGE(data_mat, Z, max_iter_final = NA)
+
+# Inf
+covdepGE(data_mat, Z, max_iter_final = Inf)
+
+# negative
+covdepGE(data_mat, Z, max_iter_final = -1)
+
+# non-integer
+covdepGE(data_mat, Z, max_iter_final = 1.5)
+
+# non-scalar
+covdepGE(data_mat, Z, max_iter_final = c(1, 2))
+
+# matrix
+covdepGE(data_mat, Z, max_iter_final = matrix(rep(4, 4), 2))
 
 ## -----------------------------edge_threshold----------------------------------
 

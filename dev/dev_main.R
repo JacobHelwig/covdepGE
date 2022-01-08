@@ -15,7 +15,7 @@ if (discrete_data) {
 data_mat <- dat$data
 Z <- dat$covts
 
-package <- T # true if the package version is desired
+package <- F # true if the package version is desired
 if (package){
   out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, print_time = T,
                             CS = T, scale = F,
@@ -24,12 +24,12 @@ if (package){
 }else{
   if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_main.R")
-  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/var_updates.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/cavi_search.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
   Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
-  out <- covdepGE(data_mat, Z, tau_, kde = F, print_time = T, CS = T, scale = F,
+  out <- covdepGE(data_mat, Z, tau_, kde = F, CS = T, scale = F,
                   sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
 }
 
@@ -69,5 +69,5 @@ total_diff
 same_probs
 
 # check for equality between ELBO
-all.equal(unname(unlist(lapply(out$VB_details, `[[`, "ELBO"))), out_original$original_ELBO)
+all.equal(unname(unlist(lapply(out$CAVI_details, `[[`, "ELBO"))), out_original$original_ELBO)
 

@@ -16,10 +16,10 @@ using namespace Rcpp;
 // X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
 // S_sq, mu, alpha: p x 1 vectors; variational parameters. the k-th
 // entry is the k-th parameter for the l-th individual
-// sigmasq, sigmabeta_sq: scalar; spike and slab variance hyperparameters
-// pi_est: scalar; spike and slab probability of inclusion
+// sigmasq, sigmabeta_sq: double; spike and slab variance hyperparameters
+// pi_est: double; spike and slab probability of inclusion
 // -----------------------------RETURNS-----------------------------------------
-// Returns: scalar; ELBO for the l-th individual and j-th column fixed as the
+// Returns: double; ELBO for the l-th individual and j-th column fixed as the
 // response
 // -----------------------------------------------------------------------------
 double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
@@ -62,10 +62,10 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
 // X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
 // S_sq, mu, alpha: n x (p - 1) matrices; variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
-// sigmasq, sigmabeta_sq: scalars; spike and slab variance hyperparameters
-// pi_est: scalar; spike and slab probability of inclusion
+// sigmasq, sigmabeta_sq: doubles; spike and slab variance hyperparameters
+// pi_est: double; spike and slab probability of inclusion
 // -----------------------------RETURNS-----------------------------------------
-// elbo_tot: scalar; ELBO for the l-th individual with j-th column fixed as the
+// elbo_tot: double; ELBO for the l-th individual with j-th column fixed as the
 // response
 // -----------------------------------------------------------------------------
 double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
@@ -104,7 +104,7 @@ double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
 // X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
 // S_sq, mu, alpha: n x (p - 1) matrices; variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
-// sigmasq: scalar; spike and slab variance hyperparameter
+// sigmasq: double; spike and slab variance hyperparameter
 // -----------------------------------------------------------------------------
 void mu_update_c (const arma::colvec& y, const arma::mat& D,
                   const arma::mat& X_mat, const arma::mat& S_sq, arma::mat& mu,
@@ -155,9 +155,9 @@ void mu_update_c (const arma::colvec& y, const arma::mat& D,
 // -----------------------------ARGUMENTS---------------------------------------
 // mu_mat, alpha_mat: n x (p - 1) matrices; variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
-// alpha_logit_term 1, 2, 3: scalar (1), n x (p - 1) matrices (2, 3): terms
+// alpha_logit_term 1, 2, 3: double (1), n x (p - 1) matrices (2, 3): terms
 // used to calculate the logit of alpha
-// upper_limit: scalar; during the alpha update, values of logit(alpha) greater
+// upper_limit: double; during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1; this avoids issues
 // with exponentiation of large numbers creating Infinity divided by Infinity
 // -----------------------------------------------------------------------------
@@ -177,8 +177,12 @@ void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
 
    // handle NA's due to division by infinity resulting from exponentiation of
    // large values; these probabilities are indescernible from 1
-   arma::uvec index1 = arma::find(alpha_logit > upper_limit); // find large values
-   alpha.elem(index1) = arma::vec(index1.n_rows, arma::fill::ones); // replace them
+
+   // find large values
+   arma::uvec index1 = arma::find(alpha_logit > upper_limit);
+
+   // replace them
+   alpha.elem(index1) = arma::vec(index1.n_rows, arma::fill::ones);
 }
 
 // -----------------------------------------------------------------------------
@@ -195,19 +199,19 @@ void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
 // X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
 // mu_mat, alpha_mat: n x (p - 1) matrices; variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
-// sigmasq, sigmabeta_sq: scalars; spike and slab variance hyperparameters
-// pi_est: scalar; spike and slab probability of inclusion
-// tolerance: scalar; when the square root of the sum of squared changes in
+// sigmasq, sigmabeta_sq: doubles; spike and slab variance hyperparameters
+// pi_est: double; spike and slab probability of inclusion
+// tolerance: double; when the square root of the sum of squared changes in
 // the elements of alpha are within tolerance, stop iterating
-// max_iter: scalar; maximum number of iterations
+// max_iter: double; maximum number of iterations
 // monitor_elbo: bool; if true, elbo will be tracked and returned
-// monitor_period: scalar; dictates the periodicity of the elbo recording
-// upper_limit: scalar; during the alpha update, values of logit(alpha) greater
+// monitor_period: double; dictates the periodicity of the elbo recording
+// upper_limit: double; during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1
 // -----------------------------RETURNS-----------------------------------------
 // var_alpha: n x (p - 1) matrix; final alpha values
-// var_ELB: scalar; final value of ELBO summed across all individuals
-// converged_iter: scalar; number of iterations to reach convergence
+// var_ELB: double; final value of ELBO summed across all individuals
+// converged_iter: integer; number of iterations to reach convergence
 // elbo_history: 2 x d matrix OR 0 x 0 matrix; if monitor_elbo is false, 0 x 0
 // matrix; otherwise, d = floor(coverged_iter / monitor_period) +
 // (coverged_iter % monitor_period == 1). The first row is the iterations at
@@ -314,10 +318,10 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 }
 
 // -----------------------------------------------------------------------------
-// -----------------------------sigma_loop_c------------------------------------
+// -----------------------------grid_search_c-----------------------------------
 // -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
-// for a fixed response, find the graph for each individual across a range
+// for a fixed response, find the graph for each individual across a grid
 // of sigmabeta_sq an pi values to choose the pair of sigmabeta_sq, pi that
 // maximize the ELBO
 // -----------------------------ARGUMENTS---------------------------------------
@@ -327,28 +331,28 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 // X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
 // mu_mat, alpha_mat: n x (p - 1); matrices of variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
-// sigmasq: scalar; spike and slab variance hyperparameter
+// sigmasq: double; spike and slab variance hyperparameter
 // sigmabeta_sq_vec: n_sigma x 1 vector; spike-and-slab hyperparameter
 // candidates
 // pi_vec: n_pi x 1 vector; candidate spike and slab probabilities of inclusion
-// tolerance: scalar; when the square root of the sum of squared changes in
-// the elements of alpha are within tolderance, stop iterating
-// max_iter: scalar; maximum number of iterations
+// tolerance: double; when the square root of the sum of squared changes in
+// the elements of alpha are within tolerance, stop iterating
+// max_iter: double; maximum number of iterations
 // monitor_elbo: bool; if true, elbo will be tracked and returned
-// monitor_period: scalar; dictates the periodicity of the elbo recording
-// upper_limit: scalar, during the alpha update, values of logit(alpha) greater
+// monitor_period: double; dictates the periodicity of the elbo recording
+// upper_limit: double, during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1
 // -----------------------------RETURNS-----------------------------------------
 // returns n_sigma x n_pi matrix of ELBOs
 // -----------------------------------------------------------------------------
 // [[Rcpp::export]]
-Rcpp::List sigma_loop_c(const arma::colvec& y, const arma::mat& D,
-                        const arma::mat& X_mat, const arma::mat& mu_mat,
-                        const arma::mat& alpha_mat, double sigmasq,
-                        const arma::colvec& sigmabeta_sq_vec,
-                        const arma::colvec& pi_vec, double tolerance,
-                        int max_iter, bool monitor_elbo, int monitor_period,
-                        double upper_limit = 9){
+Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
+                         const arma::mat& X_mat, const arma::mat& mu_mat,
+                         const arma::mat& alpha_mat, double sigmasq,
+                         const arma::colvec& sigmabeta_sq_vec,
+                         const arma::colvec& pi_vec, double tolerance,
+                         int max_iter, bool monitor_elbo, int monitor_period,
+                         double upper_limit = 9){
 
   // get the number of sigmas that are being considered
   int n_sigma = sigmabeta_sq_vec.n_elem;

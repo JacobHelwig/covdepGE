@@ -5,9 +5,9 @@
 ## calculates silverman's rule of thumb for a data vector according to:
 ## https://github.com/statsmodels/statsmodels/blob/main/statsmodels/nonparametric/bandwidths.py
 ## -----------------------------ARGUMENTS---------------------------------------
-## x: n x 1 vector; data vector for which the bandwidth will be estimated
+## x: vector of length n; data vector for which the bandwidth will be estimated
 ## -----------------------------RETURNS-----------------------------------------
-## returns scalar bandwidth estimate
+## returns bandwidth estimate
 ## -----------------------------------------------------------------------------
 silverman <- function(x){
 
@@ -22,14 +22,14 @@ silverman <- function(x){
 ## -----------------------------DESCRIPTION-------------------------------------
 ## calulates the density of a point under a mixture density of n Gaussians
 ## -----------------------------ARGUMENTS---------------------------------------
-## z: scalar; point for which the density will be calculated
+## z: numeric; point for which the density will be calculated
 ##
-## mu: n x 1 vector; j-th entry is the mean of the j-th Gaussian
+## mu: vector of length n; j-th entry is the mean of the j-th Gaussian
 ##
-## sigma: scalar; common standard deviation of the Gaussians
+## sigma: numeric; common standard deviation of the Gaussians
 ## -----------------------------RETURNS-----------------------------------------
-## returns scalar density
-##
+## returns density
+## -----------------------------------------------------------------------------
 phi0_k.z <- function(z, mu, sigma){
 
   # calculate and return the density of z
@@ -43,14 +43,14 @@ phi0_k.z <- function(z, mu, sigma){
 ## function to calulate the densities of a vector of points under a mixture
 ## density of n Gaussians
 ## -----------------------------ARGUMENTS---------------------------------------
-## Z: N x 1 vector; points for which the densities will be calculated
+## Z: vector of length N; points for which the densities will be calculated
 ##
-## mu: n x 1 vector; j-th entry is the mean of the j-th Gaussian
+## mu: vector of length n; j-th entry is the mean of the j-th Gaussian
 ##
-## sigma: scalar; common standard deviation of the Gaussians
+## sigma: numeric; common standard deviation of the Gaussians
 ## -----------------------------RETURNS-----------------------------------------
-## returns N x 1 vector of densities
-##
+## returns vector of N densities
+## -----------------------------------------------------------------------------
 phi0_k <- function(Z, mu, sigma){
   return(sapply(Z, phi0_k.z, mu = mu, sigma = sigma))
 }
@@ -64,8 +64,8 @@ phi0_k <- function(Z, mu, sigma){
 ## -----------------------------ARGUMENTS---------------------------------------
 ## X: n x p matrix; data
 ## -----------------------------RETURNS-----------------------------------------
-## returns n x 1 vector of bandwidths
-##
+## returns vector of n bandwidths
+## -----------------------------------------------------------------------------
 get_bandwidths <- function(X){
 
   # get dimensions of X
@@ -106,19 +106,19 @@ get_bandwidths <- function(X){
 ## -----------------------------ARGUMENTS---------------------------------------
 ## Z: n by p' matrix; extraneous covariates
 ##
-## norm: scalar in [1, Inf]; norm to use when calculating weights
+## norm: numeric in [1, Inf]; norm to use when calculating weights
 ##
-## kde: logical scalar; if T, use 2-step KDE methodology described in (2) to
+## kde: logical; if T, use 2-step KDE methodology described in (2) to
 ## calculate individual-specific bandwidths
 ##
-## tau: n x 1 vector, entries in (0, Inf); bandwidth parameters
+## tau: vector of length n with positive entries; bandwidth parameters
 ## -----------------------------RETURNS-----------------------------------------
 ## D: n x n matrix of weights; j, i entry is the weighting of the j-th
 ## individual with respect to the i-th individual using the i-th individual's
 ## bandwidth
 ##
-## bandwidths: n x 1 vector; individual-specific bandwidths
-##
+## bandwidths: vector of length n; individual-specific bandwidths
+## -----------------------------------------------------------------------------
 get_weights <- function(Z, norm, kde, tau){
 
   # get n
@@ -167,6 +167,7 @@ get_weights <- function(Z, norm, kde, tau){
       if (!kde){
         D[i, j] <- D[j, i]
       }else{
+
         # otherwise, find the weight of i with respect to j
         D[i, j] <- stats::dnorm(diff_norm, 0, tau[j])
       }

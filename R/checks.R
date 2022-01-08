@@ -8,59 +8,61 @@
 ##
 ## Z: n x p' matrix; extraneous covariates
 ##
-## tau: scalar in (0, Inf) OR n x 1 vector, entries in (0, Inf)
+## tau: numeric in (0, Inf) OR vector of length n with entries in (0, Inf)
 ##
 ## kde: logical; if T, use 2-step KDE methodology
 ##
-## alpha: scalar in [0, 1]; global initialization value
+## alpha: numeric in [0, 1]; global initialization value
 ##
-## mu: scalar; global initialization value
+## mu: numeric; global initialization value
 ##
-## sigmasq: scalar in (0, Inf); variance hyperparameter for spike-and-slab.
+## sigmasq: positive numeric; variance hyperparameter for spike-and-slab.
 ##
-## sigmabetasq_vec: n_sigma x 1 vector, entries in (0, Inf); candidate values
+## sigmabetasq_vec: vector with entries in (0, Inf); candidate values for slab
 ##
-## var_min: scalar in (0, Inf); lower bound of sigmabetasq_vec
+## var_min: postive numeric; lower bound of sigmabetasq_vec
 ##
-## var_max: scalar in (0, Inf); upper bound of sigmabetasq_vec
+## var_max: postive numeric; upper bound of sigmabetasq_vec
 ##
-## n_sigma: scalar in {1, 2,...}
+## n_sigma: postive integer; length of sigmabetasq_vec
 ##
-## pi_vec: n_pi x 1 vector, entries in [0, 1]; candidate values of pi
+## pi_vec: vector with entries in [0, 1]; candidate values of pi
 ##
-## norm: scalar in [1, Inf]; norm to use when calculating weights
+## norm: numeric in [1, Inf]; norm to use when calculating weights
 ##
 ## scale: logical; if T, center and scale extraneous covariates
 ##
-## tolerance: scalar in (0, Inf); end the variational update loop
+## tolerance: positive numeric; end the variational update loop
 ##
-## max_iter: scalar in {1, 2,...}; end the variational update loop
+## max_iter_grid: positive integer; end the variational update loop
 ##
-## edge_threshold: scalar in (0, 1)
+## max_iter_final: positive integer; end the variational update loop
+##
+## edge_threshold: numeric in (0, 1); probability threshold for edge
 ##
 ## sym_method: character in {"mean", "max", "min"}
 ##
-## parallel: logical scalar; if `T`, parallelize variational updates
+## parallel: logical; if `T`, parallelize CAVI
 ##
-## num_workers: scalar in {1, 2,...,parallel::detectCores()}; number of workers
+## num_workers: integer in {1, 2,...,parallel::detectCores()}; number of workers
 ##
-## stop_cluster: logical scalar; if `T`, run `doParallel::stopImplicitCluster()`
+## stop_cluster: logical; if `T`, run `doParallel::stopImplicitCluster()`
 ##
-## monitor_final_elbo logical scalar; if T, monitor the final model ELBO
+## monitor_final_elbo logical; if T, monitor the final model ELBO
 ##
-## monitor_cand_elbo logical scalar; if T, monitor the non-convergent ELBO history
+## monitor_grid_elbo logical; if T, monitor the non-convergent ELBO history
 ##
-## monitor_period scalar in {1, 2,..., max_iter}; the periodicity of ELBO
-## monitoring
+## monitor_period integer; the periodicity of ELBO monitoring
 ##
 ## warnings: logical; if T, convergence and grid warnings will be displayed
 ## -----------------------------------------------------------------------------
 covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                             sigmabetasq_vec, var_min, var_max, n_sigma, pi_vec,
-                            norm, scale, tolerance, max_iter, edge_threshold,
-                            sym_method, parallel, num_workers, stop_cluster,
-                            monitor_final_elbo, monitor_cand_elbo,
-                            monitor_period, print_time, warnings){
+                            norm, scale, tolerance, max_iter_grid,
+                            max_iter_final, edge_threshold, sym_method,
+                            parallel, num_workers, stop_cluster,
+                            monitor_final_elbo, monitor_grid_elbo,
+                            monitor_period, warnings){
 
   # ensure vector input for parameters that are expected to be vectors
   args_vector <- list(tau = tau, pi_vec = pi_vec)
@@ -77,12 +79,13 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   args_scalar <- list(kde = kde, alpha = alpha, mu = mu, sigmasq = sigmasq,
                       var_min = var_min, var_max = var_max, n_sigma = n_sigma,
                       norm = norm, scale = scale, tolerance = tolerance,
-                      max_iter = max_iter, edge_threshold = edge_threshold,
-                      sym_method = sym_method, parallel = parallel,
-                      stop_cluster = stop_cluster,
+                      max_iter_grid = max_iter_grid,
+                      max_iter_final = max_iter_final,
+                      edge_threshold = edge_threshold, sym_method = sym_method,
+                      parallel = parallel, stop_cluster = stop_cluster,
                       monitor_final_elbo = monitor_final_elbo,
-                      monitor_cand_elbo = monitor_cand_elbo,
-                      monitor_period = monitor_period, print_time = print_time,
+                      monitor_grid_elbo = monitor_grid_elbo,
+                      monitor_period = monitor_period,
                       warnings = warnings)
   if (any(!(sapply(args_scalar, length) == 1))){
 
@@ -96,7 +99,9 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   args_numeric <- list(data_mat = data_mat, Z = Z, tau = tau, alpha = alpha,
                        mu = mu, sigmasq = sigmasq, var_min = var_min,
                        n_sigma = n_sigma, var_max = var_max, pi_vec = pi_vec,
-                       norm = norm, tolerance = tolerance, max_iter = max_iter,
+                       norm = norm, tolerance = tolerance,
+                       max_iter_grid = max_iter_grid,
+                       max_iter_final = max_iter_final,
                        edge_threshold = edge_threshold,
                        monitor_period = monitor_period)
   if (any(!sapply(args_numeric, is.numeric))){
@@ -112,12 +117,13 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
                      alpha = alpha, mu = mu, sigmasq = sigmasq,
                      var_min = var_min, var_max = var_max, n_sigma= n_sigma,
                      pi_vec = pi_vec, norm = norm, scale = scale,
-                     tolerance = tolerance, max_iter = max_iter,
+                     tolerance = tolerance, max_iter_grid = max_iter_grid,
+                     max_iter_final = max_iter_final,
                      edge_threshold = edge_threshold, sym_method = sym_method,
                      parallel = parallel, stop_cluster = stop_cluster,
                      monitor_final_elbo = monitor_final_elbo,
-                     monitor_cand_elbo = monitor_cand_elbo,
-                     monitor_period = monitor_period, print_time = print_time,
+                     monitor_grid_elbo = monitor_grid_elbo,
+                     monitor_period = monitor_period,
                      warnings = warnings)
   if (any(sapply(args_nonNA, function (x) any(is.na(x))))){
 
@@ -130,7 +136,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   args_finite <- list(data_mat = data_mat, Z = Z, tau = tau, mu = mu,
                       sigmasq = sigmasq, var_min = var_min, var_max = var_max,
                       n_sigma = n_sigma, tolerance = tolerance,
-                      max_iter = max_iter,
+                      max_iter_grid = max_iter_grid,
+                      max_iter_final = max_iter_final,
                       monitor_period = monitor_period)
   if (any(!sapply(args_finite, function (x) all(is.finite(x))))){
 
@@ -141,7 +148,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   }
 
   # ensure integer input for parameters that are expected to be integers
-  args_integers <- list(n_sigma = n_sigma, max_iter = max_iter,
+  args_integers <- list(n_sigma = n_sigma, max_iter_grid = max_iter_grid,
+                        max_iter_final = max_iter_final,
                         monitor_period = monitor_period)
   if (any(!(sapply(args_integers, function(x) x %% 1) == 0))){
 
@@ -154,9 +162,9 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   # ensure logical input for parameters that are expected to be logicals
   args_logical <- list(kde = kde, scale = scale,
                        monitor_final_elbo = monitor_final_elbo,
-                       monitor_cand_elbo = monitor_cand_elbo,
+                       monitor_grid_elbo = monitor_grid_elbo,
                        parallel = parallel, stop_cluster = stop_cluster,
-                       print_time = print_time, warnings = warnings)
+                       warnings = warnings)
   if (any(!sapply(args_logical, is.logical))){
 
     # get the name of the non-logical
@@ -179,7 +187,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   # ensure positive input for parameters that are expected to be positive
   args_positive <- list(tau = tau, sigmasq = sigmasq, var_min = var_min,
                         var_max = var_max, n_sigma = n_sigma,
-                        tolerance = tolerance, max_iter = max_iter,
+                        tolerance = tolerance, max_iter_grid = max_iter_grid,
+                        max_iter_final = max_iter_final,
                         edge_threshold = edge_threshold,
                         monitor_period = monitor_period)
   if (any(!sapply(args_positive, function (x) all(x > 0)))){
@@ -264,7 +273,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
     stop("norm should be greater than or equal to 1")
   }
 
-  # if scale is true, ensure that the standard deviation of is covariates is positive
+  # if scale or kde is true, ensure that the standard deviation of is covariates
+  # is positive
   if ((scale | kde) & isTRUE(all.equal(0, as.numeric(var(Z))))){
     stop("Constant Z; set `scale = F` and `kde = F`")
   }
@@ -331,9 +341,14 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
     }
   }
 
-  # ensure that monitor_period is not greater than max_iter
-  if (monitor_period > max_iter){
-    stop("monitor_period is greater than max_iter")
+  # ensure that monitor_period is not greater than max_iter_grid
+  if (monitor_period > max_iter_grid & monitor_grid_elbo){
+    stop("monitor_period is greater than max_iter_grid")
+  }
+
+  # ensure that monitor_period is not greater than max_iter_grid
+  if (monitor_period > max_iter_final & monitor_final_elbo){
+    stop("monitor_period is greater than max_iter_final")
   }
 }
 
@@ -343,27 +358,27 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
 ## -----------------------------DESCRIPTION-------------------------------------
 ## function to check compatibility of arguments to gg_adjMat
 ## -----------------------------ARGUMENTS---------------------------------------
-## out: list OR matrix; return of covdepGE function OR adjacency matrix
+## out: object of class covdepGE; return of covdepGE function OR adjacency matrix
 ##
-## l: scalar in {1, 2, ..., n}; individual index
+## l: integer in {1, 2, ..., n}; individual index
 ##
-## prob_shade: logical scalar; if T, entries will be shaded probability-wise
+## prob_shade: logical; if T, entries will be shaded probability-wise
 ##
-## color0: scalar; color for 0 entries
+## color0: color; color for 0 entries
 ##
-## color1: scalar; color for 1 entries
+## color1: color; color for 1 entries
 ##
-## grid_color: scalar; color of grid lines
+## grid_color: color; color of grid lines
 ##
 ## incl_probs: logical; display posterior inclusion probability
 ##
-## prob_prec: scalar in {1, 2, ...}; number of decimal places to round
+## prob_prec: integer in {1, 2, ...}; number of decimal places to round
 ##
-## font_size: scalar in (0, Inf); size of font if incl_probs = T
+## font_size: postive numeric; size of font if incl_probs = T
 ##
-## font_color0: scalar; color of font for 0 entries if incl_probs = T
+## font_color0: color; color of font for 0 entries if incl_probs = T
 ##
-## font_color1: scalar; color of font for 1 entries if incl_probs = T
+## font_color1: color; color of font for 1 entries if incl_probs = T
 ## -----------------------------------------------------------------------------
 adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
                           incl_probs, prob_prec, font_size, font_color0,
@@ -451,14 +466,9 @@ adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
     stop(paste0(non_positive, " should have all positive entries"))
   }
 
-  # ensure out is a list OR a matrix
-  if (!(is.list(out) | is.matrix(out))){
+  # ensure out is of class covdepGE or matrix
+  if (!(is(out, "covdepGE") | is.matrix(out))){
     stop(paste0("out is of class ", class(out)[1], "; expected list or matrix"))
-  }
-
-  # ensure out has inclusion_probs and graphs if it is a list
-  if (!(all(c("inclusion_probs", "graphs") %in% names(out))) & is.list(out)){
-    stop(paste0("out should be return of function covdepGE"))
   }
 
   # ensure out has numeric entries if it is a matrix
@@ -484,27 +494,27 @@ adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
 ## -----------------------------DESCRIPTION-------------------------------------
 ## function to check compatibility of arguments to gg_inclusionCurve
 ## -----------------------------ARGUMENTS---------------------------------------
-## out: list; return of covdepGE function
+## out: object of class covdepGE; return of covdepGE function
 ##
-## col_idx1: scalar in {1, 2, ..., p + 1}; column index of the first variable
+## col_idx1: integer in {1, 2, ..., p + 1}; column index of the first variable
 ##
-## col_idx2: scalar in {1, 2, ..., p + 1}; column index of the second variable
+## col_idx2: integer in {1, 2, ..., p + 1}; column index of the second variable
 ##
-## line_type: scalar; ggplot2 line type
+## line_type: linetype; ggplot2 line type
 ##
-## line_size: scalar in (0, Inf); thickness of the interpolating line
+## line_size: positive numeric; thickness of the interpolating line
 ##
-## line_color: scalar; color of interpolating line
+## line_color: color; color of interpolating line
 ##
-## point_shape: scalar; shape of the points
+## point_shape: shape; shape of the points
 ##
-## point_size: scalar in (0, Inf); size of probability points
+## point_size: positive numeric; size of probability points
 ##
-## point_color: scalar; color of probability points
+## point_color: color; color of probability points
 ##
-## point_fill: scalar; fill of probability points
+## point_fill: color; fill of probability points
 ##
-## sort: logical scalar; sort the subject indices for smooth inclusion curve
+## sort: logical; sort the subject indices for smooth inclusion curve
 ## -----------------------------------------------------------------------------
 inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
                                   line_color, point_shape, point_size,
@@ -585,14 +595,9 @@ inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
     stop(paste0(non_positive, " should have all positive entries"))
   }
 
-  # ensure out is a list
-  if (!is.list(out)){
-    stop(paste0("out is of class ", class(out)[1], "; expected list"))
-  }
-
-  # ensure out has inclusion_probs and graphs
-  if (!(all(c("inclusion_probs", "graphs") %in% names(out)))){
-    stop(paste0("out should be return of function covdepGE"))
+  # ensure out of class covdepGE
+  if (!is(out, "covdepGE")){
+    stop(paste0("out is of class ", class(out)[1], "; expected covdepGE"))
   }
 
   # ensure sort is a logical
@@ -611,36 +616,31 @@ inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
 }
 
 ## -----------------------------------------------------------------------------
-## -----------------------------gg_adjMats_checks-------------------------------
+## -----------------------------plot_checks-------------------------------------
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
 ## function to check compatibility of arguments to gg_adjMats
 ## -----------------------------ARGUMENTS---------------------------------------
-## out: list; return of covdepGE function.
+## out: object of class covdepGE; return of covdepGE function.
 ##
-## graph_colors: g x 1 vector; g is the number of unique graphs from out. The
-## v-th element vector is the color for the v-th unique graph
+## graph_colors: vector of length g; g is the number of unique graphs from out.
+## The v-th element is the color for the v-th unique graph
 ##
-## seed: scalar in (-Inf, Inf); when colors is NULL, the RNG seed for selecting
-## the color for each graph. 1 by default.
+## seed: numeric; when colors is NULL, the RNG seed for selecting the color for
+## each graph. 1 by default.
 ## -----------------------------------------------------------------------------
-adjMats_checks <- function(out, seed, graph_colors){
+plot_checks <- function(out, seed, graph_colors){
 
-  # ensure out is a list
-  if (!is.list(out)){
-    stop(paste0("out is of class ", class(out)[1], "; expected list"))
-  }
-
-  # ensure out has inclusion_probs and graphs
-  if (!(all(c("inclusion_probs", "graphs") %in% names(out)))){
-    stop(paste0("out should be return of function covdepGE"))
+  # ensure out is of type covdepGE
+  if (!is(out, "covdepGE")){
+    stop(paste0("out is of class ", class(out)[1], "; expected covdepGE"))
   }
 
   # if graph_colors is not null, run compatibility checks
   if(!is.null(graph_colors)){
 
     # ensure graph_colors is a vector
-    if (!is.vector(graph_colors)){
+    if (!is.atomic(graph_colors) | is.null(graph_colors)){
       stop(paste0(graph_colors, " is of class ", class(args_vector[[graph_colors]])[1],
                   "; expected vector"))
     }
