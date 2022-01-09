@@ -349,6 +349,9 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
 
     # otherwise, CAVI will be executed sequentially
 
+    # instantiate the progress bar
+    pb <- utils::txtProgressBar(1, p + 1, style = 3)
+
     # list to store each of the results from cavi_search
     res <- vector("list", p + 1)
 
@@ -366,7 +369,13 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                                        max_iter_grid, max_iter_final,
                                        monitor_final_elbo, monitor_grid_elbo,
                                        monitor_period, warnings, resp_index, CS)
+
+      # update the progress bar
+      utils::setTxtProgressBar(pb, resp_index)
     }
+
+    # close the progress bar
+    close(pb)
   }
 
   # gather the cavi_details lists, alpha_matrix matrices, and

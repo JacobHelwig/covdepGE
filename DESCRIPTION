@@ -25,6 +25,7 @@ Imports:
     varbvs,
     parallel,
     foreach,
-    doParallel
+    doParallel,
+    utils
 Suggests: 
     MASS

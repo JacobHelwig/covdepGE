@@ -5,28 +5,60 @@ output: pdf_document
 
 # Data generation
 
-```{r, fig.width = 11, fig.height = 9}
+```{r, echo = F, message = F}
 library(covdepGE)
 library(ggpubr)
 library(ggplot2)
+library(kableExtra)
 
 setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
 source("generate_data.R")
-cont <- generate_continuous()
+n1 <- n2 <- n3 <- 60
+n <- sum(n1, n2, n3)
+cont <- generate_continuous(1, n1, n2, n3)
 data_mat <- cont$data
-dim(data_mat)
 Z <- cont$covts
 
+# visualize the covariate
+cov_df <- cbind.data.frame(interval = rep(1:3, each = 60), Z, 
+                           individual_index = 1:n)
+cov_df$interval <- factor(cov_df$interval)
+ggplot(cov_df, aes(Z, fill = interval)) +
+  geom_histogram(color = "black", bins = n %/% 5) +
+  theme_classic() +
+  ggsci::scale_fill_jco() +
+  labs(title = "Distribution of Covariate")
+
+# individual index by interval
+ind_idx <- tapply(cov_df$individual_index, cov_df$interval, function(
+  indices) paste0("$", min(indices), ",\\ldots,", max(indices), "$"))
+kbl(tibble::tibble("Interval" = names(ind_idx), "Individual Indices" = ind_idx), 
+    booktabs = T, linesep = "", align = "c", escape = F) %>% kable_styling(
+      latex_options = c("striped")) %>% column_spec(1:2, width = "4.5cm")
+```
+
+```{r, fig.width = 11, fig.height = 9, echo = F}
+# visualize the precision matrices for each interval
+int1_g <- list(gg_adjMat(cont$true_precision[[1]], color1 = "forestgreen") + 
+  ggtitle("Precision matrix for individuals in interval 1"))
+int3_g <- list(gg_adjMat(cont$true_precision[[n1 + n2 + 1]], color1 = "steelblue") + 
+  ggtitle("Precision matrix for individuals in interval 3"))
+int2_g_inds <- n1 + (n2 %/% 3) * c(1, 2)
+int2_graphs <- lapply(int2_g_inds, function(indv_idx) 
+  gg_adjMat(cont$true_precision[[indv_idx]]) +
+    labs(title = paste0("Individual ", indv_idx)))
+annotate_figure(ggarrange(plotlist = c(int1_g, int2_graphs, int3_g)), 
+                top = text_grob("True Precision matrices", size = 15))
+
 # get all of the unique graphs from the data and visualize them
-true_graphs <- lapply(cont$true_precision, function(prec_mat) (prec_mat != 0) 
-                      - diag(nrow(prec_mat)))
+true_graphs <- lapply(cont$true_precision, function(prec_mat) (prec_mat != 0) - diag(nrow(prec_mat)))
 tr_gr_uq <- unique(true_graphs)
 indv_gr <- lapply(tr_gr_uq, function(unique_graph) which(sapply(
   true_graphs, function(graph) identical(graph, unique_graph))))
 indv_gr_sum <- sapply(indv_gr, function(idx_seq) paste0(min(idx_seq), ",...,", 
                                                         max(idx_seq)))
-colors <- c("steelblue", "goldenrod", "forestgreen", "tomato2", 
-            "dodgerblue", "darkorchid")
+colors <- c("steelblue", "goldenrod", "forestgreen", "tomato2", "dodgerblue", 
+            "darkorchid")
 graph_viz <- lapply(1:length(tr_gr_uq), function(gr_idx) gg_adjMat(
   tr_gr_uq[[gr_idx]], color1 = colors[gr_idx]) + 
     ggtitle(paste("Individuals", indv_gr_sum[gr_idx])))
@@ -35,9 +67,9 @@ annotate_figure(ggarrange(plotlist = graph_viz),
                                 size = 15))
 ```
 
-# Parallel Variational Updates
+# Parallel CAVI
 
-Setting `parallel = T` in a call to `covdepGE` performs the variational updates for responses in parallel to one another. Parallel backend may be registered manually by the user, but will otherwise be done automatically. This allows flexibility for the user to configure the parallelization according to their needs.
+Setting `parallel = T` in a call to `covdepGE` performs the CAVI for each variable in parallel. Parallel backend may be registered manually by the user, but will otherwise be done automatically. This allows flexibility for the user to configure the parallelization according to their needs.
 
 ## Manual parallel backend registration:
 
@@ -61,15 +93,15 @@ By setting `stop_cluster = F`, subsequent parallel calls to `covdepGE` are able 
 
 # Efficiency
 
-## Large number of candidates
+## Large hyperparameter grid 
 
-The model in the previous section was relatively simple, with only 5 candidates. In this case, the time to create the cluster, distribute the tasks, and communication from the parent to the children workers outweighs the time savings of parallelizing the updates. Thus, sequential execution is faster for this small model.
+The model in the previous section was relatively simple, with only 5 grid points. In this case, the time to create the cluster and communication from the parent to the children workers outweighs the time savings of parallelizing the CAVI. Thus, sequential execution is faster for this small model.
 
 ```{r}
 covdepGE(data_mat, Z, n_sigma = 5)
 ```
 
-However, for a more complex model, the benefits of parallelization become apparent. To increase complexity, I will increase the number of candidate models to 200. 
+However, for a more complex model, the benefits of parallelization become apparent. To increase complexity, I will increase the number of grid points to 200. 
 
 ```{r}
 # sequential
@@ -95,13 +127,12 @@ annotate_figure(ggarrange(plotlist = plot(out_par, colors)),
 
 ## Large *n*
 
-An increase in complexity can also be achieved by again choosing the number of candidate models to be 5 and increasing the sample size. Again, the parallellized updates beat the sequential updates while producing the same result. 
+An increase in complexity can also be achieved by again choosing the number of grid points to be 5 and increasing the sample size. Again, the parallellized CAVI beats the sequential CAVI while producing the same results. 
 
-```{r, fig.width = 11, fig.height = 9} 
+```{r, fig.width = 11, fig.height = 9, echo = F} 
 sz <- 200
 cont <- generate_continuous(n1 = sz, n2 = sz, n3 = sz)
 data_mat <- cont$data
-dim(data_mat)
 Z <- cont$covts
 
 # get all of the unique graphs from the data and visualize them
