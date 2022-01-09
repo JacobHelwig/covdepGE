@@ -19,40 +19,38 @@ gg_inclusionCurve(
 )
 }
 \arguments{
-\item{out}{\code{list}; return of \code{covdepGE} function}
+\item{out}{object of class \code{covdepGE}; return of \code{covdepGE} function}
 
-\item{col_idx1}{scalar in \eqn{{1, 2, ..., p + 1}}; column index of the first
-variable}
+\item{col_idx1}{integer in \eqn{{1, 2, ..., p + 1}}; column index of the
+first variable}
 
-\item{col_idx2}{scalar in \eqn{{1, 2, ..., p + 1}}; column index of the
+\item{col_idx2}{integer in \eqn{{1, 2, ..., p + 1}}; column index of the
 second variable}
 
-\item{line_type}{scalar; \code{ggplot2} line type to interpolate the
+\item{line_type}{linetype; \code{ggplot2} line type to interpolate the
 probabilities. \code{"solid"} by default}
 
-\item{line_size}{scalar in \eqn{(0, Inf)}; thickness of the interpolating
-line. \code{0.5} by default}
-
-\item{line_color}{scalar; color of interpolating line. \code{"black"} by default}
-
-\item{point_shape}{scalar; shape of the points denoting individual-specific
-inclusion probabilities; \code{21} by default}
-
-\item{point_size}{scalar in \eqn{(0, Inf)}; size of probability points. \code{1.5}
+\item{line_size}{positive numeric; thickness of the interpolating line. \code{0.5}
 by default}
 
-\item{point_color}{scalar; color of probability points. \code{"#500000"} by
+\item{line_color}{color; color of interpolating line. \code{"black"} by default}
+
+\item{point_shape}{shape; shape of the points denoting individual-specific
+inclusion probabilities; \code{21} by default}
+
+\item{point_size}{positive numeric; size of probability points. \code{1.5} by
 default}
 
-\item{point_fill}{scalar; fill of probability points. Only applies to select
+\item{point_color}{color; color of probability points. \code{"#500000"} by default}
+
+\item{point_fill}{color; fill of probability points. Only applies to select
 shapes. \code{"white"} by default}
 
-\item{sort}{logical scalar; if \code{T}, applies a piori sorting algorithm to
-re-order subject indices according to weights such for \eqn{j} in
-\eqn{1,...,n - 1}, subject \eqn{j + 1} is the most similar in terms of their
-extraneous covariate to subject \eqn{j}. Helps visualize the continuity
-with which the edge probabilities are modeled with respect to the the
-extraneous covariates}
+\item{sort}{logical; if \code{T}, applies a piori sorting algorithm to re-order
+subject indices according to weights such for \eqn{j} in \eqn{1,...,n - 1},
+subject \eqn{j + 1} is the most similar in terms of their extraneous
+covariate to subject \eqn{j}. Helps visualize the continuity with which the
+edge probabilities are modeled with respect to the the extraneous covariates}
 }
 \value{
 Returns \code{ggplot2} visualization of inclusion probability curve

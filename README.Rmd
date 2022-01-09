@@ -97,10 +97,9 @@ out <- covdepGE(
                 norm = Inf, # norm to calculate the weights
                 scale = T, # whether the extraneous covariates should be scaled
                 tolerance = 1e-15, # variational parameter exit condition 1
-                max_iter = 200, # variational parameter exit condition 2
+                max_iter_final = 200, # variational parameter exit condition 2
                 edge_threshold = 0.75, # minimum inclusion probability
                 sym_method = "min", # how to symmetrize the alpha matrices
-                print_time = T, 
                 warnings = T # whether warnings should be displayed
                 )
 
@@ -166,17 +165,11 @@ num_neg <- length(true_graph_pos) * n - num_pos
 
 -   Create a vignette demonstrating usage on a simple simulated dataset
 
--   Model details in return:
-    -   time to fit
-    -   total ELBO
-    -   candidate values
-    -   total number of candidates
-
 -   Change the `idmod` probs to logbase 10
 
--   Remove `CS` argument
+-   Handle constant covariate with `CS = T`
 
--   Option to control `max_iter` for the candidate and final models
+-   Remove `CS` argument
 
 ## Bibliography 
 

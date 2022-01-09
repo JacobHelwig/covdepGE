@@ -1,4 +1,5 @@
 #' @keywords internal
+#' @aliases covdepGE-package
 "_PACKAGE"
 
 ## usethis namespace: start

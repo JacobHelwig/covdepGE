@@ -5,12 +5,12 @@
 ## -----------------------------DESCRIPTION-------------------------------------
 #' @description Create a visualization of an adjacency matrix
 ## -----------------------------ARGUMENTS---------------------------------------
-#' @param object of class `covdepGE` OR `matrix`; return of `covdepGE` function
+#' @param out object of class `covdepGE` OR `matrix`; return of `covdepGE` function
 #' OR an adjacency matrix
 #'
 #' @param l integer in \eqn{{1, 2, ..., n}}; individual index for which the
-#' adjacency matrix will be visualized. Ignored if `out` is a
-#' `matrix`. `1` by default
+#' adjacency matrix will be visualized. Ignored if `out` is a `matrix`. `1` by
+#' default
 #'
 #' @param prob_shade logical; if `T`, then entries will be shaded according to
 #' posterior inclusion probabilities on a gradient ranging from `color0`
@@ -23,9 +23,9 @@
 #'
 #' @param grid_color color; color of grid lines. `"black"` by default
 #'
-#' @param incl_probs logical; if `T`, the posterior inclusion probability
-#' will be displayed for each entry. Ignored if `out` is a `matrix` with 2 or
-#' less unique entries. `T` by default
+#' @param incl_probs logical; if `T`, the posterior inclusion probability will
+#' be displayed for each entry. Ignored if `out` is a `matrix` with 2 or less
+#' unique entries. `T` by default
 #'
 #' @param prob_prec positive integer; number of decimal places to round
 #' probabilities to if `incl_probs = T`. Ignored if `out` is a `matrix` with 2
@@ -104,7 +104,7 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
   adjMat_checks(out, l, prob_shade, color0, color1, grid_color, incl_probs,
                 prob_prec, font_size, font_color0, font_color1)
 
-  if (prob_shade & is.list(out)){
+  if (prob_shade & class(out)[1] == "covdepGE"){
 
     # out is return of covdepGE; color the matrix using a gradient corresponding
     # to inclusion probabilities
@@ -126,11 +126,11 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
 
     vis <- (ggplot2::ggplot(long_probs, ggplot2::aes(Var1, Var2, fill = value)) +
               ggplot2::geom_tile(color = grid_color) +
-              ggplot2::scale_fill_gradient(low = color0, high = color1,
-                                           limits = c(0, 1)) +
+              ggplot2::scale_fill_gradient(
+                low = color0, high = color1, limits = c(0, 1)) +
               ggplot2::theme_classic() + ggplot2::xlab("") + ggplot2::ylab("") +
-              ggplot2::ggtitle(paste("Posterior inclusion probabilties for individual",
-                                     l)) +
+              ggplot2::ggtitle(paste(
+                "Posterior inclusion probabilties for individual", l)) +
               ggplot2::theme(legend.title = ggplot2::element_blank(),
                              plot.title = ggplot2::element_text(hjust = 0.5)) +
               ggplot2::scale_x_continuous(breaks = 1:nrow(graph)) +
@@ -138,15 +138,13 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
 
     # if probabilities are to be displayed, add them
     if (incl_probs){
-      vis <- (vis + ggplot2::geom_text(ggplot2::aes(label = round(value, prob_prec),
-                                                    color = graph), show.legend = F,
-                                       size = font_size) +
-                ggplot2::scale_color_manual(values = c(font_color0, font_color1)))
-
+      vis <- (vis + ggplot2::geom_text(ggplot2::aes(label = round(
+        value, prob_prec), color = graph), show.legend = F, size = font_size) +
+          ggplot2::scale_color_manual(values = c(font_color0, font_color1)))
     }
 
 
-  }else if (is.list(out)){
+  }else if (class(out)[1] == "covdepGE"){
 
     # out is return of covdepGE; color the matrix using a binary pallete
 
@@ -180,10 +178,9 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
 
     # if probabilities are to be displayed, add them to the graph
     if (incl_probs){
-      vis <- (vis + ggplot2::geom_text(ggplot2::aes(label = round(probs, prob_prec),
-                                                    color = value), show.legend = F,
-                                       size = font_size) +
-                ggplot2::scale_color_manual(values = c(font_color0, font_color1)))
+      vis <- (vis + ggplot2::geom_text(ggplot2::aes(label = round(
+        probs, prob_prec), color = value), show.legend = F, size = font_size) +
+          ggplot2::scale_color_manual(values = c(font_color0, font_color1)))
     }
 
 
@@ -206,8 +203,8 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
       # if probabilities are to be displayed, add an indicator to edges for the
       # squares that will be darker
       if (incl_probs){
-        long_graph$graph <- ifelse(long_graph$value >
-                                     mean(setdiff(long_graph$value, 0)), 1, 0)
+        long_graph$graph <- ifelse(long_graph$value > mean(setdiff(
+          long_graph$value, 0)), 1, 0)
         long_graph$graph <- as.factor(long_graph$graph)
       }
 
@@ -223,10 +220,9 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
 
       # if probabilities are to be displayed, add them
       if (incl_probs){
-        vis <- (vis + ggplot2::geom_text(ggplot2::aes(label = round(value, prob_prec),
-                                                      color = graph),
-                                         show.legend = F, size = font_size) +
-                  ggplot2::scale_color_manual(values = c(font_color0, font_color1)))
+        vis <- (vis + ggplot2::geom_text(ggplot2::aes(label = round(
+          value, prob_prec), color = graph), show.legend = F, size = font_size) +
+            ggplot2::scale_color_manual(values = c(font_color0, font_color1)))
       }
     }else{
 
@@ -248,12 +244,12 @@ gg_adjMat <- function(out, l = 1, prob_shade = T, color0 = "white",
 
     # check to see if there are col names or row names to be added
     if (!is.null(colnames)){
-      vis <- suppressMessages(vis + ggplot2::scale_x_continuous(breaks = 1:nrow(out),
-                                                                labels = colnames))
+      vis <- suppressMessages(vis + ggplot2::scale_x_continuous(
+        breaks = 1:nrow(out), labels = colnames))
     }
     if (!is.null(rownames)){
-      vis <- suppressMessages(vis + ggplot2::scale_y_continuous(breaks = 1:nrow(out),
-                                                                labels = rownames))
+      vis <- suppressMessages(vis + ggplot2::scale_y_continuous(
+        breaks = 1:nrow(out), labels = rownames))
     }
   }
 
@@ -377,13 +373,14 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
     indv_sorted <- c(1, rep(NA, nrow(out$weights) - 1))
 
     for (l in 2:nrow(out$weights)){
+
       # get the index of the last individual that was added to ind_sorted
       last_indv_idx <- indv_sorted[l - 1]
 
       # find the individual whose weight is largest with respect to the last
       # individual, excluding those who are already in indv_sorted
-      next_indv_idx <- setdiff(order(out$weights[ , last_indv_idx], decreasing = T),
-                               indv_sorted)[1]
+      next_indv_idx <- setdiff(order(
+        out$weights[ , last_indv_idx], decreasing = T), indv_sorted)[1]
 
       # add this individual to the sorted list
       indv_sorted[l] <- next_indv_idx
@@ -410,15 +407,15 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
   prob1_2 <- data.frame(idx = 1:length(prob1_2), prob = prob1_2)
 
   vis <- (ggplot2::ggplot(prob1_2, ggplot2::aes(idx, prob)) +
-            ggplot2::geom_line(linetype = line_type, size = line_size,
-                               color = line_color) +
+            ggplot2::geom_line(
+              linetype = line_type, size = line_size, color = line_color) +
             ggplot2::geom_point(shape = point_shape, size = point_size,
                                 color = point_color, fill = point_fill) +
             ggplot2::xlab("Subject index") +
             ggplot2::ylab("Posterior Inclusion Probability") +
-            ggplot2::ggtitle(latex2exp::TeX(
-              paste("Inclusion probability of an edge between $x_",
-                    col_idx1, "$ and $x_", col_idx2, "$"))) +
+            ggplot2::ggtitle(latex2exp::TeX(paste(
+              "Inclusion probability of an edge between $x_", col_idx1,
+              "$ and $x_", col_idx2, "$"))) +
             ggplot2::theme_bw() +
             ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5)) +
             ggplot2::ylim(c(0, 1)))
@@ -434,13 +431,14 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 #' @description Given the return value of covdepGE function, create a list of
 #'  visualizations of the adjacency matrix for each of the unique graphs
 ## -----------------------------ARGUMENTS---------------------------------------
-#' @param out object of class covdepGE; return of `covdepGE` function
+#' @param x object of class covdepGE; return of `covdepGE` function
 #'
-#' @param graph_colors: vector of length g; g is the number of unique graphs
-#' from out. The v-th element vector is the color for the v-th unique graph
+#' @param graph_colors vector of length g; g is the number of unique graphs
+#' from out. The v-th element is the color for the v-th unique graph. Default is
+#' NULL, which results in
+#' `graph_colors <- rep("#500000", length(out$unique_graphs))`
 #'
-#' @param seed numeric; when colors is NULL, the RNG seed for selecting the
-#' color for each graph. 1 by default.
+#' @param ... additional arguments will be ignored
 ## -----------------------------RETURNS-----------------------------------------
 #' @return Returns list of `ggplot2` visualizations of unique graph adjacency
 #' matrices
@@ -489,22 +487,21 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 #' gg_inclusionCurve(out, 1, 2)
 #' gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
 ## -----------------------------------------------------------------------------
-plot.covdepGE <- function(out, graph_colors = NULL, seed = 1){
+plot.covdepGE <- function(x, graph_colors = NULL, ...){
 
   # compatibility checks
-  plot_checks(out, seed, graph_colors)
+  plot_checks(x, graph_colors)
 
-  # if no colors have been provided, select some randomly
+  # if no colors have been provided, set to default
   if(is.null(graph_colors)){
-    set.seed(seed)
-    graph_colors <- colors()[sample(1:length(colors()), length(out$unique_graphs))]
+    graph_colors <- rep("#500000", length(x$unique_graphs))
   }
 
   # get the summary of individuals corresponding to each graph
-  indv_sum <- sapply(out$unique_graphs, `[[`, "individuals_summary")
+  indv_sum <- sapply(x$unique_graphs, `[[`, "individuals_summary")
 
   # get the unique graphs
-  unique_graphs <- lapply(out$unique_graphs, `[[`,"graph")
+  unique_graphs <- lapply(x$unique_graphs, `[[`,"graph")
 
   # create a visualization for each graph and store it in a list
   graph_viz <- lapply(1:length(unique_graphs), function(gr_idx) gg_adjMat(

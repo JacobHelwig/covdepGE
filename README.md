@@ -146,38 +146,38 @@ out <- covdepGE(
                 norm = Inf, # norm to calculate the weights
                 scale = T, # whether the extraneous covariates should be scaled
                 tolerance = 1e-15, # variational parameter exit condition 1
-                max_iter = 200, # variational parameter exit condition 2
+                max_iter_final = 200, # variational parameter exit condition 2
                 edge_threshold = 0.75, # minimum inclusion probability
                 sym_method = "min", # how to symmetrize the alpha matrices
-                print_time = T, 
                 warnings = T # whether warnings should be displayed
                 )
 ```
 
-    ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : Response 1: 3/50 candidate models did not converge in 200 iterations
+    ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min
+    ## = 1e-04, : Variable 1: CAVI did not converge in 200 iterations for 3/50 grid
+    ## search candidates
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : Response 2: 17/50 candidate models did not converge in 200 iterations
+    ## 1e-04, : Variable 2: CAVI did not converge in 200 iterations for 17/50 grid
+    ## search candidates
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : Response 2: final model did not converge in 200 iterations
+    ## 1e-04, : Variable 2: final CAVI did not converge in 200 iterations
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : Response 3: 17/50 candidate models did not converge in 200 iterations
+    ## 1e-04, : Variable 3: CAVI did not converge in 200 iterations for 17/50 grid
+    ## search candidates
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : Response 3: final model did not converge in 200 iterations
+    ## 1e-04, : Variable 3: final CAVI did not converge in 200 iterations
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : For 1/5 responses, the selected value of sigmabeta_sq was on the grid
-    ## boundary. See return value VB_details
+    ## 1e-04, : For 1/5 variables, the selected value of sigmabeta_sq was on the grid
+    ## boundary. See return value CAVI_details
 
     ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : For 5/5 responses, the selected value of pi was on the grid boundary.
-    ## See return value VB_details
-
-    ## Time difference of 4.804732 secs
+    ## 1e-04, : For 5/5 variables, the selected value of pi was on the grid boundary.
+    ## See return value cavi_details
 
 ``` r
 # grid search results
@@ -282,9 +282,9 @@ num_neg <- length(true_graph_pos) * n - num_pos
 
 -   Create a vignette demonstrating usage on a simple simulated dataset
 
--   Model details in return
-
 -   Change the `idmod` probs to logbase 10
+
+-   Handle constant covariate with `CS = T`
 
 -   Remove `CS` argument
 

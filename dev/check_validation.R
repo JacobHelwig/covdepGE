@@ -199,8 +199,7 @@ out_indep <- covdepGE(data_mat,
                       kde = F
 )
 
-out_indep$CAVI_details
-unique(out_indep$alpha_matrices)
+out_indep
 
 ## -----------------------------------------------------------------------------
 ## -----------------------------covdepGE----------------------------------------
@@ -419,7 +418,7 @@ covdepGE(data_mat, Z, pi_vec = c(Inf, 2))
 covdepGE(data_mat, Z, pi_vec = c(-0.5, 0.5))
 
 # non-numeric
-covdepGE(data_mat, Z, pi_vec = c(F, 0.5)) # bug; fix 0 prior and NA issues
+covdepGE(data_mat, Z, pi_vec = c("F", 0.5))
 
 # non-numeric scalar
 covdepGE(data_mat, Z, pi_vec = F)
@@ -492,16 +491,16 @@ covdepGE(data_mat, Z, max_iter_grid = matrix(rep(4, 4), 2))
 ## -----------------------------max_iter_final-----------------------------------
 
 # NA
-covdepGE(data_mat, Z, max_iter_final = NA)
+covdepGE(data_mat, Z, max_iter_final = NA, max_iter_grid = 1)
 
 # Inf
-covdepGE(data_mat, Z, max_iter_final = Inf)
+covdepGE(data_mat, Z, max_iter_final = Inf, max_iter_grid = 1)
 
 # negative
-covdepGE(data_mat, Z, max_iter_final = -1)
+covdepGE(data_mat, Z, max_iter_final = -1, max_iter_grid = 1)
 
 # non-integer
-covdepGE(data_mat, Z, max_iter_final = 1.5)
+covdepGE(data_mat, Z, max_iter_final = 1.5, max_iter_grid = 1)
 
 # non-scalar
 covdepGE(data_mat, Z, max_iter_final = c(1, 2))
@@ -605,19 +604,19 @@ covdepGE(data_mat, Z, monitor_final_elbo = c(T, F))
 # bool matrix
 covdepGE(data_mat, Z, monitor_final_elbo = matrix(c(T, F)))
 
-## -----------------------------monitor_cand_elbo-------------------------------
+## -----------------------------monitor_grid_elbo-------------------------------
 
 # NA
-covdepGE(data_mat, Z, monitor_cand_elbo = NA)
+covdepGE(data_mat, Z, monitor_grid_elbo = NA)
 
 # non-logical
-covdepGE(data_mat, Z, monitor_cand_elbo = 4)
+covdepGE(data_mat, Z, monitor_grid_elbo = 4)
 
 # bool vect
-covdepGE(data_mat, Z, monitor_cand_elbo = c(T, F))
+covdepGE(data_mat, Z, monitor_grid_elbo = c(T, F))
 
 # bool matrix
-covdepGE(data_mat, Z, monitor_cand_elbo = matrix(c(T, F)))
+covdepGE(data_mat, Z, monitor_grid_elbo = matrix(c(T, F)))
 
 ## -----------------------------monitor_period----------------------------------
 
@@ -640,18 +639,7 @@ covdepGE(data_mat, Z, monitor_period = c(1, 2))
 covdepGE(data_mat, Z, monitor_period = matrix(rep(4, 4), 2))
 
 # greater than max_iter
-covdepGE(data_mat, Z, monitor_period = 1e7)
-
-## -----------------------------print_time--------------------------------------
-
-# NA
-covdepGE(data_mat, Z, print_time = NA)
-
-# non-logical
-covdepGE(data_mat, Z, print_time = 10)
-
-# logicial vector
-covdepGE(data_mat, Z, print_time = c(T, F))
+covdepGE(data_mat, Z, monitor_period = 1e7, monitor_final_elbo = T)
 
 ## -----------------------------warnings----------------------------------------
 
@@ -675,9 +663,6 @@ gg_adjMat(out, 1)
 
 # non-list/ matrix
 gg_adjMat(7, 1)
-
-# list without proper values
-gg_adjMat(list(7), 1)
 
 # matrix with non-numerics
 gg_adjMat(matrix(sample(letters, 25), 5))
@@ -843,11 +828,8 @@ gg_inclusionCurve(out, 1, 2)
 
 ## -----------------------------out---------------------------------------------
 
-# non-list
+# wrong type
 gg_inclusionCurve(7, 1, 2)
-
-# list without proper values
-gg_inclusionCurve(list(7), 1, 2)
 
 ## -----------------------------col_idx1----------------------------------------
 
@@ -993,47 +975,42 @@ gg_inclusionCurve(out, 1, 2, sort = 5.1)
 gg_inclusionCurve(out, 1, 2, sort = c(T, T))
 
 ## -----------------------------------------------------------------------------
-## -----------------------------gg_adjMats--------------------------------------
+## -----------------------------plot--------------------------------------------
 ## -----------------------------------------------------------------------------
 
 out <- covdepGE(data_mat, Z)
-gg_adjMats(out)
+plot(out)
 
 ## -----------------------------out---------------------------------------------
 
-# non-list
-gg_adjMats(7)
-
-# list without proper values
-gg_adjMats(list(7), 1, 2)
+# non-covdepGE
+plot.covdepGE(7)
 
 ## -----------------------------graph_colors------------------------------------
 
 # NA
-gg_adjMats(out, rep(NA, 4))
+plot(out, rep(NA, 4))
 
 # Inf
-gg_adjMats(out, rep(Inf, 4))
+plot(out, rep(Inf, 4))
 
 # non-color
-gg_adjMats(out, rep("here", 4))
+plot(out, rep("here", 4))
 
 # too short vector of colors
-gg_adjMats(out, c("red", "blue"))
+plot(out, c("red", "blue"))
 
 
 ## -----------------------------seed--------------------------------------------
 
 # NA
-gg_adjMats(out, seed = NA)
+plot(out, seed = NA)
 
 # Inf
-gg_adjMats(out, seed = Inf)
+plot(out, seed = Inf)
 
 # vector
-gg_adjMats(out, seed = c(5, 5))
+plot(out, seed = c(5, 5))
 
 # non-numeric
-gg_adjMats(out, seed = matrix(c(1, "here")))
-
-
+plot(out, seed = matrix(c(1, "here")))

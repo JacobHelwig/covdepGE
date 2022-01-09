@@ -48,14 +48,13 @@ doParallel::registerDoParallel(5)
 Sys.time() - start
 
 # run covdepGE in parallel
-out <- covdepGE(data_mat, Z, print_time = T, parallel = T, n_sigma = 5)
+covdepGE(data_mat, Z, parallel = T, n_sigma = 5)
 ```
 
 ## Automatic parallel backend registration
 
 ```{r}
-out <- covdepGE(data_mat, Z, print_time = T, parallel = T, num_workers = 7, 
-                stop_cluster = F, n_sigma = 5)
+covdepGE(data_mat, Z, parallel = T, num_workers = 7, stop_cluster = F, n_sigma = 5)
 ```
 
 By setting `stop_cluster = F`, subsequent parallel calls to `covdepGE` are able to employ the same workers. This avoids the overhead of creating a new cluster.
@@ -67,18 +66,20 @@ By setting `stop_cluster = F`, subsequent parallel calls to `covdepGE` are able 
 The model in the previous section was relatively simple, with only 5 candidates. In this case, the time to create the cluster, distribute the tasks, and communication from the parent to the children workers outweighs the time savings of parallelizing the updates. Thus, sequential execution is faster for this small model.
 
 ```{r}
-out <- covdepGE(data_mat, Z, print_time = T, n_sigma = 5)
+covdepGE(data_mat, Z, n_sigma = 5)
 ```
 
 However, for a more complex model, the benefits of parallelization become apparent. To increase complexity, I will increase the number of candidate models to 200. 
 
 ```{r}
 # sequential
-out_seq <- covdepGE(data_mat, Z, print_time = T, n_sigma = 200)
+out_seq <- covdepGE(data_mat, Z, n_sigma = 200)
+out_seq
 
 # parallel
-out_par <- covdepGE(data_mat, Z, print_time = T, n_sigma = 200, parallel = T, 
+out_par <- covdepGE(data_mat, Z, n_sigma = 200, parallel = T, 
                     num_workers = 6)
+out_par
 ```
 
 The parallel model outperforms the sequential - additionally, the models produce identical results.
@@ -86,14 +87,10 @@ The parallel model outperforms the sequential - additionally, the models produce
 Note the message displayed by the parallel model - it has detected that there are workers on an active cluster from the parallel model with `stop_cluster = F` above. It ignores the `num_workers` argument and re-uses the detected cluster. 
 
 ```{r, fig.width = 11, fig.height = 9}
-identical(out_par, out_seq)
-
-annotate_figure(ggarrange(plotlist = gg_adjMats(out_seq, colors)), 
-                top = text_grob("Unique Graphs, Sequential Execution", 
-                                size = 15))
-annotate_figure(ggarrange(plotlist = gg_adjMats(out_par, colors)), 
-                top = text_grob("Unique Graphs, Parallel Execution", 
-                                size = 15))
+annotate_figure(ggarrange(plotlist = plot(out_seq, graph_colors = colors)), 
+                top = text_grob("Unique Graphs, Sequential Execution", size = 15))
+annotate_figure(ggarrange(plotlist = plot(out_par, colors)), 
+                top = text_grob("Unique Graphs, Parallel Execution", size = 15))
 ```
 
 ## Large *n*
@@ -127,18 +124,15 @@ Note that since the last parallel call to `covdepGE` did not specify `stop_clust
 
 ```{r, fig.width = 11, fig.height = 7}
 # sequential
-out_seq <- covdepGE(data_mat, Z, print_time = T, n_sigma = 5)
+out_seq <- covdepGE(data_mat, Z, n_sigma = 5)
+out_seq
 
 # parallel
-out_par <- covdepGE(data_mat, Z, print_time = T, n_sigma = 5, parallel = T, 
-                    num_workers = 8)
+out_par <- covdepGE(data_mat, Z, n_sigma = 5, parallel = T, num_workers = 8)
+out_par
 
-identical(out_par, out_seq)
-
-annotate_figure(ggarrange(plotlist = gg_adjMats(out_seq, colors)), 
-                top = text_grob("Unique Graphs, Sequential Execution", 
-                                size = 15))
-annotate_figure(ggarrange(plotlist = gg_adjMats(out_par, colors)), 
-                top = text_grob("Unique Graphs, Parallel Execution", 
-                                size = 15))
+annotate_figure(ggarrange(plotlist = plot(out_seq, colors)), 
+                top = text_grob("Unique Graphs, Sequential Execution", size = 15))
+annotate_figure(ggarrange(plotlist = plot(out_par, colors)), 
+                top = text_grob("Unique Graphs, Parallel Execution", size = 15))
 ```

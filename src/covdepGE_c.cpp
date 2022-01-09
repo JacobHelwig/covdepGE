@@ -13,9 +13,9 @@ using namespace Rcpp;
 // D: n x 1 vector; weights (i-th entry is the weight of the i-th
 // individual with respect to the l-th individual using the l-th individual's
 // bandwidth)
-// X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
-// S_sq, mu, alpha: p x 1 vectors; variational parameters. the k-th
-// entry is the k-th parameter for the l-th individual
+// X_mat: n x p matrix; data_mat with the j-th column removed
+// S_sq, mu, alpha: p x 1 vectors; variational parameters. the k-th entry is the
+// k-th parameter for the l-th individual
 // sigmasq, sigmabeta_sq: double; spike and slab variance hyperparameters
 // pi_est: double; spike and slab probability of inclusion
 // -----------------------------RETURNS-----------------------------------------
@@ -36,9 +36,8 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
 
   // calculate each of the terms that sum to ELBO
   double t1 = -sum(D % y_Xmualpha_sq) / (2 * sigmasq);
-  double t2 = (-sum(D % (arma::pow(X_mat, 2) *
-               (alpha % (mu_sq + S_sq) - arma::pow(alpha, 2) % mu_sq))) /
-                 (2 * sigmasq));
+  double t2 = (-sum(D % (arma::pow(X_mat, 2) * (alpha % (mu_sq + S_sq) -
+               arma::pow(alpha, 2) % mu_sq))) /(2 * sigmasq));
   double t3 = sum(alpha % (1 + arma::log(S_sq))) / 2;
   double t4 = (-sum(alpha % arma::log((alpha + 0.000001) / pi_est) +
                (1 - alpha) % log((1 - alpha + 0.000001) / (1 - pi_est))));
@@ -59,8 +58,8 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
 // y: n x 1 vector; responses (j-th column of the data)
 // D: n x n matrix; weights (k,l entry is the weight of the k-th individual
 // with respect to the l-th individual using the l-th individual's bandwidth)
-// X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
-// S_sq, mu, alpha: n x (p - 1) matrices; variational parameters. the l, k
+// X_mat: n x p matrix; data_mat with the j-th column removed
+// S_sq, mu, alpha: n x p matrices; variational parameters. the l, k
 // entry is the k-th parameter for the l-th individual
 // sigmasq, sigmabeta_sq: doubles; spike and slab variance hyperparameters
 // pi_est: double; spike and slab probability of inclusion
@@ -101,9 +100,9 @@ double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
 // y: n x 1 vector; responses (j-th column of the data)
 // D: n x n matrix; weights (k,l entry is the weight of the k-th individual
 // with respect to the l-th individual using the l-th individual's bandwidth)
-// X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
-// S_sq, mu, alpha: n x (p - 1) matrices; variational parameters. the l, k
-// entry is the k-th parameter for the l-th individual
+// X_mat: n x p matrix; data_mat with the j-th column removed
+// S_sq, mu, alpha: n x p matrices; variational parameters. the l, k entry is
+// the k-th parameter for the l-th individual
 // sigmasq: double; spike and slab variance hyperparameter
 // -----------------------------------------------------------------------------
 void mu_update_c (const arma::colvec& y, const arma::mat& D,
@@ -153,10 +152,10 @@ void mu_update_c (const arma::colvec& y, const arma::mat& D,
 // -----------------------------DESCRIPTION-------------------------------------
 // for a fixed response, update alpha matrix
 // -----------------------------ARGUMENTS---------------------------------------
-// mu_mat, alpha_mat: n x (p - 1) matrices; variational parameters. the l, k
-// entry is the k-th parameter for the l-th individual
-// alpha_logit_term 1, 2, 3: double (1), n x (p - 1) matrices (2, 3): terms
-// used to calculate the logit of alpha
+// mu_mat, alpha_mat: n x p matrices; variational parameters. the l, k entry is
+// the k-th parameter for the l-th individual
+// alpha_logit_term 1, 2, 3: double (1), n x p matrices (2, 3): terms used to
+// calculate the logit of alpha
 // upper_limit: double; during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1; this avoids issues
 // with exponentiation of large numbers creating Infinity divided by Infinity
@@ -186,30 +185,29 @@ void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
 }
 
 // -----------------------------------------------------------------------------
-// -----------------------------cov_vsvb_c--------------------------------------
+// -----------------------------cavi_c------------------------------------------
 // -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
-// The core function that calculates the variational parameter updates and
-// returns the final variational estimates of a single regression for each of
-// the n individuals
+// The core function that performs CAVI to calculate and return the final
+// variational estimates of a single regression for each of the n individuals
 // -----------------------------ARGUMENTS---------------------------------------
 // y: n x 1 vector; responses (j-th column of the data)
 // D: n x n matrix; weights (k,l entry is the weight of the k-th individual
 // with respect to the l-th individual using the l-th individual's bandwidth)
-// X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
-// mu_mat, alpha_mat: n x (p - 1) matrices; variational parameters. the l, k
-// entry is the k-th parameter for the l-th individual
+// X_mat: n x p matrix; data_mat with the j-th column removed
+// mu_mat, alpha_mat: n x p matrices; variational parameters. the l, k entry is
+// the k-th parameter for the l-th individual
 // sigmasq, sigmabeta_sq: doubles; spike and slab variance hyperparameters
 // pi_est: double; spike and slab probability of inclusion
 // tolerance: double; when the square root of the sum of squared changes in
 // the elements of alpha are within tolerance, stop iterating
-// max_iter: double; maximum number of iterations
+// max_iter: integer; maximum number of iterations
 // monitor_elbo: bool; if true, elbo will be tracked and returned
 // monitor_period: double; dictates the periodicity of the elbo recording
 // upper_limit: double; during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1
 // -----------------------------RETURNS-----------------------------------------
-// var_alpha: n x (p - 1) matrix; final alpha values
+// var_alpha: n x p matrix; final alpha values
 // var_ELB: double; final value of ELBO summed across all individuals
 // converged_iter: integer; number of iterations to reach convergence
 // elbo_history: 2 x d matrix OR 0 x 0 matrix; if monitor_elbo is false, 0 x 0
@@ -218,12 +216,12 @@ void alpha_update_c(const arma::mat& mu, arma::mat& alpha,
 // which the ELBO was recorded, and the second row is the ELBO measurements
 // -----------------------------------------------------------------------------
 //[[Rcpp::export]]
-Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
-                      const arma::mat& X_mat, const arma::mat& mu_mat,
-                      const arma::mat& alpha_mat, double sigmasq,
-                      double sigmabeta_sq, double pi_est, double tolerance,
-                      int max_iter, bool monitor_elbo, int monitor_period,
-                      double upper_limit = 9) {
+Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
+                  const arma::mat& X_mat, const arma::mat& mu_mat,
+                  const arma::mat& alpha_mat, double sigmasq,
+                  double sigmabeta_sq, double pi_est, double tolerance,
+                  int max_iter, bool monitor_elbo, int monitor_period,
+                  double upper_limit = 9) {
 
   // instantiate matrices for updated variational parameters with starting
   // values dictated by the matrices passed as arguments
@@ -253,14 +251,16 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
   }
 
   // S_sq update
-  arma::mat S_sq = (sigmasq * arma::pow(arma::pow(X_mat, 2).t() * D + 1 / sigmabeta_sq, -1)).t();
+  arma::mat S_sq = (sigmasq * arma::pow(arma::pow(X_mat, 2).t() *
+    D + 1 / sigmabeta_sq, -1)).t();
 
   // 1st and 3rd term of the alpha update, denominator of the second term
   double alpha_logit_term1 = log(pi_est / (1 - pi_est));
-  arma::mat alpha_logit_term3 = arma::log(arma::sqrt(S_sq / (sigmasq * sigmabeta_sq)));
+  arma::mat alpha_logit_term3 = arma::log(arma::sqrt(S_sq /
+    (sigmasq * sigmabeta_sq)));
   arma::mat alpha_logit_term2_denom = 2 * S_sq;
 
-  // loop to optimize variational parameters
+  // CAVI loop (optimize variational parameters)
   for (int k = 0; k < max_iter; k++){
 
     // mu update
@@ -270,7 +270,8 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 
     // save the last value of alpha and update it
     alpha_last = alpha;
-    alpha_update_c(mu, alpha, alpha_logit_term1, alpha_logit_term2_denom, alpha_logit_term3);
+    alpha_update_c(mu, alpha, alpha_logit_term1, alpha_logit_term2_denom,
+                   alpha_logit_term3);
 
     // if the iteration aligns with the monitor period, record the elbo
     if ((k % monitor_period == 0) & monitor_elbo){
@@ -290,14 +291,16 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
   }
 
   // calculate ELBO across n individuals
-  double ELBO = total_ELBO_c(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est);
+  double ELBO = total_ELBO_c(y, D, X_mat, S_sq, mu, alpha, sigmasq,
+                             sigmabeta_sq, pi_est);
 
   // if ELBO is being tracked, remove the excess columns from elbo_history, and
   // record the ELBO value at the last iteration if it is not already recorded
   if (monitor_elbo){
 
     // remove excess entries
-    elbo_history = elbo_history.cols(arma::find(elbo_history.row(0) <= converged_iter));
+    elbo_history = elbo_history.cols(arma::find(elbo_history.row(0) <=
+      converged_iter));
 
     // assess whether the elbo value at the last iteration is in elbo_history
     if((converged_iter - 1) % monitor_period != 0){
@@ -321,25 +324,24 @@ Rcpp::List cov_vsvb_c(const arma::colvec& y, const arma::mat& D,
 // -----------------------------grid_search_c-----------------------------------
 // -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
-// for a fixed response, find the graph for each individual across a grid
-// of sigmabeta_sq an pi values to choose the pair of sigmabeta_sq, pi that
-// maximize the ELBO
+// for a fixed response, run CAVI for each individual across a grid of
+// sigmabeta_sq and pi values and return the ELBO for each of the grid points
 // -----------------------------ARGUMENTS---------------------------------------
 // y: n x 1 vector; responses (j-th column of the data)
 // D: n x n matrix; weights (k,l entry is the weight of the k-th individual
 // with respect to the l-th individual using the l-th individual's bandwidth)
-// X_mat: n x (p - 1) matrix; data_mat with the j-th column removed
-// mu_mat, alpha_mat: n x (p - 1); matrices of variational parameters. the l, k
-// entry is the k-th parameter for the l-th individual
+// X_mat: n x p matrix; data_mat with the j-th column removed
+// mu_mat, alpha_mat: n x p; matrices of variational parameters. the l, k entry
+// is the k-th parameter for the l-th individual
 // sigmasq: double; spike and slab variance hyperparameter
 // sigmabeta_sq_vec: n_sigma x 1 vector; spike-and-slab hyperparameter
 // candidates
 // pi_vec: n_pi x 1 vector; candidate spike and slab probabilities of inclusion
 // tolerance: double; when the square root of the sum of squared changes in
 // the elements of alpha are within tolerance, stop iterating
-// max_iter: double; maximum number of iterations
+// max_iter: integer; maximum number of iterations
 // monitor_elbo: bool; if true, elbo will be tracked and returned
-// monitor_period: double; dictates the periodicity of the elbo recording
+// monitor_period: integer; dictates the periodicity of the elbo recording
 // upper_limit: double, during the alpha update, values of logit(alpha) greater
 // than upper_limit will be assigned a probability of 1
 // -----------------------------RETURNS-----------------------------------------
@@ -360,20 +362,19 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
   // get the number of pi's that are being considered
   int n_pi = pi_vec.n_elem;
 
-  // instantiate a matrix for storing the ELBO corresponding to each
-  // sigma, pi pair
+  // instantiate a matrix for storing the ELBO corresponding to each grid point
   arma::mat elbo_sigmaXpi(n_sigma, n_pi, arma::fill::zeros);
 
-  // instantiate a list to store the result of cov_vsvb_c
+  // instantiate a list to store the result of cavi_c
   Rcpp::List out;
 
   // double to store the ELBO of the estimated graphs
   double elbo_graph;
 
-  // integer to store the number of iterations it took for cov_vsvb_c to converge
+  // integer to store the number of iterations it took for cavi_c to converge
   int converged_iter;
 
-  // count the number of graphs for which convergence was attained
+  // count the number of grid points for which convergence was attained
   int converged_ct = 0;
 
   // instantiate a matrix for storing pi, sigmabeta_sq values that result in
@@ -390,13 +391,13 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
   for (int j = 0; j < n_sigma; j++){
     for (int k = 0; k < n_pi; k++){
 
-      // get the ELBO and convergence status for cov_vsvb_c
-      out = cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq,
-                       sigmabeta_sq_vec(j), pi_vec(k), tolerance,
-                       max_iter, monitor_elbo, monitor_period, upper_limit);
+      // get the ELBO and convergence status for cavi_c
+      out = cavi_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq_vec(j),
+                   pi_vec(k), tolerance, max_iter, monitor_elbo, monitor_period,
+                   upper_limit);
       elbo_graph = out["var_elbo"];
 
-      // if cov_vsvb_c has converged, increment the convergence count
+      // if cavi_c has converged, increment the convergence count
       converged_iter = out["converged_iter"];
       if (converged_iter != max_iter){
         converged_ct++;
@@ -405,6 +406,7 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
 
         // otherwise, convergence was not attained; add the sigabeta_sq and pi
         // values to non_converged_pairs
+
         // first, check to see if non_converged_pairs has any entries
         if (non_converged_pairs.n_elem == 0){
 
@@ -422,14 +424,15 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
 
           // otherwise, non_converged_pairs already has some entries; add the
           // latest non-converged pair as the last row
-          non_converged_pairs = arma::join_cols(non_converged_pairs,
-                                                (arma::rowvec){sigmabeta_sq_vec(j), pi_vec(k)});
+          non_converged_pairs = arma::join_cols(
+            non_converged_pairs, (arma::rowvec){sigmabeta_sq_vec(j), pi_vec(k)});
 
           // if elbo is being tracked, then the latest elbo history should be
           // added as the last row of non_converged_elbo
           if (monitor_elbo){
             nc_elbo_new_row = (as<arma::mat>(out["elbo_history"])).row(1);
-            non_converged_elbo = arma::join_cols(non_converged_elbo, nc_elbo_new_row);
+            non_converged_elbo = arma::join_cols(non_converged_elbo,
+                                                 nc_elbo_new_row);
           }
         }
       }
@@ -441,6 +444,8 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
 
   return (Rcpp::List::create(Rcpp::Named("elbo_grid") = elbo_sigmaXpi,
                             Rcpp::Named("num_converged") = converged_ct,
-                            Rcpp::Named("non_converged_pairs") = non_converged_pairs,
-                            Rcpp::Named("non_converged_elbo") = non_converged_elbo));
+                            Rcpp::Named("non_converged_pairs") =
+                              non_converged_pairs,
+                            Rcpp::Named("non_converged_elbo") =
+                              non_converged_elbo));
 }

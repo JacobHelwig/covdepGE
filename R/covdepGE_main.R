@@ -1,5 +1,6 @@
 ## -----------------------------------------------------------------------------
 #' @title covdepGE: Covariate Dependent Graph Estimation
+#' @aliases covdepGE-method
 #' @export
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
@@ -12,17 +13,16 @@
 #'
 #' @param Z \eqn{n} x \eqn{p'} matrix; extraneous covariates
 #'
-#' @param tau numeric in \eqn{(0, Inf)} OR numeric vector of length \eqn{n} with
-#' entries in \eqn{(0, Inf)}; bandwidth parameter. Greater values allow for more
-#' information to be shared between individuals. Allows for global or
-#' individual-specific specification. If `kde = T`, this argument is ignored.
-#' `0.1` by default
+#' @param tau positive numeric OR numeric vector of length \eqn{n} with positive
+#' entries; bandwidth parameter. Greater values allow for more information to be
+#' shared between individuals. Allows for global or individual-specific
+#' specification. If `kde = T`, this argument is ignored. `0.1` by default
 #'
 #' @param kde logical; if `T`, use 2-step KDE methodology as described in
 #' (2) to calculate individual-specific bandwidths in place of global bandwidth
-#' parameter `tau.` `T` by default
+#' parameter `tau`. `T` by default
 #'
-#' @param alpha numeric in \eqn{[0, 1]}; global initialization value for the
+#' @param alpha numeric in \eqn{(0, 1)}; global initialization value for the
 #' variational parameters `alpha_matrices` (approximates probabilities of
 #' inclusion). `0.2` by default
 #'
@@ -36,23 +36,21 @@
 #' entries; candidate values of `sigmabeta_sq`, the slab variance. `NULL` by
 #' default
 #'
-#' @param var_min positive numeric in \eqn{(0, Inf)}; if `sigmabetasq_vec` is
-#' `NULL`, `var_min` is the lower bound of the auto-generated `sigmabetasq_vec`.
-#' `0.01` by default
+#' @param var_min positive numeric; if `sigmabetasq_vec` is `NULL`, `var_min` is
+#' the lower bound of the auto-generated `sigmabetasq_vec`. `0.01` by default
 #'
 #' @param var_max numeric in \eqn{(`varmin`, Inf)}; if `sigmabetasq_vec` is
 #' `NULL`, `var_max` is the upper bound of the auto-generated `sigmabetasq_vec`.
 #' `10` by default
 #'
-#' @param n_sigma integer in \eqn{{1, 2,...}}; if `sigmabetasq_vec` is `NULL`,
-#' `n_sigma` is the number of candidate `sigmabetasq` that will be
-#' auto-generated as:
+#' @param n_sigma positive integer; if `sigmabetasq_vec` is `NULL`, `n_sigma` is
+#' the number of candidate `sigmabeta_sq` that will be auto-generated as:
 #'
 #' `sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_sigma))`
 #'
 #' `8` by default
 #'
-#' @param pi_vec numeric vector of length `n_pi` with entries in \eqn{[0, 1]};
+#' @param pi_vec numeric vector of length `n_pi` with entries in \eqn{(0, 1)};
 #' candidate values of `pi`. `0.1` by default
 #'
 #' @param norm numeric in \eqn{[1, Inf]}; norm to use when calculating weights.
@@ -66,12 +64,12 @@
 #' `1e-12` by default
 #'
 #' @param max_iter_grid positive integer; during the grid search, if the
-#' tolerance criteria has not been met by `max_iter_grid` iterations, end the
-#' CAVI. `1e4` by default
+#' tolerance criteria has not been met by `max_iter_grid` iterations, end CAVI.
+#' `max_iter_final` by default
 #'
 #' @param max_iter_final positive integer; for the final CAVI, if the tolerance
-#' criteria has not been met by `max_iter_final` iterations, end the CAVI. `1e4`
-#' by default
+#' criteria has not been met by `max_iter_final` iterations, end CAVI. `1e4` by
+#' default
 #'
 #' @param edge_threshold numeric in \eqn{(0, 1)}; when post-processing the
 #' inclusion probabilities, an edge will be added to the graph if the
@@ -82,10 +80,10 @@
 #' symmetrize the alpha matrices, the \eqn{i,j = j,i} entry is
 #' `sym_method`\eqn{((i,j entry), (j,i entry))}. `"mean"` by default
 #'
-#' @param parallel logical; if `T`, CAVI for each variable will be performed in
-#' parallel using `foreach`. Parallel backend may be registered prior to making
-#' a call to `covdepGE`. If no active parallel backend can be detected, then
-#' parallel backend will be automatically registered using
+#' @param parallel logical; if `T`, grid search and CAVI for each variable will
+#' be performed in parallel using `foreach`. Parallel backend may be registered
+#' prior to making a call to `covdepGE`. If no active parallel backend can be
+#' detected, then parallel backend will be automatically registered using
 #' `doParallel::registerDoParallel(num_workers)`
 #'
 #' @param num_workers integer in \eqn{{1, 2,...,`parallel::detectCores()`}};
@@ -93,7 +91,7 @@
 #' parallel backend is detected. `NULL` by default, which results in
 #' `num_workers = floor(parallel::detectCores() / 2)`
 #'
-#' @param stop_cluster: logical; if `T`, run `doParallel::stopImplicitCluster()`
+#' @param stop_cluster logical; if `T`, run `doParallel::stopImplicitCluster()`
 #' after parallel exectution of CAVI for all variables has completed. This will
 #' stop the cluster created implicitly by
 #' `doParallel::registerDoParallel(num_workers)` and will shut down the unused
@@ -108,10 +106,9 @@
 #' grid points that do not attain convergence within `max_iter_grid` iterations
 #' will be returned
 #'
-#' @param monitor_period integer in
-#' \eqn{{1, 2,..., `min(max_iter_grid, max_iter_final)`}}; the periodicity
-#' with which the ELBO is recorded if `monitor_final_elbo` or
-#' `monitor_grid_elbo` is `T`. `1` by default
+#' @param monitor_period integer; the periodicity with which the ELBO is
+#' recorded if `monitor_final_elbo` or `monitor_grid_elbo` is `T`. `1` by
+#' default
 #'
 #' @param warnings logical; if `T`, convergence and grid warnings will be
 #' displayed. Convergence warnings occur when the tolerance exit condition has
@@ -130,20 +127,20 @@
 #' (obtained from `inclusion_probs` according to `edge_threshold`)
 #'
 #' 2. `inclusion_probs`: list of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices;
-#'  the \eqn{l}-th matrix is a symmetric matrix of inclusion probabilities for
-#'  the \eqn{l}-th individual (obtained by symmetrizing the `alpha_matrices`
-#'  according to `sym_method`)
+#' the \eqn{l}-th matrix is a symmetric matrix of inclusion probabilities for
+#' the \eqn{l}-th individual (obtained by symmetrizing the `alpha_matrices`
+#' according to `sym_method`)
 #'
 #' 3. `alpha_matrices`: list of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices;
 #' the \eqn{l}-th matrix is an asymmetric matrix of inclusion probabilities for
-#'  the \eqn{l}-th individual
+#' the \eqn{l}-th individual
 #'
 #' 4. `unique_graphs`: list of \eqn{g} lists; \eqn{g} is the number of
 #' unique graphs. The \eqn{v}-th list has 3 values:
 #' - `graph`: \eqn{(p + 1)} x \eqn{(p + 1)} matrix; the adjacency matrix for the
 #'  \eqn{v}-th graph
-#' - `individuals`: vector; the individual indices corresponding to the
-#' \eqn{v}-th graph
+#' - `individuals`: vector with entries in \eqn{{1,...,n}}; the individual
+#' indices corresponding to the \eqn{v}-th graph
 #' - `individuals_summary`: character; summarizes the individual indices in
 #' `individuals`
 #'
@@ -167,15 +164,15 @@
 #'  - `n`: integer; sample size
 #'  - `p`: integer; the number of variables in the data minus one
 #'  - `ELBO`: numeric; the total ELBO summed across the \eqn{p + 1} final models
-#'  - `num_unique`: integer; the number of unique covariance structures
-#'  identified
-#'  - `final_DNC`: integer; the number of final models that did not attain
-#'  convergence within `max_iter_final` iterations
+#'  - `num_unique`: integer; the number of unique conditional dependence
+#'  structures identified
+#'  - `final_DNC`: integer; the number of variables for which the final CAVI did
+#'  not attain convergence within `max_iter_final` iterations
 #'  - `num_candidates`: integer; the number of grid points in the grid search
 #'
-#' 7. `weights`: \eqn{n} x \eqn{n} matrix; the \eqn{j, i} entry is the weighting
-#'  of the \eqn{j}-th individual with respect to the \eqn{i}-th individual using
-#'  the \eqn{i}-th individual's bandwidth
+#' 7. `weights`: \eqn{n} x \eqn{n} matrix; the \eqn{i, j} entry is the weighting
+#' of the \eqn{i}-th individual with respect to the \eqn{j}-th individual using
+#' the \eqn{j}-th individual's bandwidth
 #'
 #' 8. `bandwidths`: vector of length \eqn{n}; individual-specific bandwidths
 #'
@@ -183,7 +180,7 @@
 #'
 #' 10. `pi_candidates`: vector; `pi` candidates
 #'
-#' 11. `arguments`: list; argument values passed to the current call to
+#' 11. `arguments`: vector; argument values passed to the current call to
 #' `covdepGE`
 ## -----------------------------EXAMPLES----------------------------------------
 #' @examples
@@ -290,7 +287,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       {
         # return true if parallel backend is registered with more than 1 worker
         foreach::`%dopar%`(foreach::foreach(NULL), NULL)
-        T & foreach::getDoParRegistered()
+        foreach::getDoParRegistered()
       },
 
       # return false if error
@@ -312,8 +309,9 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       }
 
       # perform registration
-      if (warnings) warning(paste("No registered workers detected; registering doParallel with",
-                                  num_workers, "workers"))
+      if (warnings) warning(paste(
+        "No registered workers detected; registering doParallel with",
+        num_workers, "workers"))
       doParallel::registerDoParallel(cores = num_workers)
     }
 
@@ -330,7 +328,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
             # Set the remaining p variables as predictors
             X_mat <- data_mat[, -resp_index]
 
-            # perform the variational updates and save the results to res
+            # perform the grid search and final CAVI; save the results to res
             cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq, sigmabetasq_vec,
                         pi_vec, tolerance, max_iter_grid, max_iter_final,
                         monitor_final_elbo, monitor_grid_elbo, monitor_period,
@@ -362,7 +360,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       # Set the remaining p variables as predictors
       X_mat <- data_mat[, -resp_index]
 
-      # perform the variational updates and save the results to res
+      # perform the grid search and final CAVI; save the results to res
       res[[resp_index]] <- cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq,
                                        sigmabetasq_vec, pi_vec, tolerance,
                                        max_iter_grid, max_iter_final,
@@ -392,7 +390,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
     if (length(sigmabetasq_vec) > 2){
 
       # get the selected values of sigmabeta_sq for each variable
-      final_sigmabeta_sq <- unlist(lapply(VB_details, `[[`, "sigmabeta_sq"))
+      final_sigmabeta_sq <- unlist(lapply(cavi_details, `[[`, "sigmabeta_sq"))
 
       # count the number of final_sigmabeta_sq that were on the boundary of the
       # grid
@@ -410,7 +408,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
     if (length(pi_vec) > 2){
 
       # get the selected values of pi for each variable
-      final_pi <- unlist(lapply(VB_details, `[[`, "pi"))
+      final_pi <- unlist(lapply(cavi_details, `[[`, "pi"))
 
       # count the number of final_pi that were on the boundary of the grid
       grid_boundary <- pi_vec[c(1, length(pi_vec))]
@@ -490,7 +488,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
          individuals_summary = indv_graphs_sum[[gr_idx]]))
 
   # calculate the total ELBO
-  total_elbo <- sum(sapply(VB_details, `[[`, "ELBO"))
+  total_elbo <- sum(sapply(cavi_details, `[[`, "ELBO"))
 
   # find the number of grid points
   grid_size <- length(sigmabetasq_vec) * length(pi_vec)
@@ -503,13 +501,13 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                         num_unique = length(unique_graphs),
                         final_DNC = final_dnc, grid_size = grid_size)
 
+  # create a named vector to return the function arguments
+  args <- c(kde = kde, norm = norm, scale = scale, tolerance = tolerance,
+            edge_threshold = edge_threshold, sym_method = sym_method,
+            parallel = parallel)
+
   # record the elapsed time and add it to the model details
   model_details[["elapsed"]] <- Sys.time() - start_time
-
-  # create a list to return the function arguments
-  args <- list(kde = kde, norm = norm, scale = scale, tolerance = tolerance,
-               edge_threshold = edge_threshold, sym_method = sym_method,
-               parallel = parallel)
 
   # define the list of return values
   ret <- list(graphs = graphs, inclusion_probs = incl_probs,
@@ -529,20 +527,25 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
 #' @title print.covdepGE
 #' @export
 #' @rdname covdepGE
-#' @inherit covdepGE
+## -----------------------------DESCRIPTION-------------------------------------
+## S3 method for printing an object of class `covdepGE`
+## -----------------------------ARGUMENTS---------------------------------------
+#' @param x object of class covdepGE; the return of the covdepGE function
+#' @param ... additional arguments will be ignored
 ## -----------------------------------------------------------------------------
-print.covdepGE <- function(res){
+print.covdepGE <- function(x, ...){
 
   cat("                      Covariate Dependent Graphical Model\n\n")
 
   spc <- 80
 
-  with(res$model_details,
+  with(x$model_details,
        {
          # print ELBO and number of unique graphs
          elbo_str <- paste0("Model ELBO: ", round(ELBO, 2))
          cat(sprintf(paste0("%-s%", spc - nchar(elbo_str), "s"), elbo_str,
-                     paste0("Unique Dependence Structures: ", num_unique, "\n")))
+                     paste0("Unique conditional dependence structures: ",
+                            num_unique, "\n")))
 
          # print data dimensions and the grid size
          data_dim <- paste0("n: ", n, ", variables: ", p + 1)

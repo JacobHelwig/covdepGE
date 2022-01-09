@@ -19,41 +19,40 @@ gg_adjMat(
 )
 }
 \arguments{
-\item{out}{\code{list} OR \code{matrix}; return of \code{covdepGE} function OR an adjacency
-matrix}
+\item{out}{object of class \code{covdepGE} OR \code{matrix}; return of \code{covdepGE} function
+OR an adjacency matrix}
 
-\item{l}{scalar in \eqn{{1, 2, ..., n}}; individual index for which the
-adjacency matrix will be visualized. Ignored if \code{out} is a
-\code{matrix}. \code{1} by default}
+\item{l}{integer in \eqn{{1, 2, ..., n}}; individual index for which the
+adjacency matrix will be visualized. Ignored if \code{out} is a \code{matrix}. \code{1} by
+default}
 
-\item{prob_shade}{logical scalar; if \code{T}, then entries will be shaded
-according to posterior inclusion probabilities on a gradient ranging from
-\code{color0} (probability 0) to \code{color1} (probability 1); if \code{F}, binary
-coloring is used. Ignored if \code{out} is a \code{matrix}. \code{T} by default}
+\item{prob_shade}{logical; if \code{T}, then entries will be shaded according to
+posterior inclusion probabilities on a gradient ranging from \code{color0}
+(probability 0) to \code{color1} (probability 1); if \code{F}, binary coloring is used.
+Ignored if \code{out} is a \code{matrix}. \code{T} by default}
 
-\item{color0}{scalar; color for 0 entries. \code{"white"} by default}
+\item{color0}{color; color for 0 entries. \code{"white"} by default}
 
-\item{color1}{scalar; color for 1 entries. \code{"#500000"} by default}
+\item{color1}{color; color for 1 entries. \code{"#500000"} by default}
 
-\item{grid_color}{scalar; color of grid lines. \code{"black"} by default}
+\item{grid_color}{color; color of grid lines. \code{"black"} by default}
 
-\item{incl_probs}{logical scalar; if \code{T}, the posterior inclusion probability
-will be displayed for each entry. Ignored if \code{out} is a \code{matrix} with 2 or
-less unique entries. \code{T} by default}
+\item{incl_probs}{logical; if \code{T}, the posterior inclusion probability will
+be displayed for each entry. Ignored if \code{out} is a \code{matrix} with 2 or less
+unique entries. \code{T} by default}
 
-\item{prob_prec}{scalar in \eqn{{1, 2, ...}}; number of decimal places to
-round probabilities to if \code{incl_probs = T}. Ignored if \code{out} is a \code{matrix}
-with 2 or less unique entries. \code{2} by default}
+\item{prob_prec}{positive integer; number of decimal places to round
+probabilities to if \code{incl_probs = T}. Ignored if \code{out} is a \code{matrix} with 2
+or less unique entries. \code{2} by default}
 
-\item{font_size}{font_size: scalar in \eqn{(0, Inf)}; size of font if
-\code{incl_probs = T}. Ignored if \code{out} is a \code{matrix} with 2 or less unique entries.
-\code{3} by default}
+\item{font_size}{positive numeric; size of font if \code{incl_probs = T}. Ignored
+if \code{out} is a \code{matrix} with 2 or less unique entries. \code{3} by default}
 
-\item{font_color0}{scalar; color of font for 0 entries if \code{incl_probs = T}.
+\item{font_color0}{color; color of font for 0 entries if \code{incl_probs = T}.
 Ignored if \code{out} is a \code{matrix} with 2 or less unique entries. \code{"black"} by
 default}
 
-\item{font_color1}{scalar; color of font for 1 entries if \code{incl_probs = T}.
+\item{font_color1}{color; color of font for 1 entries if \code{incl_probs = T}.
 Ignored if \code{out} is a \code{matrix} with 2 or less unique entries. \code{"white"} by
 default}
 }

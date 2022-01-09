@@ -56,7 +56,7 @@ mean(sigmasq)
 ```
 \newpage
 ```{r}
-# estimate the covariance structure
+# estimate the conditional dependence structure
 out <- covdepGE(
                 data_mat,
                 Z, # extraneous covariates
@@ -68,27 +68,28 @@ out <- covdepGE(
                 pi_vec = seq(0.1, 0.3, 0.05), # prior inclusion probability grid
                 norm = Inf, # norm to calculate the weights with 
                 scale = T, # whether the extraneous covariates should be scaled
-                tolerance = 1e-15, # variational parameter exit condition 1
-                max_iter = 1e5, # variational parameter exit condition 2
+                tolerance = 1e-11, # variational parameter exit condition 1
+                max_iter_final = 1e5, # variational parameter exit condition 2
                 edge_threshold = 0.75, # minimum inclusion probability
                 sym_method = "min", # how to symmetrize the alpha matrices
-                print_time = T, 
                 warnings = T # whether warnings should be displayed
                 )
+out
 ```
 ```{r}
 # grid search results
-out$ELBO
+out$CAVI_details
 
 # individual-specific bandwidths calculated using KDE
 out$bandwidths
 
 # analyze results
-?gg_adjMat
 gg_adjMat(out, 1, color1 = "coral1")
 gg_adjMat(out, 50, color1 = "tomato3")
 gg_adjMat(out, 60, color1 = "steelblue")
 gg_adjMat(out, 100, color1 = "deepskyblue3")
+
+plot(out)
 
 ?gg_inclusionCurve
 gg_inclusionCurve(out, 1, 2)
@@ -119,5 +120,4 @@ num_neg <- length(true_graph_pos) * n - num_pos
 (sensitivity <- TP / num_pos)
 (specificity <- TN / num_neg)
 (accuracy <- (TN + TP) / (num_pos + num_neg))
-
 ```

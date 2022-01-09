@@ -1,100 +1,100 @@
 ## -----------------------------------------------------------------------------
-#' cavi_search
+## -----------------------------cavi_search---------------------------------------
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
-#' Performs CAVI and grid search for a fixed data matrix and response for n
-#' linear regressions, where the l-th regression is weighted with respect to the
-#' l-th individual. Returns matrix of posterior inclusion probabilities, details
-#' on the variational updates, a vector of warnings, and the number of final
-#' CAVI that DNC
+## Performs CAVI and grid search for a fixed data matrix and response for n
+## linear regressions, where the l-th regression is weighted with respect to the
+## l-th individual. Returns matrix of posterior inclusion probabilities, details
+## on the variational updates, a vector of warnings, and the number of final
+## CAVI that DNC
 ## -----------------------------ARGUMENTS---------------------------------------
-#' X_mat: n x p matrix; predictors
-#'
-#' Z: n x p' matrix; extraneous covariates
-#'
-#' D: n x n matrix; weights (k,l entry is the weight of the k-th individual
-#' with respect to the l-th individual using the l-th individual's bandwidth)
-#'
-#' y: vector of length n; response
-#'
-#' alpha: numeric in [0, 1]; global initialization value for the variational
-#' parameters alpha_matrices (approximates probabilities of inclusion). 0.2 by
-#' default
-#'
-#' mu: numeric; global initialization value for the variational parameters
-#' mu_matrices (approximates regression coefficients). 0 by default
-#'
-#' sigmasq: positive numeric; Error term variance for spike-and-slab. Algorithm
-#' scales this value by individual-specific weights. 0.5 by default
-#'
-#' sigmabetasq_vec: vector of length n_sigma with positive entries; candidate
-#' values of sigmabeta_sq, the slab variance. NULL by default
-#'
-#' pi_vec: vector of length n_pi with entries in [0, 1]; candidate values of pi.
-#' 0.1 by default
-#'
-#' tolerance: positive numeric; end CAVI when the Frobenius norm of the
-#' iteration-to-iteration change in the alpha matrix are within tolerance.
-#' `1e-12` by default
-#'
-#' max_iter_grid: positive integer; during the grid search, if the
-#' tolerance criteria has not been met by `max_iter_grid` iterations, end the
-#' CAVI. `1e4` by default
-#'
-#' max_iter_final: positive integer; for the final CAVI, if the tolerance
-#' criteria has not been met by `max_iter_final` iterations, end the CAVI. `1e4`
-#' by default
-#'
-#' monitor_final_elbo: logical; if T, the ELBO history for the final CAVI will
-#' be returned. F by default
-#'
-#' monitor_grid_elbo: logical; if T, the ELBO history for each of the grid
-#' points that do not attain convergence within max_iter_grid iterations
-#' will be returned
-#'
-#' monitor_period: integer in
-#' \eqn{{1, 2,..., `min(max_iter_grid, max_iter_final)`}}; the periodicity with
-#' which the ELBO is recorded if monitor_final_elbo or monitor_grid_elbo is T.
-#' 1 by default
-#'
-#' warnings: logical; if T, convergence and grid warnings will be
-#' displayed. Convergence warnings occur when the tolerance exit condition has
-#' not been met by max_iter_grid or max_iter_final iterations. Grid warnings
-#' occur when, for either sigmabetasq_vec or pi_vec, the grid is longer than 2
-#' candidates, and the final CAVI uses a candidate value on the grid boundary.
-#' T by default
-#'
-#' resp_index: integer in {1,...,p + 1}; the index of the column that is y in
-#' data_mat
-#'
-#' CS: logical; if T, pi_vec and sigma_sq will be selected
-#' according to Carbonetto-Stephens. F by default
+## X_mat: n x p matrix; predictors
+##
+## Z: n x p' matrix; extraneous covariates
+##
+## D: n x n matrix; weights (k,l entry is the weight of the k-th individual
+## with respect to the l-th individual using the l-th individual's bandwidth)
+##
+## y: vector of length n; response
+##
+## alpha: numeric in [0, 1]; global initialization value for the variational
+## parameters alpha_matrices (approximates probabilities of inclusion). 0.2 by
+## default
+##
+## mu: numeric; global initialization value for the variational parameters
+## mu_matrices (approximates regression coefficients). 0 by default
+##
+## sigmasq: positive numeric; Error term variance for spike-and-slab. Algorithm
+## scales this value by individual-specific weights. 0.5 by default
+##
+## sigmabetasq_vec: vector of length n_sigma with positive entries; candidate
+## values of sigmabeta_sq, the slab variance. NULL by default
+##
+## pi_vec: vector of length n_pi with entries in [0, 1]; candidate values of pi.
+## 0.1 by default
+##
+## tolerance: positive numeric; end CAVI when the Frobenius norm of the
+## iteration-to-iteration change in the alpha matrix are within tolerance.
+## `1e-12` by default
+##
+## max_iter_grid: positive integer; during the grid search, if the
+## tolerance criteria has not been met by `max_iter_grid` iterations, end the
+## CAVI. `1e4` by default
+##
+## max_iter_final: positive integer; for the final CAVI, if the tolerance
+## criteria has not been met by `max_iter_final` iterations, end the CAVI. `1e4`
+## by default
+##
+## monitor_final_elbo: logical; if T, the ELBO history for the final CAVI will
+## be returned. F by default
+##
+## monitor_grid_elbo: logical; if T, the ELBO history for each of the grid
+## points that do not attain convergence within max_iter_grid iterations
+## will be returned
+##
+## monitor_period: integer in
+## {1, 2,..., `min(max_iter_grid, max_iter_final)`}; the periodicity with
+## which the ELBO is recorded if monitor_final_elbo or monitor_grid_elbo is T.
+## 1 by default
+##
+## warnings: logical; if T, convergence and grid warnings will be
+## displayed. Convergence warnings occur when the tolerance exit condition has
+## not been met by max_iter_grid or max_iter_final iterations. Grid warnings
+## occur when, for either sigmabetasq_vec or pi_vec, the grid is longer than 2
+## candidates, and the final CAVI uses a candidate value on the grid boundary.
+## T by default
+##
+## resp_index: integer in {1,...,p + 1}; the index of the column that is y in
+## data_mat
+##
+## CS: logical; if T, pi_vec and sigma_sq will be selected
+## according to Carbonetto-Stephens. F by default
 ## -----------------------------RETURNS-----------------------------------------
-#' Returns `list` with the following values:
-#'
-#' 1. alpha_matrix: n x p matrix; the l, j entry is the variational
-#' approximation to the posterior inclusion probability of the j-th variable in
-#' a regression with the y fixed as the response with weightings taken with
+## Returns `list` with the following values:
+##
+## 1. alpha_matrix: n x p matrix; the l, j entry is the variational
+## approximation to the posterior inclusion probability of the j-th variable in
+## a regression with the y fixed as the response with weightings taken with
 #  respect to the l-th individual
-#'
-#' 2. CAVI_details: list with 6 values:
-#'  - sigmabeta_sq, pi: numerics; the grid point that maximized the ELBO for
-#'  the j-th variable
-#'  - ELBO: numeric; the maximum value of ELBO for the final CAVI
-#'  - converged_iter: integer; the number of iterations to attain convergence
-#'  for the final CAVI
-#'  - ELBO_history: vector; ELBO history by iteration for the final CAVI. If
-#'  monitor_final_elbo is F, then this value will be NULL
-#'  - non_converged: matrix; each row corresponds to the ELBO history for each
-#'  of the grid points that did not converge. If monitor_grid_elbo is F,
-#'  then the ELBO history is omitted, and only the non-convergent sigmabeta_sq
-#'  and pi values are provided. If all pairs resulted in convergence, then this
-#'  value is NULL
-#'
-#' 3. warnings_vec: character vector; Vector of convergence warnings to be
-#' displayed in covdepGE_main
-#'
-#' 4. final_DNC: integer; number of final CAVIs that did not converge
+##
+## 2. CAVI_details: list with 6 values:
+##  - sigmabeta_sq, pi: numerics; the grid point that maximized the ELBO for
+##  the j-th variable
+##  - ELBO: numeric; the maximum value of ELBO for the final CAVI
+##  - converged_iter: integer; the number of iterations to attain convergence
+##  for the final CAVI
+##  - ELBO_history: vector; ELBO history by iteration for the final CAVI. If
+##  monitor_final_elbo is F, then this value will be NULL
+##  - non_converged: matrix; each row corresponds to the ELBO history for each
+##  of the grid points that did not converge. If monitor_grid_elbo is F,
+##  then the ELBO history is omitted, and only the non-convergent sigmabeta_sq
+##  and pi values are provided. If all pairs resulted in convergence, then this
+##  value is NULL
+##
+## 3. warnings_vec: character vector; Vector of convergence warnings to be
+## displayed in covdepGE_main
+##
+## 4. final_DNC: integer; number of final CAVIs that did not converge
 ## -----------------------------------------------------------------------------
 cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq, sigmabetasq_vec,
                         pi_vec, tolerance, max_iter_grid, max_iter_final,
@@ -151,19 +151,20 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq, sigmabetasq_vec,
   pi_est <- pi_vec[which(elbo_sigmaXpi == max(elbo_sigmaXpi), T)[,"col"]][1]
 
   # run CAVI using these values of sigmabeta_sq and pi_est
-  result <- cov_vsvb_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
-                       pi_est, tolerance, max_iter_final, monitor_final_elbo,
-                       monitor_period)
-
-  # count 1 if the final CAVI DNC
-  final_dnc <- 0
+  result <- cavi_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
+                   pi_est, tolerance, max_iter_final, monitor_final_elbo,
+                   monitor_period)
 
   # if the final CAVI did not converge, display a warning
   if (result$converged_iter == max_iter_final & warnings){
     warning_vec <- c(warning_vec, (paste0("Variable ", resp_index,
                    ": final CAVI did not converge in ", max_iter_final,
                    " iterations")))
-  }else if (result$converged_iter == max_iter_final){
+  }
+
+  # count 1 if the final CAVI DNC
+  final_dnc <- 0
+  if (result$converged_iter == max_iter_final){
     final_dnc <- 1
   }
 

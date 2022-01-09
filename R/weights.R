@@ -113,8 +113,8 @@ get_bandwidths <- function(X){
 ##
 ## tau: vector of length n with positive entries; bandwidth parameters
 ## -----------------------------RETURNS-----------------------------------------
-## D: n x n matrix of weights; j, i entry is the weighting of the j-th
-## individual with respect to the i-th individual using the i-th individual's
+## D: n x n matrix of weights; i, j entry is the weighting of the i-th
+## individual with respect to the j-th individual using the j-th individual's
 ## bandwidth
 ##
 ## bandwidths: vector of length n; individual-specific bandwidths

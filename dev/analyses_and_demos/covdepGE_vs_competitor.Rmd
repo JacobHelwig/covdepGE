@@ -111,7 +111,7 @@ set.seed(1)
 
 # define the dimensions of the data
 sparse_interval <- 2
-sparsity_level <- 10
+sparsity_level <- 15
 interval_n <- list(n1 = 60, n2 = 60, n3 = 60)
 interval_n[[sparse_interval]] <- sparsity_level
 attach(interval_n)
@@ -237,14 +237,14 @@ out_dep <- covdepGE(data_mat,
   n_sigma = 50, # length of the sigmabeta_sq grid
   pi_vec = 0.1, # prior inclusion probability
   tolerance = 1e-10, # variational parameter exit condition 1
-  max_iter = 1e3, # variational parameter exit condition 2
-  print_time = T
+  max_iter_final = 1e3 # variational parameter exit condition 2
 )
+out_dep
 ```
 ```{r, fig.width = 11, fig.height = 9, echo = F}
 # visualize each of the unique graphs
 colors <- c("forestgreen", "tomato2", "goldenrod", "steelblue")
-annotate_figure(ggarrange(plotlist = gg_adjMats(out_dep, colors)), 
+annotate_figure(ggarrange(plotlist = plot(out_dep, colors)), 
                 top = text_grob("Covariate Dependent Estimated Graphs", size = 15))
 ```
 
@@ -288,15 +288,13 @@ for (k in 1:num_clusters) {
     n_sigma = 50, # length of the sigmabeta_sq grid
     pi_vec = 0.1, # prior inclusion probability
     tolerance = 1e-10, # variational parameter exit condition 1
-    max_iter = 1e3, # variational parameter exit condition 2
-    print_time = T,
+    max_iter_final = 1e3, # variational parameter exit condition 2
     kde = F, # whether to use kde to calculate bandwidths
     scale = F # whether to scale the extraneous covariates
   )
 }
 
-# show the unqiue weights for each of the clusters
-lapply(out_indep, function(out) unique(as.vector(out$weights)))
+out_indep
 ```
 
 ```{r, fig.width = 11, fig.height = 9, echo = F}
@@ -415,23 +413,24 @@ save(perf_res, file = paste0("performance_data_int", sparse_interval,
 
 # ELBO Monitoring
 
-The latest version of `covdepGE` includes `VB_details` in the return: 
+The latest version of `covdepGE` includes `CAVI_details` in the return: 
 
-`VB_details`: list of $(p + 1)$ `lists`; the $j$-th list corresponds to the $j$-th predictor and contains 6 values:
+`CAVI_details`: list of $(p + 1)$ lists; the $j$-th list corresponds to the $j$-th variable and contains 6 values:
 
-  - `sigma^2_beta`, `pi`: scalars; the final values of `pi` and `sigmabeta_sq` that maximized ELBO over all individuals with the $j$-th predictor fixed as the response
-  
-  - `ELBO`: scalar; the maximum value of ELBO for the final model
-  
-  - `converged_iter`: scalar; the number of iterations to attain convergence for the final model
-  
-  - `ELBO_history`: vector; ELBO history by iteration for the final model. If `monitor_final_elbo` is `F`, then this value will be `NULL`
-  
-  - `non_converged`: matrix; each row corresponds to the ELBO history for each of the candidate models that did not converge. If `monitor_cand_elbo` is `F`, then the ELBO history is omitted, and only the non-convergent `sigmabeta_sq` and `pi` values are provided. If all pairs resulted in convergence, then this value is `NULL`
+ - `sigmabeta_sq`, `pi`: numerics; the grid point that maximized the ELBO for the $j$-th variable
+ 
+ - `ELBO`: numeric; the maximum value of ELBO for the final CAVI
+ 
+ - `converged_iter`: numeric; the number of iterations to attain convergence for the final CAVI
+ 
+ - `ELBO_history`: numeric vector; ELBO history by iteration for the final CAVI. If `monitor_final_elbo` is `F`, then this value will be `NULL`
+ 
+ - `non_converged`: numeric matrix; each row corresponds to the ELBO history for each of the grid points that did not converge. If `monitor_grid_elbo` is `F`, then the ELBO history is omitted, and only the non-convergent `sigmabeta_sq` and `pi` values are provided. If all pairs resulted in convergence, then this value is `NULL`
 
 ```{r}
-out <- covdepGE(data_mat, Z, max_iter = 50, tolerance = 1e-10, 
-                monitor_final_elbo = T, monitor_cand_elbo = T, 
-                monitor_period = 15, print_time = T)
-out$VB_details
+out <- covdepGE(data_mat, Z, max_iter_final = 50, tolerance = 1e-10, 
+                monitor_final_elbo = T, monitor_grid_elbo = T, 
+                monitor_period = 15)
+out
+out$CAVI_details
 ```

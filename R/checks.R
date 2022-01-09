@@ -8,17 +8,17 @@
 ##
 ## Z: n x p' matrix; extraneous covariates
 ##
-## tau: numeric in (0, Inf) OR vector of length n with entries in (0, Inf)
+## tau: positive numeric OR vector of length n with positive entries
 ##
 ## kde: logical; if T, use 2-step KDE methodology
 ##
-## alpha: numeric in [0, 1]; global initialization value
+## alpha: numeric in (0, 1); global initialization value
 ##
 ## mu: numeric; global initialization value
 ##
 ## sigmasq: positive numeric; variance hyperparameter for spike-and-slab.
 ##
-## sigmabetasq_vec: vector with entries in (0, Inf); candidate values for slab
+## sigmabetasq_vec: vector with positive entries; candidate values for slab
 ##
 ## var_min: postive numeric; lower bound of sigmabetasq_vec
 ##
@@ -26,17 +26,17 @@
 ##
 ## n_sigma: postive integer; length of sigmabetasq_vec
 ##
-## pi_vec: vector with entries in [0, 1]; candidate values of pi
+## pi_vec: vector with entries in (0, 1); candidate values of pi
 ##
 ## norm: numeric in [1, Inf]; norm to use when calculating weights
 ##
 ## scale: logical; if T, center and scale extraneous covariates
 ##
-## tolerance: positive numeric; end the variational update loop
+## tolerance: positive numeric; end CAVI when change in alpha < tolerance
 ##
-## max_iter_grid: positive integer; end the variational update loop
+## max_iter_grid: positive integer; end CAVI on grid if iterations > max_iter_grid
 ##
-## max_iter_final: positive integer; end the variational update loop
+## max_iter_final: positive integer; end final CAVI if iterations > max_iter_final
 ##
 ## edge_threshold: numeric in (0, 1); probability threshold for edge
 ##
@@ -52,7 +52,7 @@
 ##
 ## monitor_grid_elbo logical; if T, monitor the non-convergent ELBO history
 ##
-## monitor_period integer; the periodicity of ELBO monitoring
+## monitor_period positive integer; the periodicity of ELBO monitoring
 ##
 ## warnings: logical; if T, convergence and grid warnings will be displayed
 ## -----------------------------------------------------------------------------
@@ -69,10 +69,10 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   if (any(!sapply(args_vector, function(x) is.atomic(x) & is.null(dim(x))))){
 
     # get the name of the non-vector
-    non_vector <- names(which(!sapply(args_vector, function(x) is.atomic(x) &
-                                        is.null(dim(x)))))[1]
-    stop(paste0(non_vector, " is of class ", class(args_vector[[non_vector]])[1],
-                "; expected vector"))
+    non_vector <- names(which(!sapply(
+      args_vector, function(x) is.atomic(x) & is.null(dim(x)))))[1]
+    stop(paste0(non_vector, " is of class ",
+                class(args_vector[[non_vector]])[1], "; expected vector"))
   }
 
   # ensure scalar input for parameters that are expected to be scalars
@@ -142,8 +142,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   if (any(!sapply(args_finite, function (x) all(is.finite(x))))){
 
     # get the name of the non-finite
-    non_finite <- names(which(!sapply(args_finite,
-                                      function (x) all(is.finite(x)))))[1]
+    non_finite <- names(which(!sapply(
+      args_finite, function (x) all(is.finite(x)))))[1]
     stop(paste0(non_finite, " should have all finite entries"))
   }
 
@@ -154,8 +154,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   if (any(!(sapply(args_integers, function(x) x %% 1) == 0))){
 
     # get the name of the non-integer
-    non_integer <- names(which(!(sapply(args_integers, function(x) x %% 1)
-                                 == 0)))[1]
+    non_integer <- names(which(!(sapply(
+      args_integers, function(x) x %% 1) == 0)))[1]
     stop(paste0(non_integer, " should be integer-valued"))
   }
 
@@ -180,8 +180,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
     # get the name of the non-character
     non_character <- names(which(!sapply(args_character, is.character)))[1]
     stop(paste0(non_character, " is of type ",
-                typeof(args_character[[non_character]]),
-                "; expected character"))
+                typeof(args_character[[non_character]]), "; expected character"))
   }
 
   # ensure positive input for parameters that are expected to be positive
@@ -194,31 +193,35 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   if (any(!sapply(args_positive, function (x) all(x > 0)))){
 
     # get the name of the non-positive
-    non_positive <- names(which(!sapply(args_positive,
-                                        function (x) all(x > 0))))[1]
+    non_positive <- names(which(!sapply(
+      args_positive, function (x) all(x > 0))))[1]
     stop(paste0(non_positive, " should have all positive entries"))
   }
 
-  # ensure [0, 1] input for parameters that are expected to be in the interval
-  # [0, 1]
-  args_01 <- list(alpha = alpha, pi_vec = pi_vec)
-  if (any(!sapply(args_01, function (x) all(0 <= x & x <= 1)))){
+  # ensure (0, 1) input for parameters that are expected to be in the interval
+  # (0, 1)
+  args_01 <- list(alpha = alpha, pi_vec = pi_vec,
+                  edge_threshold = edge_threshold)
+  if (any(!sapply(args_01, function (x) all(0 < x & x < 1)))){
 
-    # get the name of the non-[0, 1]
-    non_01 <- names(which(!sapply(args_01,
-                                  function (x) all(0 <= x & x <= 1))))[1]
-    stop(paste0(non_01, " should have all entries in the interval [0, 1]"))
+    # get the name of the non-(0, 1)
+    non_01 <- names(which(!sapply(
+      args_01, function (x) all(0 < x & x < 1))))[1]
+    stop(paste0(non_01, " should have all entries in the interval (0, 1)"))
   }
 
   # ensure that data_mat and Z are matrices
-  data_mat <- tryCatch(as.matrix(data_mat),
-                       error = function(msg){
-                         stop(paste("data_mat should be of class matrix or a class that is coercible to a matrix;",
-                                    class(data_mat)[1], "is not coercible to a matrix"))})
-  Z <- tryCatch(as.matrix(Z),
-                error = function(msg){
-                  stop(paste("Z should be of class matrix or a class that is coercible to a matrix;",
-                             class(Z)[1], "is not coercible to a matrix"))})
+  data_mat <- tryCatch(
+    as.matrix(data_mat), error = function(msg){
+      stop(paste(
+        "data_mat should be of class matrix or a class that is coercible to a matrix;",
+        class(data_mat)[1], "is not coercible to a matrix"))
+      })
+  Z <- tryCatch(
+    as.matrix(Z), error = function(msg){
+      stop(paste(
+        "Z should be of class matrix or a class that is coercible to a matrix;",
+        class(Z)[1], "is not coercible to a matrix"))})
 
   # ensure data_mat and Z have compatible dimensions
   n <- nrow(data_mat)
@@ -242,7 +245,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
 
     # check that all entries are numeric
     if (!is.numeric(sigmabetasq_vec)){
-      stop(paste0("sigmabetasq_vec is of type ", typeof(sigmabetasq_vec),
+      stop(paste0("sigmabetasq_vec is of type ", typeof( sigmabetasq_vec),
                   "; expected numeric"))
     }
 
@@ -275,13 +278,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
 
   # if scale or kde is true, ensure that the standard deviation of is covariates
   # is positive
-  if ((scale | kde) & isTRUE(all.equal(0, as.numeric(var(Z))))){
+  if ((scale | kde) & isTRUE(all.equal(0, as.numeric(stats::var(Z))))){
     stop("Constant Z; set `scale = F` and `kde = F`")
-  }
-
-  # ensure that edge_threshold is in (0, 1)
-  if (!(0 < edge_threshold & edge_threshold < 1)){
-    stop("edge_threshold should be in the interval (0, 1)")
   }
 
   # ensure that sym_method is mean, min, or max
@@ -328,8 +326,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
     # ensure that num_workers is not greater than detect_workers
     det_cores <- parallel::detectCores()
     if (!is.na(det_cores) & det_cores < num_workers){
-      stop(paste0("Number of cores (", det_cores
-                  ,") is less than num_workers (", num_workers, ")"))
+      stop(paste0("Number of cores (", det_cores,
+                  ") is less than num_workers (", num_workers, ")"))
     }
   }
 
@@ -404,8 +402,8 @@ adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
 
     # get the name of the non-numeric
     non_numeric <- names(which(!sapply(args_numeric, is.numeric)))[1]
-    stop(paste0(non_numeric, " is of type ", typeof(args_numeric[[non_numeric]]),
-                "; expected numeric"))
+    stop(paste0(non_numeric, " is of type ",
+                typeof(args_numeric[[non_numeric]]), "; expected numeric"))
   }
 
   # ensure non-NA input for parameters that are to be non-NA
@@ -426,8 +424,8 @@ adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
   if (any(!sapply(args_finite, function (x) all(is.finite(x))))){
 
     # get the name of the non-finite
-    non_finite <- names(which(!sapply(args_finite,
-                                      function (x) all(is.finite(x)))))[1]
+    non_finite <- names(which(!sapply(
+      args_finite, function(x) all(is.finite(x)))))[1]
     stop(paste0(non_finite, " should have all finite entries"))
   }
 
@@ -450,9 +448,10 @@ adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
     tryCatch(is.matrix(grDevices::col2rgb(x)), error = function(msg) F)}))){
 
     # get the name of the non-color
-    non_color <- args_colors[!sapply(args_colors, function(x){
-      tryCatch(is.matrix(grDevices::col2rgb(x)),
-               error = function(msg) F)})][[1]]
+    non_color <- args_colors[!sapply(
+      args_colors, function(x){
+        tryCatch(is.matrix(grDevices::col2rgb(x)),
+                 error = function(msg) F)})][[1]]
     stop(paste0(non_color, " is not a valid color"))
   }
 
@@ -461,14 +460,15 @@ adjMat_checks <- function(out, l, prob_shade, color0, color1, grid_color,
   if (any(!sapply(args_positive, function (x) all(x > 0)))){
 
     # get the name of the non-positive
-    non_positive <- names(which(!sapply(args_positive,
-                                        function (x) all(x > 0))))[1]
+    non_positive <- names(which(!sapply(
+      args_positive, function (x) all(x > 0))))[1]
     stop(paste0(non_positive, " should have all positive entries"))
   }
 
   # ensure out is of class covdepGE or matrix
-  if (!(is(out, "covdepGE") | is.matrix(out))){
-    stop(paste0("out is of class ", class(out)[1], "; expected list or matrix"))
+  if (!(class(out)[1] == "covdepGE" | is.matrix(out))){
+    stop(paste0("out is of class ", class(out)[1],
+                "; expected covdepGE or matrix"))
   }
 
   # ensure out has numeric entries if it is a matrix
@@ -541,8 +541,8 @@ inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
 
     # get the name of the non-numeric
     non_numeric <- names(which(!sapply(args_numeric, is.numeric)))[1]
-    stop(paste0(non_numeric, " is of type ", typeof(args_numeric[[non_numeric]]),
-                "; expected numeric"))
+    stop(paste0(non_numeric, " is of type ",
+                typeof(args_numeric[[non_numeric]]), "; expected numeric"))
   }
 
   # ensure non-NA input for parameters that are to be non-NA
@@ -564,8 +564,8 @@ inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
   if (any(!sapply(args_finite, function (x) all(is.finite(x))))){
 
     # get the name of the non-finite
-    non_finite <- names(which(!sapply(args_finite,
-                                      function (x) all(is.finite(x)))))[1]
+    non_finite <- names(which(!sapply(
+      args_finite, function (x) all(is.finite(x)))))[1]
     stop(paste0(non_finite, " should have all finite entries"))
   }
 
@@ -579,8 +579,7 @@ inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
 
     # get the name of the non-color
     non_color <- args_colors[!sapply(args_colors, function(x){
-      tryCatch(is.matrix(grDevices::col2rgb(x)),
-               error = function(msg) F)})][[1]]
+      tryCatch(is.matrix(grDevices::col2rgb(x)), error = function(msg) F)})][[1]]
     stop(paste0(non_color, " is not a valid color"))
   }
 
@@ -590,13 +589,12 @@ inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
   if (any(!sapply(args_positive, function (x) all(x > 0)))){
 
     # get the name of the non-positive
-    non_positive <- names(which(!sapply(args_positive,
-                                        function (x) all(x > 0))))[1]
+    non_positive <- names(which(!sapply(args_positive, function(x) all(x > 0))))[1]
     stop(paste0(non_positive, " should have all positive entries"))
   }
 
   # ensure out of class covdepGE
-  if (!is(out, "covdepGE")){
+  if (class(out)[1] != "covdepGE"){
     stop(paste0("out is of class ", class(out)[1], "; expected covdepGE"))
   }
 
@@ -625,14 +623,11 @@ inclusionCurve_checks <- function(out, col_idx1, col_idx2, line_type, line_size,
 ##
 ## graph_colors: vector of length g; g is the number of unique graphs from out.
 ## The v-th element is the color for the v-th unique graph
-##
-## seed: numeric; when colors is NULL, the RNG seed for selecting the color for
-## each graph. 1 by default.
 ## -----------------------------------------------------------------------------
-plot_checks <- function(out, seed, graph_colors){
+plot_checks <- function(out, graph_colors){
 
   # ensure out is of type covdepGE
-  if (!is(out, "covdepGE")){
+  if (class(out)[1] != "covdepGE"){
     stop(paste0("out is of class ", class(out)[1], "; expected covdepGE"))
   }
 
@@ -640,26 +635,16 @@ plot_checks <- function(out, seed, graph_colors){
   if(!is.null(graph_colors)){
 
     # ensure graph_colors is a vector
-    if (!is.atomic(graph_colors) | is.null(graph_colors)){
-      stop(paste0(graph_colors, " is of class ", class(args_vector[[graph_colors]])[1],
-                  "; expected vector"))
+    if (!is.atomic(graph_colors) | !is.null(dim(graph_colors))){
+      stop(paste0(graph_colors, " is of class ",
+                  class(graph_colors)[1], "; expected vector"))
     }
 
     # ensure that there are a sufficient number of colors in graph_colors
     if(length(graph_colors) < length(out$unique_graphs)){
       stop(paste0("graph_colors is of length ", length(graph_colors),
-                  "; should have at least ", length(out$unique_graphs), " elements"))
+                  "; should have at least ", length(out$unique_graphs),
+                  " elements"))
     }
   }
-
-  # ensure seed is numeric
-  if (!is.numeric(seed)){
-    stop(paste0("seed is of type ", typeof(seed), "; expected numeric"))
-  }
-
-  # ensure seed is finite
-  if (!all(is.finite(seed))){
-    stop(paste0("seed should have all finite entries"))
-  }
 }
-
