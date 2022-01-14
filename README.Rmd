@@ -171,6 +171,8 @@ num_neg <- length(true_graph_pos) * n - num_pos
 
 -   Remove `CS` argument
 
+-   Center `X`
+
 ## Bibliography 
 
 (1) Dasgupta S., Ghosh P., Pati D., Mallick B. “An approximate

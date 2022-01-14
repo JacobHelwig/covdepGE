@@ -1,0 +1,59 @@
+---
+output: pdf_document
+---
+# True Precision Matrices
+
+```{r, echo = F, message = F}
+library(covdepGE)
+library(ggpubr)
+library(ggplot2)
+
+setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev")
+source("generate_data.R")
+n1 <- n2 <- n3 <- 60
+n <- sum(n1, n2, n3)
+cont <- generate_continuous(1, n1, n2, n3)
+data_mat <- cont$data
+Z <- cont$covts
+
+# visualize the precision matrices for each interval
+int1_g <- gg_adjMat(cont$true_precision[[1]], color1 = "forestgreen") + 
+  ggtitle("Individuals 1,...,60")
+int3_g <- gg_adjMat(cont$true_precision[[n1 + n2 + 1]], color1 = "steelblue") + 
+  ggtitle("Individuals 121,...,180")
+int1_g
+```
+
+```{r, fig.width = 13, fig.height = 18, echo = F, message = F}
+int2_g_inds <- n1 + 1:11
+int2_graphs <- lapply(int2_g_inds, function(indv_idx) 
+  gg_adjMat(cont$true_precision[[indv_idx]]) +
+    labs(title = paste0("Individual ", indv_idx)))
+ggarrange(plotlist = int2_graphs, ncol = 3, nrow = 4, common.legend = T)
+```
+
+```{r, echo = F, message = F}
+int3_g
+```
+
+# Bandwidth Analysis
+
+The bandwidths for individuals 61,...,71 are listed below, along with summary statistics and visualizations for all of the estimated bandwidths. 
+
+```{r, fig.width = 11, fig.height = 9}
+out <- covdepGE(data_mat, Z, n_sigma = 200, parallel = T, num_workers = 6)
+out
+
+round(out$bandwidths[61:71], 4)
+summary(out$bandwidths)
+```
+
+```{r, message = F}
+bw_tb <- tibble::tibble("individual index" = 1:n, bandwidth = out$bandwidths,
+                        interval = factor(rep(1:3, each = 60)))
+ggplot(bw_tb, aes(`individual index`, bandwidth, color = interval)) +
+  geom_point(shape = 21) + theme_classic() + ggsci::scale_color_nejm()
+
+ggplot(bw_tb, aes(bandwidth, fill = interval)) + 
+  geom_histogram(color = "black", binwidth = 0.02) + theme_classic() + ggsci::scale_fill_nejm()
+```

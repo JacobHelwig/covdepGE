@@ -1,0 +1,187 @@
+%
+% This is a borrowed LaTeX template file for lecture notes for CS267,
+% Applications of Parallel Computing, UC Berkeley EECS Department.
+% and Carnegie Mellon University's 10-725/36-725 
+% Convex Optimization course taught by Ryan Tibshirani.  When
+% preparing LaTeX notes for this class, please use this template. 
+
+\documentclass[twoside]{article}
+\setlength{\oddsidemargin}{0.25 in}
+\setlength{\evensidemargin}{-0.25 in}
+\setlength{\topmargin}{-0.6 in}
+\setlength{\textwidth}{6.5 in}
+\setlength{\textheight}{8.5 in}
+\setlength{\headsep}{0.75 in}
+\setlength{\parindent}{0 in}
+\setlength{\parskip}{0.1 in}
+
+%
+% ADD PACKAGES here:
+%
+
+\usepackage{amsmath,amsfonts,graphicx,amssymb,amsthm,bbm}
+\usepackage[mmddyy]{datetime}
+
+%
+% The following commands set up the lecnum (lecture number)
+% counter and make various numbering schemes work relative
+% to the lecture number.
+%
+\newcounter{lecnum}
+\renewcommand{\thepage}{\thelecnum-\arabic{page}}
+\renewcommand{\thesection}{\thelecnum.\arabic{section}}
+\renewcommand{\theequation}{\thelecnum.\arabic{equation}}
+\renewcommand{\thefigure}{\thelecnum.\arabic{figure}}
+\renewcommand{\thetable}{\thelecnum.\arabic{table}}
+
+%
+% The following macro is used to generate the header.
+%
+\newcommand{\lecture}[4]{
+   \pagestyle{myheadings}
+   \thispagestyle{plain}
+   \newpage
+   \setcounter{lecnum}{#1}
+   \setcounter{page}{1}
+   \noindent
+   \begin{center}
+   \framebox{
+      \vbox{\vspace{2mm}
+       \hbox to 6.28in { {\Large \hfill #2  \hfill} }
+       \vspace{2mm}
+       \hbox to 6.28in { {\it Author: #3 \hfill Created: #4} }
+       \vspace{2mm}
+       \hbox to 6.28in { {\it \hfill Last edit: \today} }
+      \vspace{2mm}}
+   }
+   \end{center}
+   \markboth{#2}{Lecture #1: #2}
+
+ %  {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept \& CMU's convex optimization course taught by Ryan Tibshirani.}
+
+}
+%
+% Convention for citations is authors' initials followed by the year.
+% For example, to cite a paper by Leighton and Maggs you would type
+% \cite{LM89}, and to cite a paper by Strassen you would type \cite{S69}.
+% (To avoid bibliography problems, for now we redefine the \cite command.)
+% Also commands that create a suitable format for the reference list.
+\renewcommand{\cite}[1]{[#1]}
+\def\beginrefs{\begin{list}%
+        {[\arabic{equation}]}{\usecounter{equation}
+         \setlength{\leftmargin}{2.0truecm}\setlength{\labelsep}{0.4truecm}%
+         \setlength{\labelwidth}{1.6truecm}}}
+\def\endrefs{\end{list}}
+\def\bibentry#1{\item[\hbox{[#1]}]}
+
+%Use this command for a figure; it puts a figure in wherever you want it.
+%usage: \fig{NUMBER}{SPACE-IN-INCHES}{CAPTION}
+\newcommand{\fig}[3]{
+			\vspace{#2}
+			\begin{center}
+			Figure \thelecnum.#1:~#3
+			\end{center}
+	}
+% Use these for theorems, lemmas, proofs, etc.
+\newtheorem{theorem}{Theorem}[lecnum]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+%\newenvironment{proof}{{\bf Proof:}}{\hfill\rule{2mm}{2mm}}
+
+% **** IF YOU WANT TO DEFINE ADDITIONAL MACROS FOR YOURSELF, PUT THEM HERE:
+
+% -- some Macros defined by AB and DP
+\newcommand{\abs}[1]{\left\vert#1\right\vert}
+\newcommand{\set}[1]{\left\{#1\right\}}
+\newcommand{\seq}[1]{\left<#1\right>}
+\newcommand{\norm}[1]{\left\Vert#1\right\Vert}
+\newcommand{\nnorm}[1]{\big\Vert#1\big\Vert}
+%\newcommand{\essnorm}[1]{\norm{#1}_{\ess}}
+\newcommand\wt[1]{{ \widetilde{#1} }}
+
+\newcommand \bbP{\mathbb{P}}
+\newcommand \bbE{\mathbb{E }}
+\newcommand \bbV{\mathbb{V}}
+\newcommand \bbR{\mathbb{R}}
+\newcommand \bbL{\mathbb{L}}
+\newcommand \bft{\boldsymbol \theta}
+\def\T{{ \mathrm{\scriptscriptstyle T} }}
+\def\H{{ \mathrm{\scriptscriptstyle H} }}
+\def\TV{{ \mathrm{\scriptscriptstyle TV} }}
+\def\Gauss{{ \mathrm{N} }}
+\def\d{{ \mbox{d} }}
+\newcommand{\ind}{\mathbbm{1}}
+\newcommand{\iu}{\mathrm{i}\mkern1mu}
+
+\def\m{\mathcal}
+\def\mb{\mathbb}
+\def\mr{\mathrm}
+\def\mx{\mbox}
+\def\tr{{\rm tr\,}}
+\newcommand{\1}{\\[1ex]}
+\newcommand{\2}{\\[2ex]}
+\newcommand{\3}{\\[3ex]}
+\newcommand{\4}{\\[4ex]}
+
+\DeclareMathOperator{\diag}{\text{diag}}
+\DeclareMathOperator{\logit}{\text{logit}}
+\DeclareMathOperator{\rank}{\text{rank}}
+
+% -- some Macros defined by JH
+
+% variance
+\newcommand{\var}[1]{{\rm Var}\left(#1\right)}
+
+% question environment
+\newtheorem{q}[theorem]{Question}
+
+
+\begin{document}
+%FILL IN THE RIGHT INFO.
+%\lecture{**LECTURE-NUMBER**}{**DATE**}{**LECTURER**}{**SCRIBE**}
+\lecture{0}{Hyperparameter specification for \texttt{covdepGE}}{Jacob Helwig \& Debdeep Pati}{1/11/22}
+%\footnotetext{These notes are partially based on those of Nigel Mansell.}
+
+% **** YOUR NOTES GO HERE:
+
+% Some general latex examples and examples making use of the
+% macros follow.  
+%**** IN GENERAL, BE BRIEF. LONG SCRIBE NOTES, NO MATTER HOW WELL WRITTEN,
+%**** ARE NEVER READ BY ANYBODY.
+
+\section{\texttt{varbvs} approach to hyperparameter specification}
+ % Don't be this informal in your notes!
+
+For $X'\in\mathbb{R}^{n\times p}$ and $y\in\mathbb R^n$, the default algorithm for \texttt{varbvs} begins by initializing hyperparameters as follows: 
+
+\begin{align*}
+  &\sigma^2 = \text{var}(y) \text{ (the error term variance)} \\
+  &\sigma^2_\beta = 1 \text{ (the slab variance)}\\
+  &\underset{\sim}{\frac{\pi}{1 - \pi}} \text{ (vector of 20 candidates for the prior odds of inclusion)} 
+\end{align*}
+
+The components of $\underset{\sim}{\frac{\pi}{1 - \pi}}$ are equally spaced and range from $\frac{\pi_1}{1 - \pi_1} =- \log_{10}(p)$  to $\frac{\pi_{20}}{1 - \pi_{20}} = -1$.
+
+Next, for the $j$-th value in $\underset{\sim}{\frac{\pi}{1 - \pi}},\frac{\pi_j}{1 - \pi_j}$, CAVI is performed to obtain a variational estimate for $\mu_j$ (the posterior mean of the non-zero regression coefficients) and $\alpha_j$ (the posterior inclusion probabilities). At each step of the CAVI, after the variational update is performed, $\sigma^2_j$ and ${\sigma^2_\beta}_j$ are both updated using the current values of the variational parameters and hyperparameters. The update for $\sigma^2_j$ is performed using maximum likelihood estimation and the update for ${\sigma^2_\beta}_j$ is performed using maximum a posteriori estimation. Finally, after the CAVI has concluded, the lower bound to the marginal log-liklihood given the hyperparameters, $\log(w_j)$, is calculated. 
+
+This process is repeated for each of the components of $\underset{\sim}{\frac{\pi}{1 - \pi}}$, resulting in a $\sigma^2_j$ and a ${\sigma^2_\beta}_j$ corresponding to each ${\frac{\pi_j}{1 - \pi_j}}$ and having been fit to the data. Additionally, to each $\frac{\pi_j}{1-\pi_j}$ there will be a $\log(w_j)$. Then, $\log(w_k)$ is chosen such that it maximizes the lower bound over $\underset\sim{\frac{\pi}{1-\pi}}$. CAVI is then repeated for all of the values in $\underset{\sim}{\frac{\pi}{1 - \pi}}$, however, this time, the initial values for each $\sigma^2_j$ and ${\sigma^2_\beta}_j$ are not $\text{var}(y)$ and $1$, but rather $\sigma^2_k$ and ${\sigma^2_\beta}_k$, respectively. Similarly, the starting values for each $\mu_j$ and $\alpha_j$ are $\mu_k$ and $\alpha_k$. 
+As with the first CAVI, the values of $\sigma^2_j$ and ${\sigma^2_\beta}_j$ are updated at each iteration using maximum liklihood estimation and maximum a posteriori estimation. 
+
+Upon completing CAVI for each of the $\frac{\pi_j}{1 - \pi_j}$, updated values are returned as $\underset{\sim}{\sigma^2}$ and $\underset{\sim}{\sigma^2_\beta}$, where the $j$-th value of these vectors corresponds to $\frac{\pi_j}{1 - \pi_j}$. Finally, the posterior inclusion probabilities are calculated as $\underset\sim\alpha\underset\sim w$, where $\underset\sim w$ is the vector of normalized lower bounds and the $j$-th column of $\underset\sim\alpha$ is $\alpha_j$.
+
+\section{Our approach to hyperparameter specification}
+
+In our algorithm, we define $y$ as the $i$-th column of $X$ and $X'$ as $X$ with the $i$-th column removed. We then rely on \texttt{varbvs} to obtain our hyperparameters for the $i$-th variable by first running the \texttt{varbvs} algorithm on $X'$ and $y$ as described in the previous section. To select hyperparameters, we set $\sigma^2 = \bar{\underset\sim{\sigma^2}}$ (sample mean of $\underset\sim{\sigma^2}$). We transform $\underset\sim{\frac\pi{1-\pi}}$ to $\underset\sim\pi$ and then set $\pi = \bar{\underset\sim\pi}$. We then define a vector $\underset\sim{\sigma_\beta^2}$ of slab variance candidates independent of the results obtained from \texttt{varbvs} and independent of the data. We perform CAVI for each value in $\underset\sim{\sigma_\beta^2}$, selecting the final value for the $i$-th variable to be the component of $\underset\sim{\sigma^2_\beta}$ that maximizes the ELBO. 
+
+This approach seems inefficient for several reasons. First, it opts to reduce the values of $\underset\sim{\sigma^2}$ to $\bar{\underset\sim{\sigma^2}}$ and $\underset\sim{\pi}$ to $\bar{\underset\sim{\pi}}$ instead of exploring the different elements of the hyperparameter space $(\sigma^2_j, {\sigma^2_\beta}_j, \pi_j)$ that have been fit to the data in conjunction with one another. It also ignores entirely the values of $\underset\sim{\sigma^2_\beta}$ that have been fit to the data and instead generates a grid independent of the data and the other two hyperparameters. Thus, a modification that could perhaps make our approach more effective would be to perform CAVI for each of the elements of the hyperparameter space $(\sigma^2_j, {\sigma^2_\beta}_j, \pi_j)$ estimated by \texttt{varbvs} for the $i$-th variable and select the element $(\sigma^2_k, {\sigma^2_\beta}_k, \pi_k)$ that maximizes the ELBO.   
+
+\section{Conclusion and next steps}
+
+I believe that this modified approach would not only result in \texttt{covdepGE} utilizing more sensible values for $(\sigma^2_j, {\sigma^2_\beta}_j, \pi_j)$, but also would result in faster convergence, since the hyperparameters are fit to the data. Although it is true that these hyperparameters have been fit to the data under the assumption that the conditional dependence structure is homogeneous across all of the individuals, it seems that our current choice of hyperparameters is informed by the data even less. 
+
+To explore this hypothesis, I will perform an experiment where I generate the continuous data multiple times. I will then call \texttt{covdepGE} twice, first using the hyperparameter specification scheme that we are currently using, and then using the specification scheme that I suggest here. I will compare the distribution of the difference in the total model ELBO using each scheme within each data generation.
+
+\end{document}
