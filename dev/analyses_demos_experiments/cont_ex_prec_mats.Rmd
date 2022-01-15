@@ -41,7 +41,7 @@ int3_g
 The bandwidths for individuals 61,...,71 are listed below, along with summary statistics and visualizations for all of the estimated bandwidths. 
 
 ```{r, fig.width = 11, fig.height = 9}
-out <- covdepGE(data_mat, Z, n_sigma = 200, parallel = T, num_workers = 6)
+out <- covdepGE(data_mat, Z, n_param = 200, parallel = T, num_workers = 6)
 out
 
 round(out$bandwidths[61:71], 4)

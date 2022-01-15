@@ -16,15 +16,15 @@
 ##
 ## mu: numeric; global initialization value
 ##
-## sigmasq: positive numeric; variance hyperparameter for spike-and-slab.
+## sigmasq_vec: positive numeric; candidate error term variances
 ##
-## sigmabetasq_vec: vector with positive entries; candidate values for slab
+## sigmabetasq_vec: vector with positive entries; candidate slab variances
 ##
 ## var_min: postive numeric; lower bound of sigmabetasq_vec
 ##
 ## var_max: postive numeric; upper bound of sigmabetasq_vec
 ##
-## n_sigma: postive integer; length of sigmabetasq_vec
+## n_param: postive integer; length of hyperparameter grid
 ##
 ## pi_vec: vector with entries in (0, 1); candidate values of pi
 ##
@@ -48,21 +48,13 @@
 ##
 ## stop_cluster: logical; if `T`, run `doParallel::stopImplicitCluster()`
 ##
-## monitor_final_elbo logical; if T, monitor the final model ELBO
-##
-## monitor_grid_elbo logical; if T, monitor the non-convergent ELBO history
-##
-## monitor_period positive integer; the periodicity of ELBO monitoring
-##
 ## warnings: logical; if T, convergence and grid warnings will be displayed
 ## -----------------------------------------------------------------------------
-covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
-                            sigmabetasq_vec, var_min, var_max, n_sigma, pi_vec,
+covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
+                            sigmabetasq_vec, var_min, var_max, n_param, pi_vec,
                             norm, scale, tolerance, max_iter_grid,
                             max_iter_final, edge_threshold, sym_method,
-                            parallel, num_workers, stop_cluster,
-                            monitor_final_elbo, monitor_grid_elbo,
-                            monitor_period, warnings){
+                            parallel, num_workers, stop_cluster, warnings){
 
   # ensure vector input for parameters that are expected to be vectors
   args_vector <- list(tau = tau, pi_vec = pi_vec)
@@ -76,16 +68,13 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   }
 
   # ensure scalar input for parameters that are expected to be scalars
-  args_scalar <- list(kde = kde, alpha = alpha, mu = mu, sigmasq = sigmasq,
-                      var_min = var_min, var_max = var_max, n_sigma = n_sigma,
+  args_scalar <- list(kde = kde, alpha = alpha, mu = mu, sigmasq_vec = sigmasq_vec,
+                      var_min = var_min, var_max = var_max, n_param = n_param,
                       norm = norm, scale = scale, tolerance = tolerance,
                       max_iter_grid = max_iter_grid,
                       max_iter_final = max_iter_final,
                       edge_threshold = edge_threshold, sym_method = sym_method,
                       parallel = parallel, stop_cluster = stop_cluster,
-                      monitor_final_elbo = monitor_final_elbo,
-                      monitor_grid_elbo = monitor_grid_elbo,
-                      monitor_period = monitor_period,
                       warnings = warnings)
   if (any(!(sapply(args_scalar, length) == 1))){
 
@@ -97,13 +86,12 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
 
   # ensure numeric input for parameters that are expected to be numeric
   args_numeric <- list(data_mat = data_mat, Z = Z, tau = tau, alpha = alpha,
-                       mu = mu, sigmasq = sigmasq, var_min = var_min,
-                       n_sigma = n_sigma, var_max = var_max, pi_vec = pi_vec,
+                       mu = mu, sigmasq_vec = sigmasq_vec, var_min = var_min,
+                       n_param = n_param, var_max = var_max, pi_vec = pi_vec,
                        norm = norm, tolerance = tolerance,
                        max_iter_grid = max_iter_grid,
                        max_iter_final = max_iter_final,
-                       edge_threshold = edge_threshold,
-                       monitor_period = monitor_period)
+                       edge_threshold = edge_threshold)
   if (any(!sapply(args_numeric, is.numeric))){
 
     # get the name of the non-numeric
@@ -114,16 +102,13 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
 
   # ensure non-NA input for parameters that are to be non-NA
   args_nonNA <- list(data_mat = data_mat, Z = Z, tau = tau, kde = kde,
-                     alpha = alpha, mu = mu, sigmasq = sigmasq,
-                     var_min = var_min, var_max = var_max, n_sigma= n_sigma,
+                     alpha = alpha, mu = mu, sigmasq_vec = sigmasq_vec,
+                     var_min = var_min, var_max = var_max, n_param= n_param,
                      pi_vec = pi_vec, norm = norm, scale = scale,
                      tolerance = tolerance, max_iter_grid = max_iter_grid,
                      max_iter_final = max_iter_final,
                      edge_threshold = edge_threshold, sym_method = sym_method,
                      parallel = parallel, stop_cluster = stop_cluster,
-                     monitor_final_elbo = monitor_final_elbo,
-                     monitor_grid_elbo = monitor_grid_elbo,
-                     monitor_period = monitor_period,
                      warnings = warnings)
   if (any(sapply(args_nonNA, function (x) any(is.na(x))))){
 
@@ -134,11 +119,10 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
 
   # ensure finite input for parameters that are expected to be finite
   args_finite <- list(data_mat = data_mat, Z = Z, tau = tau, mu = mu,
-                      sigmasq = sigmasq, var_min = var_min, var_max = var_max,
-                      n_sigma = n_sigma, tolerance = tolerance,
+                      sigmasq_vec = sigmasq_vec, var_min = var_min, var_max = var_max,
+                      n_param = n_param, tolerance = tolerance,
                       max_iter_grid = max_iter_grid,
-                      max_iter_final = max_iter_final,
-                      monitor_period = monitor_period)
+                      max_iter_final = max_iter_final)
   if (any(!sapply(args_finite, function (x) all(is.finite(x))))){
 
     # get the name of the non-finite
@@ -148,9 +132,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   }
 
   # ensure integer input for parameters that are expected to be integers
-  args_integers <- list(n_sigma = n_sigma, max_iter_grid = max_iter_grid,
-                        max_iter_final = max_iter_final,
-                        monitor_period = monitor_period)
+  args_integers <- list(n_param = n_param, max_iter_grid = max_iter_grid,
+                        max_iter_final = max_iter_final)
   if (any(!(sapply(args_integers, function(x) x %% 1) == 0))){
 
     # get the name of the non-integer
@@ -160,11 +143,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   }
 
   # ensure logical input for parameters that are expected to be logicals
-  args_logical <- list(kde = kde, scale = scale,
-                       monitor_final_elbo = monitor_final_elbo,
-                       monitor_grid_elbo = monitor_grid_elbo,
-                       parallel = parallel, stop_cluster = stop_cluster,
-                       warnings = warnings)
+  args_logical <- list(kde = kde, scale = scale, parallel = parallel,
+                       stop_cluster = stop_cluster, warnings = warnings)
   if (any(!sapply(args_logical, is.logical))){
 
     # get the name of the non-logical
@@ -184,12 +164,11 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
   }
 
   # ensure positive input for parameters that are expected to be positive
-  args_positive <- list(tau = tau, sigmasq = sigmasq, var_min = var_min,
-                        var_max = var_max, n_sigma = n_sigma,
+  args_positive <- list(tau = tau, sigmasq_vec = sigmasq_vec, var_min = var_min,
+                        var_max = var_max, n_param = n_param,
                         tolerance = tolerance, max_iter_grid = max_iter_grid,
                         max_iter_final = max_iter_final,
-                        edge_threshold = edge_threshold,
-                        monitor_period = monitor_period)
+                        edge_threshold = edge_threshold)
   if (any(!sapply(args_positive, function (x) all(x > 0)))){
 
     # get the name of the non-positive
@@ -339,15 +318,6 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq,
     }
   }
 
-  # ensure that monitor_period is not greater than max_iter_grid
-  if (monitor_period > max_iter_grid & monitor_grid_elbo){
-    stop("monitor_period is greater than max_iter_grid")
-  }
-
-  # ensure that monitor_period is not greater than max_iter_grid
-  if (monitor_period > max_iter_final & monitor_final_elbo){
-    stop("monitor_period is greater than max_iter_final")
-  }
 }
 
 ## -----------------------------------------------------------------------------

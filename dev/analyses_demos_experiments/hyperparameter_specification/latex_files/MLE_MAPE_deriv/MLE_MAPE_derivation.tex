@@ -56,7 +56,7 @@
       \vspace{2mm}}
    }
    \end{center}
-   \markboth{#2}{Lecture #1: #2}
+   \markboth{#2}{#2}
 
  %  {\bf Note}: {\it LaTeX template courtesy of UC Berkeley EECS dept \& CMU's convex optimization course taught by Ryan Tibshirani.}
 
@@ -205,51 +205,51 @@ Setting equal to 0 and solving for $\sigma^2$ gives:
 \sigma^2_{\textit{MLE}} = \frac1{n}\sum_{i = 1}^n (x_{i,j} - x^\top_{i,-j}\beta_j^l)^2w_{i,l}
 \end{equation}
 
-As this is the conditional weighted likelihood**, conditioning on $\beta_j^l = \mu_j^l$ gives: 
-
-\textit{**I am not sure if this is the correct or complete reasoning}
+**Estimating the value of the parameter $\beta_j^l$ using its posterior expected value: 
 
 \begin{equation}
 \sigma^2_{\textit{MLE}} = \frac1{n}\sum_{i = 1}^n (x_{i,j} - x^\top_{i,-j}\mu_j^l)^2w_{i,l}
 \end{equation}
 
+\textit{**I don't believe that this is the correct reasoning}
+
 \section{MAPE update for $\sigma^2_\beta$}
 
-The joint posterior of $(\beta_j^l,\gamma_j^l)$ is given by:
-
-\begin{equation}
-p(\beta_j^l,\gamma_j^l|X)\propto L_l^w(j)p_0(\beta_j^l, \gamma_j^l)
-\end{equation}
-
-Thus, the log posterior is given by:
-
-\begin{align}
-\log(p(\beta_j^l,\gamma_j^l|X)) & \propto \log(L_l^w(j)) + \log(p_0(\beta_j^l, \gamma_j^l))  \\
-& \propto \log(L_l^w(j)) + \log\left\{\prod_{k = 1}^{p - 1}\delta_{\{0\}}\left(\beta_{j,k}^l\right)^{1- \gamma_{j,k}^l}\pi^{\gamma_{j,k}^l}(1-\pi)^{1-\gamma_{j,k}^l}\right\}\\
-& \quad + \sum_{k = 1}^{p-1}\gamma_{j,k}^l\log(\frac1{\sqrt{2\pi\sigma^2}}) -\frac12\log(\sigma^2_\beta) \sum_{k = 1}^{p-1}\gamma_{j,k}^l - \frac12(\sigma^2\sigma^2_\beta)^{-1}\sum_{k=1}^{p-1}\gamma_{j,k}^l(\beta_{j,k}^l)^2
-\end{align}
-
-Differentiating with respect to $\sigma^2_\beta$ gives:
-
-\begin{equation}
-\frac{\partial\log(p(\beta_j^l,\gamma_j^l|X))}{\partial\sigma^2_\beta}\propto -\frac12(\sigma^2_\beta)^{-1} \sum_{k = 1}^{p-1}\gamma_{j,k}^l + \frac1{2\sigma^2}(\sigma^2_\beta)^{-2}\sum_{k=1}^{p-1}\gamma_{j,k}^l(\beta_{j,k}^l)^2
-\end{equation}
-
-Setting equal to 0 and solving for $\sigma^2_\beta$ gives:
-
-\begin{equation}
-(\sigma^2_\beta)_{\textit{MAPE}} = \frac{\sum_{k=1}^{p-1}\gamma_{j,k}^l(\beta_{j,k}^l)^2}{\sigma^2\sum_{k=1}^{p-1}\gamma_{j,k}^l}
-\end{equation}
-
-Approximating the value of the unknown parameters by their expected values** (that is, $\gamma_{j,k}^l$ with $\alpha_{j,k}^l$ and $\beta_{j,k}^l$ with $\mu_{j,k}^l$): 
-
-\textit{**Note: I am certain that this is not the correct reasoning for plugging in the variational approximations}
-
-\begin{equation}
-(\sigma^2_\beta)_{\textit{MAPE}} = \frac{\sum_{k=1}^{p-1}\alpha_{j,k}^l(\mu_{j,k}^l)^2}{\sigma^2\sum_{k=1}^{p-1}\alpha_{j,k}^l}
-\end{equation}
-
-\section{MAPE update for $\sigma_\beta^2$ with hyperprior}
+%The joint posterior of $(\beta_j^l,\gamma_j^l)$ is given by:
+%
+%\begin{equation}
+%p(\beta_j^l,\gamma_j^l|X)\propto L_l^w(j)p_0(\beta_j^l, \gamma_j^l)
+%\end{equation}
+%
+%Thus, the log posterior is given by:
+%
+%\begin{align}
+%\log(p(\beta_j^l,\gamma_j^l|X)) & \propto \log(L_l^w(j)) + \log(p_0(\beta_j^l, \gamma_j^l))  \\
+%& \propto \log(L_l^w(j)) + \log\left\{\prod_{k = 1}^{p - 1}\delta_{\{0\}}\left(\beta_{j,k}^l\right)^{1- \gamma_{j,k}^l}\pi^{\gamma_{j,k}^l}(1-\pi)^{1-\gamma_{j,k}^l}\right\}\\
+%& \quad + \sum_{k = 1}^{p-1}\gamma_{j,k}^l\log(\frac1{\sqrt{2\pi\sigma^2}}) -\frac12\log(\sigma^2_\beta) \sum_{k = 1}^{p-1}\gamma_{j,k}^l - \frac12(\sigma^2\sigma^2_\beta)^{-1}\sum_{k=1}^{p-1}\gamma_{j,k}^l(\beta_{j,k}^l)^2
+%\end{align}
+%
+%Differentiating with respect to $\sigma^2_\beta$ gives:
+%
+%\begin{equation}
+%\frac{\partial\log(p(\beta_j^l,\gamma_j^l|X))}{\partial\sigma^2_\beta}\propto -\frac12(\sigma^2_\beta)^{-1} \sum_{k = 1}^{p-1}\gamma_{j,k}^l + \frac1{2\sigma^2}(\sigma^2_\beta)^{-2}\sum_{k=1}^{p-1}\gamma_{j,k}^l(\beta_{j,k}^l)^2
+%\end{equation}
+%
+%Setting equal to 0 and solving for $\sigma^2_\beta$ gives:
+%
+%\begin{equation}
+%(\sigma^2_\beta)_{\textit{MAPE}} = \frac{\sum_{k=1}^{p-1}\gamma_{j,k}^l(\beta_{j,k}^l)^2}{\sigma^2\sum_{k=1}^{p-1}\gamma_{j,k}^l}
+%\end{equation}
+%
+%Approximating the value of the unknown parameters by their expected values** (that is, $\gamma_{j,k}^l$ with $\alpha_{j,k}^l$ and $\beta_{j,k}^l$ with $\mu_{j,k}^l$): 
+%
+%\textit{**Note: I am certain that this is not the correct reasoning for plugging in the variational approximations}
+%
+%\begin{equation}
+%(\sigma^2_\beta)_{\textit{MAPE}} = \frac{\sum_{k=1}^{p-1}\alpha_{j,k}^l(\mu_{j,k}^l)^2}{\sigma^2\sum_{k=1}^{p-1}\alpha_{j,k}^l}
+%\end{equation}
+%
+%\section{MAPE update for $\sigma_\beta^2$ with hyperprior}
 
 \texttt{varbvs} imposes a scaled inverse chi-squared hyperprior on $\sigma^2_\beta$ with degrees of freedom $n_0$ and scale parameter $s_0$. That is:
 
@@ -257,7 +257,7 @@ Approximating the value of the unknown parameters by their expected values** (th
 \sigma^2_\beta \sim f_0(\sigma^2_\beta) \propto \frac{\exp\left(\frac{-n_0s_0}{2\sigma^2_\beta}\right)}{{(\sigma^2_\beta)^{1 + n_0/2}}}
 \end{equation}
 
-This section is a copy of the previous section with the addition of this hyperprior. 
+%This section is a copy of the previous section with the addition of this hyperprior. 
 
 The joint posterior of $(\beta_j^l,\gamma_j^l)$ is given by:
 
@@ -269,9 +269,8 @@ Thus, the log posterior is given by:
 
 \begin{align}
 \log(p(\beta_j^l,\gamma_j^l|X)) & \propto \log(L_l^w(j)) + \log(p_0(\beta_j^l, \gamma_j^l))  \\
-& \propto \log(L_l^w(j)) + \log\left\{\prod_{k = 1}^{p - 1}\delta_{\{0\}}\left(\beta_{j,k}^l\right)^{1- \gamma_{j,k}^l}\pi^{\gamma_{j,k}^l}(1-\pi)^{1-\gamma_{j,k}^l}\right\}\\
-& \quad + \sum_{k = 1}^{p-1}\gamma_{j,k}^l\log(\frac1{\sqrt{2\pi\sigma^2}}) -\frac12\log(\sigma^2_\beta) \sum_{k = 1}^{p-1}\gamma_{j,k}^l - \frac12(\sigma^2\sigma^2_\beta)^{-1}\sum_{k=1}^{p-1}\gamma_{j,k}^l(\beta_{j,k}^l)^2 \\
-&\quad -\frac{n_0s_0}{2\sigma^2_\beta}-(1 + n_0/2)\log(\sigma^2_\beta)
+& \propto \log(L_l^w(j)) + \log\left\{\prod_{k = 1}^{p - 1}\delta_{\{0\}}\left(\beta_{j,k}^l\right)^{1- \gamma_{j,k}^l}\left(\frac1{\sqrt{\sigma^2}}\right)^{\gamma_{j,k}^l}\pi^{\gamma_{j,k}^l}(1-\pi)^{1-\gamma_{j,k}^l}\right\}\\
+& \quad -\frac12\log(\sigma^2_\beta) \sum_{k = 1}^{p-1}\gamma_{j,k}^l - \frac12(\sigma^2\sigma^2_\beta)^{-1}\sum_{k=1}^{p-1}\gamma_{j,k}^l(\beta_{j,k}^l)^2 - \frac{n_0s_0}{2\sigma^2_\beta}-(1 + n_0/2)\log(\sigma^2_\beta)
 \end{align}
 
 Differentiating with respect to $\sigma^2_\beta$ gives:
@@ -286,22 +285,22 @@ Setting equal to 0 and solving for $\sigma^2_\beta$ gives:
 (\sigma^2_\beta)_{\textit{MAPE}} = \frac{\sum_{k=1}^{p-1}\gamma_{j,k}^l(\beta_{j,k}^l)^2 + n_0s_0}{\sigma^2(2 + n_0 + \sum_{k=1}^{p-1}\gamma_{j,k}^l)}
 \end{equation}
 
-Approximating the value of the unknown parameters by their expected values** (that is, $\gamma_{j,k}^l$ with $\alpha_{j,k}^l$ and $\beta_{j,k}^l$ with $\mu_{j,k}^l$): 
-
-\textit{**Note: I am certain that this is not the correct reasoning for plugging in the variational approximations}
+**Estimating the value of the parameters $\beta_j^l$ and $\gamma_j^l$ using their posterior expected values: 
 
 \begin{equation}
 (\sigma^2_\beta)_{\textit{MAPE}} = \frac{\sum_{k=1}^{p-1}\alpha_{j,k}^l(\mu_{j,k}^l)^2 + n_0s_0}{\sigma^2(2 + n_0 + \sum_{k=1}^{p-1}\alpha_{j,k}^l)}
 \end{equation}
 
+\textit{**I don't believe that this is the correct reasoning}
+
 \section{\texttt{varbvs} hyperparameter updates}
 
-Note that these updates are for an unweighted regression. These updates can be found in \href{https://github.com/pcarbo/varbvs/blob/master/varbvs-R/R/varbvsnorm.R}{this \texttt{varbvs} script}, under sections 2d and 2e. Unfamiliar helper functions, such as \texttt{dot} and \texttt{betavar} can be found in \href{https://github.com/pcarbo/varbvs/blob/master/varbvs-R/R/misc.R}{this \texttt{varbvs} script}.
+Note that these updates are for an unweighted regression of $X$ onto $y$. These updates can be found in \href{https://github.com/pcarbo/varbvs/blob/master/varbvs-R/R/varbvsnorm.R}{this \texttt{varbvs} script}, under sections 2d and 2e. Unfamiliar helper functions, such as \texttt{dot} and \texttt{betavar} can be found in \href{https://github.com/pcarbo/varbvs/blob/master/varbvs-R/R/misc.R}{this \texttt{varbvs} script}.
 
 Let $X_r = Xr$, where $r$ is a vector whose $k$-th entry is $\mu_{j,k}^l\alpha_{j,k}^l$ 
 
 \begin{equation}
-\sigma^2_{\textit{MLE}} = \left\{\lVert y - X_r\rVert^2_2 + \sum_{k = 1}^{p-1}(X_k^\top X_k)\alpha_{j,k}^l\left[(s_{j,k}^l)^2 + (1 - \alpha_{j,k}^l)(\mu_{j,k}^l)^2\right] + \frac1{\sigma^2_\beta}\sum_{k = 1}^{p - 1}\alpha_{j,k}^l((s_{j,k}^l)^2 + (\mu_{j,k}^l)^2)\right\} / (n + \sum_{k = 1}^{p - 1}\alpha_{j,k}^l)
+\sigma^2_{\textit{MLE}} = \frac{\lVert y - X_r\rVert^2_2 + \sum_{k = 1}^{p-1}\left\{(X_k^\top X_k)\alpha_{j,k}^l\left[(s_{j,k}^l)^2 + (1 - \alpha_{j,k}^l)(\mu_{j,k}^l)^2\right]\right\} + \frac1{\sigma^2_\beta}\sum_{k = 1}^{p - 1}\left\{\alpha_{j,k}^l((s_{j,k}^l)^2 + (\mu_{j,k}^l)^2)\right\}}{n + \sum_{k = 1}^{p - 1}\alpha_{j,k}^l}
 \end{equation}
 
 \begin{equation}

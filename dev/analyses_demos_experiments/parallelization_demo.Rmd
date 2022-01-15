@@ -80,13 +80,13 @@ doParallel::registerDoParallel(5)
 Sys.time() - start
 
 # run covdepGE in parallel
-covdepGE(data_mat, Z, parallel = T, n_sigma = 5)
+covdepGE(data_mat, Z, parallel = T, n_param = 5)
 ```
 
 ## Automatic parallel backend registration
 
 ```{r}
-covdepGE(data_mat, Z, parallel = T, num_workers = 7, stop_cluster = F, n_sigma = 5)
+covdepGE(data_mat, Z, parallel = T, num_workers = 7, stop_cluster = F, n_param = 5)
 ```
 
 By setting `stop_cluster = F`, subsequent parallel calls to `covdepGE` are able to employ the same workers. This avoids the overhead of creating a new cluster.
@@ -98,18 +98,18 @@ By setting `stop_cluster = F`, subsequent parallel calls to `covdepGE` are able 
 The model in the previous section was relatively simple, with only 5 grid points. In this case, the time to create the cluster and communication from the parent to the children workers outweighs the time savings of parallelizing the CAVI. Thus, sequential execution is faster for this small model.
 
 ```{r}
-covdepGE(data_mat, Z, n_sigma = 5)
+covdepGE(data_mat, Z, n_param = 5)
 ```
 
 However, for a more complex model, the benefits of parallelization become apparent. To increase complexity, I will increase the number of grid points to 200. 
 
 ```{r}
 # sequential
-out_seq <- covdepGE(data_mat, Z, n_sigma = 200)
+out_seq <- covdepGE(data_mat, Z, n_param = 200)
 out_seq
 
 # parallel
-out_par <- covdepGE(data_mat, Z, n_sigma = 200, parallel = T, 
+out_par <- covdepGE(data_mat, Z, n_param = 200, parallel = T, 
                     num_workers = 6)
 out_par
 ```
@@ -155,11 +155,11 @@ Note that since the last parallel call to `covdepGE` did not specify `stop_clust
 
 ```{r, fig.width = 11, fig.height = 7}
 # sequential
-out_seq <- covdepGE(data_mat, Z, n_sigma = 5)
+out_seq <- covdepGE(data_mat, Z, n_param = 5)
 out_seq
 
 # parallel
-out_par <- covdepGE(data_mat, Z, n_sigma = 5, parallel = T, num_workers = 8)
+out_par <- covdepGE(data_mat, Z, n_param = 5, parallel = T, num_workers = 8)
 out_par
 
 annotate_figure(ggarrange(plotlist = plot(out_seq, colors)), 

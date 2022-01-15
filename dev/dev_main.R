@@ -3,7 +3,7 @@ rm(list = ls())
 source("generate_data.R")
 
 # generate data and covariates
-discrete_data <- T # true if discrete example is desired
+discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter
@@ -15,7 +15,7 @@ if (discrete_data) {
 data_mat <- dat$data
 Z <- dat$covts
 
-package <- T # true if the package version is desired
+package <- F # true if the package version is desired
 if (package){
   out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, CS = T, scale = F,
                             sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),

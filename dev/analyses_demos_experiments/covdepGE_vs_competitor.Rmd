@@ -234,7 +234,7 @@ out_dep <- covdepGE(data_mat,
   sigmasq = mean(sigmasq), # hyperparameter residual variance
   var_min = 1e-3, # smallest sigmabeta_sq grid value
   var_max = 5, # largest sigmabeta_sq grid value
-  n_sigma = 50, # length of the sigmabeta_sq grid
+  n_param = 50, # length of the sigmabeta_sq grid
   pi_vec = 0.1, # prior inclusion probability
   tolerance = 1e-10, # variational parameter exit condition 1
   max_iter_final = 1e3 # variational parameter exit condition 2
@@ -285,7 +285,7 @@ for (k in 1:num_clusters) {
     sigmasq = mean(sigmasq_k), # hyperparameter residual variance
     var_min = 1e-3, # smallest sigmabeta_sq grid value
     var_max = 5, # largest sigmabeta_sq grid value
-    n_sigma = 50, # length of the sigmabeta_sq grid
+    n_param = 50, # length of the sigmabeta_sq grid
     pi_vec = 0.1, # prior inclusion probability
     tolerance = 1e-10, # variational parameter exit condition 1
     max_iter_final = 1e3, # variational parameter exit condition 2
@@ -411,26 +411,3 @@ save(perf_res, file = paste0("performance_data_int", sparse_interval,
                                 "_sparse", sparsity_level, ".Rda"))
 ```
 
-# ELBO Monitoring
-
-The latest version of `covdepGE` includes `CAVI_details` in the return: 
-
-`CAVI_details`: list of $(p + 1)$ lists; the $j$-th list corresponds to the $j$-th variable and contains 6 values:
-
- - `sigmabeta_sq`, `pi`: numerics; the grid point that maximized the ELBO for the $j$-th variable
- 
- - `ELBO`: numeric; the maximum value of ELBO for the final CAVI
- 
- - `converged_iter`: numeric; the number of iterations to attain convergence for the final CAVI
- 
- - `ELBO_history`: numeric vector; ELBO history by iteration for the final CAVI. If `monitor_final_elbo` is `F`, then this value will be `NULL`
- 
- - `non_converged`: numeric matrix; each row corresponds to the ELBO history for each of the grid points that did not converge. If `monitor_grid_elbo` is `F`, then the ELBO history is omitted, and only the non-convergent `sigmabeta_sq` and `pi` values are provided. If all pairs resulted in convergence, then this value is `NULL`
-
-```{r}
-out <- covdepGE(data_mat, Z, max_iter_final = 50, tolerance = 1e-10, 
-                monitor_final_elbo = T, monitor_grid_elbo = T, 
-                monitor_period = 15)
-out
-out$CAVI_details
-```

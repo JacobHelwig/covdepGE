@@ -13,25 +13,22 @@ covdepGE(
   kde = T,
   alpha = 0.2,
   mu = 0,
-  sigmasq = 0.5,
+  sigmasq_vec = 0.5,
   sigmabetasq_vec = NULL,
   var_min = 0.01,
   var_max = 10,
-  n_sigma = 8,
+  n_param = 8,
   pi_vec = 0.1,
   norm = 2,
   scale = T,
   tolerance = 1e-12,
-  max_iter_grid = max_iter_final,
-  max_iter_final = 10000,
+  max_iter_grid = 100,
+  max_iter_final = 1000,
   edge_threshold = 0.5,
   sym_method = "mean",
   parallel = F,
   num_workers = NULL,
   stop_cluster = T,
-  monitor_final_elbo = F,
-  monitor_grid_elbo = F,
-  monitor_period = 1,
   warnings = T,
   CS = F
 )
@@ -57,12 +54,14 @@ variational parameters \code{alpha_matrices} (approximates probabilities of
 inclusion). \code{0.2} by default}
 
 \item{mu}{numeric; global initialization value for the variational parameters
-\code{mu_matrices} (approximates regression coefficients). \code{0} by default}
+\code{mu_matrices} (approximates posterior mean of regression coefficients). \code{0}
+by default}
 
-\item{sigmasq}{positive numeric; Error term variance for spike-and-slab.
-Algorithm scales this value by individual-specific weights. \code{0.5} by default}
+\item{sigmasq_vec}{numeric vector of length \code{n_param} with positive
+entries; candidate values of \code{sigmasq}, the error term variance. \code{0.5} by
+default}
 
-\item{sigmabetasq_vec}{numeric vector of length \code{n_sigma} with positive
+\item{sigmabetasq_vec}{numeric vector of length \code{n_param} with positive
 entries; candidate values of \code{sigmabeta_sq}, the slab variance. \code{NULL} by
 default}
 
@@ -73,14 +72,14 @@ the lower bound of the auto-generated \code{sigmabetasq_vec}. \code{0.01} by def
 \code{NULL}, \code{var_max} is the upper bound of the auto-generated \code{sigmabetasq_vec}.
 \code{10} by default}
 
-\item{n_sigma}{positive integer; if \code{sigmabetasq_vec} is \code{NULL}, \code{n_sigma} is
+\item{n_param}{positive integer; if \code{sigmabetasq_vec} is \code{NULL}, \code{n_param} is
 the number of candidate \code{sigmabeta_sq} that will be auto-generated as:
 
-\code{sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_sigma))}
+\code{sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_param))}
 
 \code{8} by default}
 
-\item{pi_vec}{numeric vector of length \code{n_pi} with entries in \eqn{(0, 1)};
+\item{pi_vec}{numeric vector of length \code{n_param} with entries in \eqn{(0, 1)};
 candidate values of \code{pi}. \code{0.1} by default}
 
 \item{norm}{numeric in \eqn{[1, Inf]}; norm to use when calculating weights.
@@ -95,10 +94,10 @@ iteration-to-iteration change in the alpha matrix are within tolerance.
 
 \item{max_iter_grid}{positive integer; during the grid search, if the
 tolerance criteria has not been met by \code{max_iter_grid} iterations, end CAVI.
-\code{max_iter_final} by default}
+\code{100} by default}
 
 \item{max_iter_final}{positive integer; for the final CAVI, if the tolerance
-criteria has not been met by \code{max_iter_final} iterations, end CAVI. \code{1e4} by
+criteria has not been met by \code{max_iter_final} iterations, end CAVI. \code{1000} by
 default}
 
 \item{edge_threshold}{numeric in \eqn{(0, 1)}; when post-processing the
@@ -106,8 +105,8 @@ inclusion probabilities, an edge will be added to the graph if the
 \eqn{(i, j)} edge has probability of inclusion greater than \code{edge_threshold}.
 \code{0.5} by default}
 
-\item{sym_method}{character in \{\code{"mean"}, \code{"max"}, \code{"min"}\}; to
-symmetrize the alpha matrices, the \eqn{i,j = j,i} entry is
+\item{sym_method}{character in \{\code{"mean"}, \code{"max"}, \code{"min"}\}; to symmetrize
+the alpha matrices, the \eqn{i,j = j,i} entry is
 \code{sym_method}\eqn{((i,j entry), (j,i entry))}. \code{"mean"} by default}
 
 \item{parallel}{logical; if \code{T}, grid search and CAVI for each variable will
@@ -127,17 +126,6 @@ stop the cluster created implicitly by
 \code{doParallel::registerDoParallel(num_workers)} and will shut down the unused
 workers. Setting \code{F} is useful when making multiple calls to \code{covdepGE} with
 \code{parallel = T}, as it avoids the overhead of creating a new cluster. \code{T} by
-default}
-
-\item{monitor_final_elbo}{logical; if \code{T}, the ELBO history for the final
-CAVI will be returned. \code{F} by default}
-
-\item{monitor_grid_elbo}{logical; if \code{T}, the ELBO history for each of the
-grid points that do not attain convergence within \code{max_iter_grid} iterations
-will be returned}
-
-\item{monitor_period}{integer; the periodicity with which the ELBO is
-recorded if \code{monitor_final_elbo} or \code{monitor_grid_elbo} is \code{T}. \code{1} by
 default}
 
 \item{warnings}{logical; if \code{T}, convergence and grid warnings will be
@@ -180,21 +168,15 @@ indices corresponding to the \eqn{v}-th graph
 }
 \enumerate{
 \item \code{CAVI_details}: list of \eqn{(p + 1)} lists; the \eqn{j}-th list
-corresponds to the \eqn{j}-th variable and contains 6 values:
+corresponds to the \eqn{j}-th variable and contains the following values:
 }
 \itemize{
-\item \code{sigmabeta_sq}, \code{pi}: numerics; the grid point that maximized the ELBO for
-the \eqn{j}-th variable
+\item \code{sigmasq}, \code{sigmabeta_sq}, \code{pi}: numerics; the values of the
+hyperparameters that maximized the ELBO for the j-th variable
 \item \code{ELBO}: numeric; the maximum value of ELBO for the final CAVI
 \item \code{converged_iter}: numeric; the number of iterations to attain convergence
 for the final CAVI
-\item \code{ELBO_history}: numeric vector; ELBO history by iteration for the final
-CAVI. If \code{monitor_final_elbo} is \code{F}, then this value will be \code{NULL}
-\item \code{non_converged}: numeric matrix; each row corresponds to the ELBO history
-for each of the grid points that did not converge. If \code{monitor_grid_elbo}
-is \code{F}, then the ELBO history is omitted, and only the non-convergent
-\code{sigmabeta_sq} and \code{pi} values are provided. If all pairs resulted in
-convergence, then this value is \code{NULL}
+\item \code{hyperparameters}: \code{n_param} x 4 matrix; each of the hyperparameter grid
 }
 \enumerate{
 \item \code{model_details}: list with the following values:
@@ -215,17 +197,13 @@ not attain convergence within \code{max_iter_final} iterations
 of the \eqn{i}-th individual with respect to the \eqn{j}-th individual using
 the \eqn{j}-th individual's bandwidth
 \item \code{bandwidths}: vector of length \eqn{n}; individual-specific bandwidths
-\item \code{sigmabeta_sq_candidates}: vector; \code{sigmabeta_sq} candidates
-\item \code{pi_candidates}: vector; \code{pi} candidates
 \item \code{arguments}: vector; argument values passed to the current call to
 \code{covdepGE}
 }
 }
 \description{
 Model the conditional dependence structure of data as a function
-of extraneous covariates as described in (1). For each variable, the final
-CAVI (coordinate ascent variational inference) selects the hyperparameters
-\code{pi} and \code{sigmabeta_sq} by maximizing ELBO over a grid of candidate pairs
+of extraneous covariates as described in (1).
 }
 \examples{
 set.seed(1)

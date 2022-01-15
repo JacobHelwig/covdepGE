@@ -15,7 +15,7 @@ library(latex2exp)
 ?covdepGE()
 
 # script for generating the data for the discrete and continuous covariate model
-source("generate_data.R") 
+source("../generate_data.R") 
 cont <- generate_continuous()
 disc <- generate_discrete(same = F)
 
@@ -24,10 +24,10 @@ dim(cont$data)
 dim(disc$data)
 
 # apply covdepGE to the continuous data
-out.cont <- covdepGE(cont$data, cont$covts, print_time = T, tau = 0.56)
+out.cont <- covdepGE(cont$data, cont$covts, tau = 0.56)
 
 # apply covdepGE to the discrete data 
-out.disc <- covdepGE(disc$data, disc$covts, print_time = T)
+out.disc <- covdepGE(disc$data, disc$covts)
 
 # time trials:
 microbenchmark::microbenchmark(covdepGE(cont$data, cont$covts, tau = 0.56), covdepGE(disc$data, disc$covts), times = 10)
