@@ -80,19 +80,29 @@ for (sparse_interval in sparse_intervals) {
   }
 }
 
-ggarrange(ggarrange(plotlist = viz[1:3], ncol = 3, nrow = 1, common.legend = T),
+fig <- ggarrange(ggarrange(plotlist = viz[1:3], ncol = 3, nrow = 1, common.legend = T),
   ggarrange(plotlist = viz[4:6], ncol = 3, nrow = 1, common.legend = T),
   ggarrange(plotlist = viz[7:9], ncol = 3, nrow = 1, common.legend = T),
   ncol = 1, nrow = 3)
+
+fig
 
 results <- tibble::tibble(results)
 colnames(results) <- gsub("_", " ", colnames(results))
 
 kbl(results, booktabs = T, linesep = "", align = "c") %>% 
   kable_styling(latex_options = c("striped", "scale_down"))
+```
 
-# clear the environment
-rm(list = ls())
+```{r, echo = FALSE}
+# # save the figure
+# setwd("~/PhD application Fa21/TAMU/LaTeX SOP")
+# 
+# fig2
+# 
+# tikz('Semester_GPA.tex', width = 2.85, height=2)
+# print(fig2) # you *have to* print the object you created
+# dev.off() # not device.off()
 ```
 
 # Data generation
@@ -102,6 +112,9 @@ The extraneous covariate is created as the union of three disjoint intervals wit
 For this demonstration, the second interval is the sparse part of the covariate space, with sparsity level 10. However, in the other 8 experiments, I varied the interval in which the sparsity occured and the degree of the sparisty.
 
 ```{r, fig.width = 11, fig.height = 4.5, echo = F, message = F}
+# clear the environment
+rm(list = ls())
+
 library(covdepGE)
 library(mclust)
 
@@ -111,7 +124,7 @@ set.seed(1)
 
 # define the dimensions of the data
 sparse_interval <- 2
-sparsity_level <- 15
+sparsity_level <- 5
 interval_n <- list(n1 = 60, n2 = 60, n3 = 60)
 interval_n[[sparse_interval]] <- sparsity_level
 attach(interval_n)

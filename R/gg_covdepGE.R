@@ -438,6 +438,9 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 #' NULL, which results in
 #' `graph_colors <- rep("#500000", length(out$unique_graphs))`
 #'
+#' @param title_sum logical; whether the indices of the individuals
+#' corresponding to the graph should be included in the title. Default is `F`
+#'
 #' @param ... additional arguments will be ignored
 ## -----------------------------RETURNS-----------------------------------------
 #' @return Returns list of `ggplot2` visualizations of unique graph adjacency
@@ -487,7 +490,7 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 #' gg_inclusionCurve(out, 1, 2)
 #' gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
 ## -----------------------------------------------------------------------------
-plot.covdepGE <- function(x, graph_colors = NULL, ...){
+plot.covdepGE <- function(x, graph_colors = NULL, title_sum = F, ...){
 
   # compatibility checks
   plot_checks(x, graph_colors)
@@ -497,8 +500,14 @@ plot.covdepGE <- function(x, graph_colors = NULL, ...){
     graph_colors <- rep("#500000", length(x$unique_graphs))
   }
 
-  # get the summary of individuals corresponding to each graph
-  indv_sum <- sapply(x$unique_graphs, `[[`, "individuals_summary")
+  # create the titles for the plots
+  titles <- paste("Graph", 1:length(x$unique_graphs))
+
+  # check if the title should include the individual's summaries
+  if(title_sum){
+    indv_sum <- sapply(x$unique_graphs, `[[`, "individuals_summary")
+    titles <- paste0(titles, ", Individuals ", indv_sum)
+  }
 
   # get the unique graphs
   unique_graphs <- lapply(x$unique_graphs, `[[`,"graph")
@@ -506,7 +515,7 @@ plot.covdepGE <- function(x, graph_colors = NULL, ...){
   # create a visualization for each graph and store it in a list
   graph_viz <- lapply(1:length(unique_graphs), function(gr_idx) gg_adjMat(
     unique_graphs[[gr_idx]], color1 = graph_colors[gr_idx]) + ggplot2::ggtitle(
-      paste("Individuals", indv_sum[gr_idx])))
+      titles[gr_idx]))
 
   return(graph_viz)
 }

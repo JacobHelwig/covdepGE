@@ -80,7 +80,7 @@
 ##
 ## 4. final_DNC: integer; number of final CAVIs that did not converge
 ## -----------------------------------------------------------------------------
-cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq, sigmabetasq_vec,
+cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, sigmabetasq_vec,
                         pi_vec, tolerance, max_iter_grid, max_iter_final,
                         warnings, resp_index, CS){
 
@@ -103,10 +103,22 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq, sigmabetasq_vec,
     sigmasq_vec <- rep(mean(idmod$sigma), length(sigmabetasq_vec))
     pi_vec <- rep(mean(probs), length(sigmabetasq_vec))
   }else{
-    idmod <- varbvs::varbvs(X_mat, NULL, y, verbose = FALSE)
-    sigmasq_vec <- idmod$sigma
-    sigmabetasq_vec <- idmod$sa
-    pi_vec <- 1 / (1 + (10^-idmod$logodds))
+    if(length(pi_vec) == 1){
+      pi_vec <- rep(pi_vec, length(sigmabetasq_vec))
+    }else if(length(pi_vec) != length(sigmabetasq_vec)){
+      stop("Error in cavi_search")
+    }
+    if(length(sigmasq_vec) == 1){
+      sigmasq_vec <- rep(sigmasq_vec, length(sigmabetasq_vec))
+    } else if(length(sigmasq_vec) != length(sigmabetasq_vec)){
+      stop("Error in cavi_search (2)")
+    }
+    # logodds <- log10(pi_vec / (1 - pi_vec))
+    # idmod <- varbvs::varbvs(X_mat, NULL, y, sa = sigmabetasq_vec,
+    #                         logodds = pi_vec, verbose = FALSE)
+    # sigmasq_vec <- idmod$sigma
+    # sigmabetasq_vec <- idmod$sa
+    # pi_vec <- 1 / (1 + (10^-idmod$logodds))
   }
 
   # store the hyperparameter values

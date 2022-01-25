@@ -60,7 +60,7 @@ n <- nrow(data_mat)
 p <- ncol(data_mat)
 
 # get the true covariance structure and use it to find the true graphs
-true_cov <- cont$true_covariance
+true_cov <- cont$true_precision
 true_graphs <- lapply(true_cov, function(vcov) (vcov != 0) * 1 - diag(p))
 
 # visualize the distribution of the extraneous covariates
@@ -71,54 +71,55 @@ ggplot(covts_df, aes(Z, fill = group)) + geom_histogram(alpha = 0.75, bins = 40,
 (tau <- silverman(Z))
 
 # methodology with no KDE
-out_no_KDE <- covdepGE(data_mat, Z, tau = tau, kde = F, CS = T)
+out_no_KDE <- covdepGE(data_mat, Z, tau = tau, kde = F, CS = T, parallel = T, stop_cluster = F)
 
 get_performance(out_no_KDE, true_graphs)
 
 # methodology with no KDE and tau = 0.56
-out_no_KDE <- covdepGE(data_mat, Z, tau = 0.56, kde = F, CS = T)
+out_no_KDE <- covdepGE(data_mat, Z, tau = 0.56, kde = F, CS = T, parallel = T, 
+                       stop_cluster = F)
 
 get_performance(out_no_KDE, true_graphs)
 
 # methodology with KDE
-out_KDE <- covdepGE(data_mat, Z, kde = T, CS = T)
+out_KDE <- covdepGE(data_mat, Z, CS = T, parallel = T)
 
 get_performance(out_KDE, true_graphs)
 
 
 # generate data
-cont <- generate_continuous(limits2 = c(.25, 0.55),
-                            limits3 = c(2.5, 10))
-data_mat <- cont$data
-Z <- cont$covts
-n <- nrow(data_mat)
-p <- ncol(data_mat)
-
-# get the true covariance structure and use it to find the true graphs
-true_cov <- cont$true_covariance
-true_graphs <- lapply(true_cov, function(vcov) (vcov != 0) * 1 - diag(p))
-
-# visualize the distribution of the extraneous covariates
-covts_df <- cbind.data.frame(group = as.factor(c(rep(1, 60), rep(2, 60), rep(3, 60))), Z = Z)
-ggplot(covts_df, aes(Z, fill = group)) + geom_histogram(alpha = 0.75, bins = 40, color = "black") + theme_bw() + ggsci::scale_fill_igv()
-
-# find an estimate to the bandwidth of the covariates
-(tau <- silverman(Z))
-
-# methodology with no KDE
-out_no_KDE <- covdepGE(data_mat, Z, tau = tau, kde = F, CS = T)
-
-get_performance(out_no_KDE, true_graphs)
-
-# methodology with no KDE and tau = 0.56
-out_no_KDE <- covdepGE(data_mat, Z, tau = 0.56, kde = F, CS = T)
-
-get_performance(out_no_KDE, true_graphs)
-
-# methodology with KDE
-out_KDE <- covdepGE(data_mat, Z, kde = T, CS = T)
-
-get_performance(out_KDE, true_graphs)
+# cont <- generate_continuous(limits2 = c(.25, 0.55),
+#                             limits3 = c(2.5, 10))
+# data_mat <- cont$data
+# Z <- cont$covts
+# n <- nrow(data_mat)
+# p <- ncol(data_mat)
+# 
+# # get the true covariance structure and use it to find the true graphs
+# true_cov <- cont$true_covariance
+# true_graphs <- lapply(true_cov, function(vcov) (vcov != 0) * 1 - diag(p))
+# 
+# # visualize the distribution of the extraneous covariates
+# covts_df <- cbind.data.frame(group = as.factor(c(rep(1, 60), rep(2, 60), rep(3, 60))), Z = Z)
+# ggplot(covts_df, aes(Z, fill = group)) + geom_histogram(alpha = 0.75, bins = 40, color = "black") + theme_bw() + ggsci::scale_fill_igv()
+# 
+# # find an estimate to the bandwidth of the covariates
+# (tau <- silverman(Z))
+# 
+# # methodology with no KDE
+# out_no_KDE <- covdepGE(data_mat, Z, tau = tau, kde = F, CS = T)
+# 
+# get_performance(out_no_KDE, true_graphs)
+# 
+# # methodology with no KDE and tau = 0.56
+# out_no_KDE <- covdepGE(data_mat, Z, tau = 0.56, kde = F, CS = T)
+# 
+# get_performance(out_no_KDE, true_graphs)
+# 
+# # methodology with KDE
+# out_KDE <- covdepGE(data_mat, Z, kde = T, CS = T)
+# 
+# get_performance(out_KDE, true_graphs)
 
 
 

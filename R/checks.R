@@ -57,7 +57,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
                             parallel, num_workers, stop_cluster, warnings){
 
   # ensure vector input for parameters that are expected to be vectors
-  args_vector <- list(tau = tau, pi_vec = pi_vec)
+  args_vector <- list(tau = tau, sigmasq_vec, sigmasq_vec, pi_vec = pi_vec)
   if (any(!sapply(args_vector, function(x) is.atomic(x) & is.null(dim(x))))){
 
     # get the name of the non-vector
@@ -68,9 +68,9 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
   }
 
   # ensure scalar input for parameters that are expected to be scalars
-  args_scalar <- list(kde = kde, alpha = alpha, mu = mu, sigmasq_vec = sigmasq_vec,
-                      var_min = var_min, var_max = var_max, n_param = n_param,
-                      norm = norm, scale = scale, tolerance = tolerance,
+  args_scalar <- list(kde = kde, alpha = alpha, mu = mu, var_min = var_min,
+                      var_max = var_max, n_param = n_param, norm = norm,
+                      scale = scale, tolerance = tolerance,
                       max_iter_grid = max_iter_grid,
                       max_iter_final = max_iter_final,
                       edge_threshold = edge_threshold, sym_method = sym_method,

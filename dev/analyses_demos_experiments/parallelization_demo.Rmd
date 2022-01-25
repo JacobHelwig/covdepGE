@@ -100,17 +100,17 @@ The model in the previous section was relatively simple, with only 5 grid points
 ```{r}
 covdepGE(data_mat, Z, n_param = 5)
 ```
-
+\newpage
 However, for a more complex model, the benefits of parallelization become apparent. To increase complexity, I will increase the number of grid points to 200. 
 
 ```{r}
 # sequential
-out_seq <- covdepGE(data_mat, Z, n_param = 200)
+out_seq <- covdepGE(data_mat, Z, n_param = 200, CS = T)
 out_seq
 
 # parallel
 out_par <- covdepGE(data_mat, Z, n_param = 200, parallel = T, 
-                    num_workers = 6)
+                    num_workers = 6, CS = T)
 out_par
 ```
 
@@ -150,7 +150,7 @@ annotate_figure(ggarrange(plotlist = graph_viz),
                 top = text_grob("True Conditional Dependence Structures", 
                                 size = 15))
 ```
-
+\newpage
 Note that since the last parallel call to `covdepGE` did not specify `stop_cluster = F`, the cluster must be re-created.
 
 ```{r, fig.width = 11, fig.height = 7}
@@ -161,6 +161,49 @@ out_seq
 # parallel
 out_par <- covdepGE(data_mat, Z, n_param = 5, parallel = T, num_workers = 8)
 out_par
+
+annotate_figure(ggarrange(plotlist = plot(out_seq, colors)), 
+                top = text_grob("Unique Graphs, Sequential Execution", size = 15))
+annotate_figure(ggarrange(plotlist = plot(out_par, colors)), 
+                top = text_grob("Unique Graphs, Parallel Execution", size = 15))
+```
+
+## Large *p*
+
+```{r, fig.width = 11, fig.height = 9, echo = F} 
+p <- 19
+cont <- generate_continuous(p = p)
+data_mat <- cont$data
+Z <- cont$covts
+
+# get all of the unique graphs from the data and visualize them
+true_graphs <- lapply(cont$true_precision, function(prec_mat) (prec_mat != 0) 
+                      - diag(nrow(prec_mat)))
+tr_gr_uq <- unique(true_graphs)
+indv_gr <- lapply(tr_gr_uq, function(unique_graph) which(sapply(
+  true_graphs, function(graph) identical(graph, unique_graph))))
+indv_gr_sum <- sapply(indv_gr, function(idx_seq) paste0(min(idx_seq), ",...,", 
+                                                        max(idx_seq)))
+graph_viz <- lapply(1:length(tr_gr_uq), function(gr_idx) gg_adjMat(
+  tr_gr_uq[[gr_idx]], color1 = colors[gr_idx]) + 
+    ggtitle(paste("Individuals", indv_gr_sum[gr_idx])))
+annotate_figure(ggarrange(plotlist = graph_viz), 
+                top = text_grob("True Conditional Dependence Structures", 
+                                size = 15))
+```
+\newpage
+
+```{r, fig.width = 11, fig.height = 7}
+# sequential
+out_seq <- covdepGE(data_mat, Z, n_param = 5, warnings = F)
+out_seq
+
+# parallel
+out_par <- covdepGE(data_mat, Z, n_param = 5, parallel = T, num_workers = 16, warnings = F)
+out_par
+
+set.seed(4)
+colors <- c(colors, sample(colors()[sapply(colors(), function(color) !(substr(color, 1, 4)) %in% c("grey", "gray"))], max(0, out_par$model_details$num_unique - length(colors))))
 
 annotate_figure(ggarrange(plotlist = plot(out_seq, colors)), 
                 top = text_grob("Unique Graphs, Sequential Execution", size = 15))

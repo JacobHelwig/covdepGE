@@ -5,7 +5,7 @@
 # function to generate the continuous data and covariates
 # takes a RNG seed and sample size for each interval
 # returns the continuous data, covariates, and true precision matrices
-generate_continuous <- function(seed = 1, n1 = 60, n2 = 60, n3 = 60){
+generate_continuous <- function(seed = 1, n1 = 60, n2 = 60, n3 = 60, p = 4){
 
   set.seed(seed)
 
@@ -13,7 +13,6 @@ generate_continuous <- function(seed = 1, n1 = 60, n2 = 60, n3 = 60){
 
   # define the dimensions of the data
   n <- sum(n1, n2, n3)
-  p <- 4
 
   # define the limits of the intervals
   limits1 <- c(-.990, -.331)

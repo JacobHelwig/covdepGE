@@ -471,6 +471,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   unique_graphs <- lapply(1:length(unique_graphs), function(gr_idx)
     list(graph = unique_graphs[[gr_idx]], individuals = indv_graphs[[gr_idx]],
          individuals_summary = indv_graphs_sum[[gr_idx]]))
+  names(unique_graphs) <- paste0("graph", 1:length(unique_graphs))
 
   # calculate the total ELBO
   total_elbo <- sum(sapply(cavi_details, `[[`, "ELBO"))
