@@ -2,6 +2,8 @@ setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/c
 rm(list = ls())
 source("generate_data.R")
 
+R_code <- F # true if R code instead of C++ should be used
+
 # generate data and covariates
 discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
@@ -19,7 +21,7 @@ package <- F # true if the package version is desired
 if (package){
   out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, CS = T, scale = F,
                             sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                            parallel = F, num_workers = 5)
+                            parallel = T, num_workers = 5)
 }else{
   if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_main.R")
@@ -27,9 +29,10 @@ if (package){
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_R.R")
   Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
   out <- covdepGE(data_mat, Z, tau_, kde = F, CS = T, scale = F,
-                  sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10))
+                  sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10), R = R_code)
 }
 
 # check to see that this modified code produces the same results as the original code

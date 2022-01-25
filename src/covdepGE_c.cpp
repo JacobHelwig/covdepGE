@@ -88,7 +88,6 @@ double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
   }
 
   return elbo_tot;
-
 }
 
 // -----------------------------------------------------------------------------
@@ -342,7 +341,6 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
     elbo_graph = out["var_elbo"];
     elbo(j) = elbo_graph;
   }
-
 
   return(Rcpp::List::create(Rcpp::Named("elbo") = elbo,
                             Rcpp::Named("num_converged") = converged_ct));

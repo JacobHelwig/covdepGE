@@ -224,7 +224,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                      max_iter_grid = 100,
                      max_iter_final = 1000, edge_threshold = 0.5,
                      sym_method = "mean", parallel = F, num_workers = NULL,
-                     stop_cluster = T, warnings = T, CS = F){
+                     stop_cluster = T, warnings = T, CS = F, R = F){
 
   start_time <- Sys.time()
 
@@ -308,7 +308,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
             # perform the grid search and final CAVI; save the results to res
             cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq_vec, sigmabetasq_vec,
                         pi_vec, tolerance, max_iter_grid, max_iter_final,
-                        warnings, resp_index, CS)
+                        warnings, resp_index, CS, R)
             }
           )
       },
@@ -343,7 +343,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       res[[resp_index]] <- cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq_vec,
                                        sigmabetasq_vec, pi_vec, tolerance,
                                        max_iter_grid, max_iter_final, warnings,
-                                       resp_index, CS)
+                                       resp_index, CS, R)
 
       # update the progress bar
       utils::setTxtProgressBar(pb, resp_index)

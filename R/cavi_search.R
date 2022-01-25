@@ -82,7 +82,7 @@
 ## -----------------------------------------------------------------------------
 cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, sigmabetasq_vec,
                         pi_vec, tolerance, max_iter_grid, max_iter_final,
-                        warnings, resp_index, CS){
+                        warnings, resp_index, CS, R = F){
 
   # get the dimensions of the data
   n <- nrow(X_mat)
@@ -113,12 +113,6 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, sigmabetasq_vec,
     } else if(length(sigmasq_vec) != length(sigmabetasq_vec)){
       stop("Error in cavi_search (2)")
     }
-    # logodds <- log10(pi_vec / (1 - pi_vec))
-    # idmod <- varbvs::varbvs(X_mat, NULL, y, sa = sigmabetasq_vec,
-    #                         logodds = pi_vec, verbose = FALSE)
-    # sigmasq_vec <- idmod$sigma
-    # sigmabetasq_vec <- idmod$sa
-    # pi_vec <- 1 / (1 + (10^-idmod$logodds))
   }
 
   # store the hyperparameter values
@@ -127,9 +121,15 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, sigmabetasq_vec,
 
   # loop to optimize sigmabeta_sq; run CAVI for each grid points; store the
   # resulting ELBO
-  grid_search_out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-                                   sigmabetasq_vec, pi_vec, tolerance,
-                                   max_iter_grid)
+  if (R){
+    grid_search_out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
+                                     sigmabetasq_vec, pi_vec, tolerance,
+                                     max_iter_grid)
+  } else{
+    grid_search_out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
+                                     sigmabetasq_vec, pi_vec, tolerance,
+                                     max_iter_grid)
+  }
 
   # total number of grid points
   grid_size <- length(pi_vec)
@@ -158,8 +158,13 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, sigmabetasq_vec,
   pi <- pi_vec[elbo == max(elbo)][1]
 
   # run CAVI using these values of sigmabeta_sq and pi_est
-  result <- cavi_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
-                   pi, tolerance, max_iter_final)
+  if (R){
+    result <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
+                     pi, tolerance, max_iter_final)
+  }else {
+    result <- cavi_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
+                     pi, tolerance, max_iter_final)
+  }
 
   # if the final CAVI did not converge, display a warning
   if (result$converged_iter == max_iter_final & warnings){
