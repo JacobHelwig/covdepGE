@@ -75,7 +75,7 @@ total_ELBO_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
    ## calculate the ELBO for l-th individual and add it to the total ELBO
    elbo_tot <- elbo_tot + ELBO_calculator_R(
      y, D[ , l], X_mat, S_sq[l, ], mu_mat[l, ], alpha_mat[l, ],
-     sigmasq, sigmabeta_sq, pi_est)
+     sigmasq[l], sigmabeta_sq[l], pi_est)
   }
 
   return(elbo_tot)
@@ -131,7 +131,7 @@ mu_update_R <- function(y, D, X_mat, S_sq, mu, alpha, sigmasq){
   d_x_y <- matrix(D[ , l], n, p) * X_mat * y_k
 
   # the update of the l-th row of mu
-  mu[l, ] <- S_sq[l, ] * colSums(d_x_y) / sigmasq
+  mu[l, ] <- S_sq[l, ] * colSums(d_x_y) / sigmasq[l]
  }
 
  return(mu)
@@ -151,9 +151,17 @@ mu_update_R <- function(y, D, X_mat, S_sq, mu, alpha, sigmasq){
 ## than upper_limit will be assigned a probability of 1; this avoids issues
 ## with exponentiation of large numbers creating Infinity divided by Infinity
 ## -----------------------------------------------------------------------------
-alpha_update_R <- function(mu, alpha, alpha_logit_term1,
-                           alpha_logit_term2_denom, alpha_logit_term3,
+alpha_update_R <- function(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est,
                            upper_limit = 9){
+
+  # get dimensions of the data
+  n <- nrow(S_sq)
+  p <- ncol(S_sq)
+
+  # 1st and 3rd term of the alpha update, denominator of the second term
+  alpha_logit_term1 <- log(pi_est / (1 - pi_est))
+  alpha_logit_term3 <- log(sqrt(S_sq / matrix(sigmasq * sigmabeta_sq, n, p)))
+  alpha_logit_term2_denom <- 2 * S_sq
 
   # calculate the logit of alpha
   alpha_logit <- (alpha_logit_term1 + ((mu^2) / alpha_logit_term2_denom) +
@@ -173,6 +181,81 @@ alpha_update_R <- function(mu, alpha, alpha_logit_term1,
   alpha[index1] <- 1
 
   return(alpha)
+}
+
+## -----------------------------------------------------------------------------
+## -----------------------------sigmasq_update_R--------------------------------
+## -----------------------------------------------------------------------------
+## -----------------------------DESCRIPTION-------------------------------------
+## Update the residual variance term using MAPE
+## -----------------------------ARGUMENTS---------------------------------------
+## y: n x 1 vector; responses (j-th column of the data)
+## D: n x n matrix; weights (k,l entry is the weight of the k-th individual
+## with respect to the l-th individual using the l-th individual's bandwidth)
+## X_mat: n x p matrix; data_mat with the j-th column removed
+## mu_mat, alpha_mat, S_sq: n x p matrices; variational parameters. the l, k
+## entry is the k-th parameter for the l-th individual
+## sigmasq, sigmabeta_sq: doubles; spike and slab variance hyperparameters
+## -----------------------------RETURNS-----------------------------------------
+## sigmasq: n x 1 vector; updated residual variance
+## -----------------------------------------------------------------------------
+## [[Rcpp::export]]
+sigmasq_update_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
+                             sigmabeta_sq) {
+
+  # get dimensions of the data
+  n <- nrow(X_mat)
+  p <- ncol(X_mat)
+
+  # calulate alpha^2 and mu^2
+  alpha_sq <- alpha_mat^2
+  mu_sq <- mu_mat^2
+
+  # calculate expected value of beta for each individual; l-th row is
+  # E(beta) for individual l
+  rho <- mu_mat * alpha_mat
+
+  # find fitted values using expected value of beta for each individual; l-th
+  # column is fitted values for individual l
+  fitted <- X_mat %*% t(rho)
+
+  # calculate the squared residuals for each of the fitted values for each
+  # individual; l-th column is residuals for individual l
+  resid2 <- (matrix(y, n, n) - fitted)^2
+
+  # calculate the sum of the weighted squared residuals for each individual;
+  # l-th value is the SWSR for individual l
+  resid_w <- colSums(resid2 * D)
+
+  # calculate the second values in the numerator for each individual; the l-th
+  # row is for individual l
+  num_term2 <- alpha_mat * S_sq + alpha_mat * mu_sq - alpha_sq * mu_sq
+
+  # calculate the third values in the numerator for each individual; the l-th
+  # value is for individual l
+  num_term3 <- rowSums(alpha_mat * (S_sq + mu_sq)) / sigmabeta_sq
+
+  # calculate the denominator for each individual; l-th value is for individual l
+  denom <- rowSums(alpha_mat) + n
+
+  # iterate over the individuals to update each error variance
+  for (l in 1:n){
+
+    # calculate weighted versions of y and X
+    weights <- sqrt(D[ , l])
+    X_w <- X_mat * matrix(weights, n, p)
+
+    # diagonal elements of X transpose X weighted
+    XtX_w <- diag(t(X_w) %*% X_w)
+
+    # second numerator term
+    num_term2_l <- t(XtX_w) %*% num_term2[l , ]
+
+    # apply update
+    sigmasq[l] <- (resid_w[l] + num_term2_l + num_term3[l]) / denom[l]
+  }
+
+  return(sigmasq)
 }
 
 ## -----------------------------------------------------------------------------
@@ -207,6 +290,10 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
   n <- nrow(X_mat)
   p <- ncol(X_mat)
 
+  # instantiate initial values of variance hyperparameters for all individuals
+  sigmasq <- rep(sigmasq, n)
+  sigmabeta_sq <- rep(sigmabeta_sq, n)
+
   # instantiate matrices for updated variational parameters with starting
   # values dictated by the matrices passed as arguments
   mu <- mu_mat
@@ -219,16 +306,12 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
   # integer for tracking the iteration at which convergence is reached
   converged_iter <- max_iter
 
-  # S_sq update
-  S_sq <- t(sigmasq / (t(X_mat^2) %*% D + 1 / sigmabeta_sq))
-
-  # 1st and 3rd term of the alpha update, denominator of the second term
-  alpha_logit_term1 <- log(pi_est / (1 - pi_est))
-  alpha_logit_term3 <- log(sqrt(S_sq / (sigmasq * sigmabeta_sq)))
-  alpha_logit_term2_denom <- 2 * S_sq
-
   # CAVI loop (optimize variational parameters)
   for (k in 1:max_iter){
+
+    # S_sq update
+    S_sq <- matrix(sigmasq, n, p) / (t(t(X_mat^2) %*% D) + 1 /
+                                       matrix(sigmabeta_sq, n, p))
 
     # mu update
     mu <- mu_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq);
@@ -237,8 +320,7 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
 
     # save the last value of alpha and update it
     alpha_last <- alpha
-    alpha <- alpha_update_R(mu, alpha, alpha_logit_term1,
-                            alpha_logit_term2_denom, alpha_logit_term3);
+    alpha <- alpha_update_R(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
 
     # calculate change in alpha
     change_alpha <- alpha - alpha_last;
@@ -249,6 +331,9 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
       converged_iter <- k
       break;
     }
+
+    # update the error term variance using MAPE
+    sigmasq <- sigmasq_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq)
  }
 
  # calculate ELBO across n individuals

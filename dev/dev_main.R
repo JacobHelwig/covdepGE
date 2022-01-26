@@ -2,7 +2,7 @@ setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/c
 rm(list = ls())
 source("generate_data.R")
 
-R_code <- F # true if R code instead of C++ should be used
+R_code <- T # true if R code instead of C++ should be used
 
 # generate data and covariates
 discrete_data <- F # true if discrete example is desired
@@ -73,3 +73,10 @@ same_probs
 # check for equality between ELBO
 all.equal(unname(unlist(lapply(out$CAVI_details, `[[`, "ELBO"))), out_original$original_ELBO)
 
+# check for equality with original hyperparameter update results
+out_curr <- out
+load("sigmasq_upd_results_orig.Rda")
+sum(sapply(1:length(out$inclusion_probs), function(
+  j) sum((out$alpha_matrices[[j]] - out_curr$alpha_matrices[[j]])^2))) < 1e-10
+sum(sapply(1:length(out$inclusion_probs), function(
+  j) sum((out$inclusion_probs[[j]] - out_curr$inclusion_probs[[j]])^2))) < 1e-10
