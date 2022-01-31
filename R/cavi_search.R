@@ -79,6 +79,14 @@
 ## displayed in covdepGE_main
 ##
 ## 4. final_DNC: integer; number of final CAVIs that did not converge
+##
+## 5. sigmasq: n x (p + 1) matrix; fitted error term variances for each
+## individual in the final model. Column j corresponds to the regression with
+## the j-th variable fixed as the response.
+##
+## 6. sigmabeta_sq: n x (p + 1) matrix; fitted slab variances for each
+## individual in the final model. Column j corresponds to the regression with
+## the j-th variable fixed as the response
 ## -----------------------------------------------------------------------------
 cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, sigmabetasq_vec,
                         pi_vec, tolerance, max_iter_grid, max_iter_final,
@@ -180,7 +188,8 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, sigmabetasq_vec,
   }
 
   # save the CAVI details
-  cavi_details <- list(sigmasq = sigmasq, sigmabeta_sq = sigmabeta_sq,
+  cavi_details <- list(sigmasq = result$sigmasq,
+                       sigmabeta_sq = result$sigmabeta_sq,
                        pi = pi, ELBO = result$var_elbo,
                        converged_iter = result$converged_iter,
                        hyperparameters = hyperparameters)

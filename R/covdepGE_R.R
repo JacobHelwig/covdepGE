@@ -184,10 +184,10 @@ alpha_update_R <- function(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est,
 }
 
 ## -----------------------------------------------------------------------------
-## -----------------------------sigmasq_update_R--------------------------------
+## -----------------------------sigma_update_R----------------------------------
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
-## Update the residual variance term using MAPE
+## Update the residual and slab variance term for each individual using MAPE
 ## -----------------------------ARGUMENTS---------------------------------------
 ## y: n x 1 vector; responses (j-th column of the data)
 ## D: n x n matrix; weights (k,l entry is the weight of the k-th individual
@@ -197,59 +197,82 @@ alpha_update_R <- function(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est,
 ## entry is the k-th parameter for the l-th individual
 ## sigmasq, sigmabeta_sq: doubles; spike and slab variance hyperparameters
 ## -----------------------------RETURNS-----------------------------------------
+## returns list with two values:
 ## sigmasq: n x 1 vector; updated residual variance
+## sigmabeta_sq: n x 1 vector; updated slab variance
 ## -----------------------------------------------------------------------------
 ## [[Rcpp::export]]
-sigmasq_update_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
+sigma_update_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
                              sigmabeta_sq) {
 
   # get dimensions of the data
   n <- nrow(X_mat)
   p <- ncol(X_mat)
 
+  # terms for sigmasq update:
+
   # calulate alpha^2 and mu^2
   alpha_sq <- alpha_mat^2
   mu_sq <- mu_mat^2
 
+  # calculate expected value of beta for each individual; l-th row is
+  # E(beta) for individual l
+  rho <- mu_mat * alpha_mat
+
+  # find fitted values using expected value of beta for each individual; l-th
+  # column is fitted values for individual l
+  fitted <- X_mat %*% t(rho)
+
+  # calculate the squared residuals for each of the fitted values for each
+  # individual; l-th column is residuals for individual l
+  resid2 <- (matrix(y, n, n) - fitted)^2
+
+  # calculate the sum of the weighted squared residuals for each individual;
+  # l-th value is the SWSR for individual l
+  resid_w <- colSums(resid2 * D)
+
+  # calculate the second values in the numerator for each individual; the l-th
+  # row is for individual l
+  num_term2 <- alpha_mat * S_sq + alpha_mat * mu_sq - alpha_sq * mu_sq
+
+  # calculate the third values in the numerator for each individual; the l-th
+  # value is for individual l
+  num_term3 <- rowSums(alpha_mat * (S_sq + mu_sq)) / sigmabeta_sq
+
+  # calculate the denominator for each individual; l-th value is for individual l
+  denom <- rowSums(alpha_mat) + n
+
   # iterate over the individuals to update each error variance
   for (l in 1:n){
 
-    # fix the variational parameters for individual l
-    alpha_l <- alpha_mat[l, ]
-    alpha_l2 <- alpha_sq[l, ]
-    mu_l <- mu_mat[l, ]
-    mu_l2 <- mu_sq[l, ]
-    Ssq_l <- S_sq[l, ]
+    # sigmasq update for individual l:
 
-
-    # calculate expected value of beta
-    rho_l <- mu_l * alpha_l
-
-    # calculate weighted versions of y and X
+    # calculate weighted version of X
     weights <- sqrt(D[ , l])
-    y_w <- y * weights
     X_w <- X_mat * matrix(weights, n, p)
-
-    # calculate l2 error of residuals using expected value of beta
-    num_term1 <- sum((y_w - X_w %*% rho_l)^2)
 
     # diagonal elements of X transpose X weighted
     XtX_w <- diag(t(X_w) %*% X_w)
 
     # second numerator term
-    num_term2 <- sum(XtX_w * (alpha_l * Ssq_l + alpha_l * mu_l2 - alpha_l2 * mu_l2))
-
-    # third numerator term
-    num_term3 <- sum(alpha_l * (Ssq_l + mu_l2)) / sigmabeta_sq[l]
-
-    # denominator
-    denom <- n + sum(alpha_l)
+    num_term2_l <- t(XtX_w) %*% num_term2[l , ]
 
     # apply update
-    sigmasq[l] <- (num_term1 + num_term2 + num_term3) / denom
+    sigmasq[l] <- (resid_w[l] + num_term2_l + num_term3[l]) / denom[l]
   }
 
-  return(sigmasq)
+  # terms for sigmabeta_sq update
+
+  # numerator is num_term3 without the division by sigmabeta_sq
+  num <- num_term3 * sigmabeta_sq
+
+  # denominator is denom without summing n, and also scaled by sigmasq
+  denom <- sigmasq * (denom - n)
+
+  # update the slab variance
+  sigmabeta_sq <- num / denom
+
+  return(list(sigmasq = sigmasq, sigmabeta_sq = sigmabeta_sq))
 }
 
 ## -----------------------------------------------------------------------------
@@ -276,6 +299,8 @@ sigmasq_update_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
 ## var_alpha: n x p matrix; final alpha values
 ## var_ELB: double; final value of ELBO summed across all individuals
 ## converged_iter: integer; number of iterations to reach convergence
+## sigmasq: n x 1 vector; fitted error term variance for each individual
+## sigmabeta_sq: n x 1 vector; fitted slab variance for each individual
 ## -----------------------------------------------------------------------------
 ## [[Rcpp::export]]
 cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
@@ -326,8 +351,11 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
       break;
     }
 
-    # update the error term variance using MAPE
-    sigmasq <- sigmasq_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq)
+    # update the variance terms using MAPE
+    sigma_update <- sigma_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq,
+                                   sigmabeta_sq)
+    sigmasq <- sigma_update$sigmasq
+    sigmabeta_sq <- sigma_update$sigmabeta_sq
  }
 
  # calculate ELBO across n individuals
@@ -335,7 +363,8 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
 
  # return final alpha matrix, the final ELBO, the number of iterations to
  # converge, and the elbo history matrix
- return(list(var_alpha = alpha, var_elbo = ELBO, converged_iter = converged_iter))
+ return(list(var_alpha = alpha, var_elbo = ELBO, converged_iter = converged_iter,
+             sigmasq = sigmasq, sigmabeta_sq = sigmabeta_sq))
 }
 
 ## -----------------------------------------------------------------------------

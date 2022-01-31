@@ -221,8 +221,8 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                      sigmasq_vec = 0.5, sigmabetasq_vec = NULL, var_min = 0.01,
                      var_max = 10, n_param = 8, pi_vec = 0.1, norm = 2,
                      scale = T, tolerance = 1e-12,
-                     max_iter_grid = 100,
-                     max_iter_final = 1000, edge_threshold = 0.5,
+                     max_iter_grid = 10,
+                     max_iter_final = 20, edge_threshold = 0.5,
                      sym_method = "mean", parallel = F, num_workers = NULL,
                      stop_cluster = T, warnings = T, CS = F, R = F){
 

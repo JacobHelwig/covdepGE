@@ -31,7 +31,7 @@ if (package){
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_R.R")
   Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
-  out <- covdepGE(data_mat, Z, tau_, kde = F, CS = T, scale = F,
+  out <- covdepGE(data_mat, Z, tau_, kde = F, CS = !R_code, scale = F,
                   sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10), R = R_code)
 }
 
