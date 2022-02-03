@@ -149,6 +149,8 @@ num_neg <- length(true_graph_pos) * n - num_pos
 
 ## To-do
 
+-   `update_sigmasq` and `update_sigmabetasq` to `checks`
+
 -   Topic 16 slides ideas
 
 -   2 ideas from `Mclust`: logo and loading bar

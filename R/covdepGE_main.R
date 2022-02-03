@@ -218,10 +218,10 @@
 #' Density Modeling*, Statistica Sinica, 2020
 ## -----------------------------------------------------------------------------
 covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
-                     sigmasq_vec = 0.5, sigmabetasq_vec = NULL, var_min = 0.01,
-                     var_max = 10, n_param = 8, pi_vec = 0.1, norm = 2,
-                     scale = T, tolerance = 1e-12,
-                     max_iter_grid = 10,
+                     sigmasq_vec = 0.5, update_sigmasq = T,
+                     sigmabetasq_vec = NULL, update_sigmabetasq = T,
+                     var_min = 0.01, var_max = 10, n_param = 8, pi_vec = 0.1,
+                     norm = 2, scale = T, tolerance = 1e-12, max_iter_grid = 10,
                      max_iter_final = 20, edge_threshold = 0.5,
                      sym_method = "mean", parallel = F, num_workers = NULL,
                      stop_cluster = T, warnings = T, CS = F, R = F){
@@ -250,9 +250,9 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   D <- D$D
 
   # if sigmabetasq_vec is NULL, instantiate the grid
-  if(is.null(sigmabetasq_vec)){
-    sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_param))
-  }
+  # if(is.null(sigmabetasq_vec)){
+  #   sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_param))
+  # }
 
   # main loop over the predictors
 
@@ -306,9 +306,10 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
             X_mat <- data_mat[, -resp_index]
 
             # perform the grid search and final CAVI; save the results to res
-            cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq_vec, sigmabetasq_vec,
-                        pi_vec, tolerance, max_iter_grid, max_iter_final,
-                        warnings, resp_index, CS, R)
+            cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
+                        sigmabetasq_vec, update_sigmabetasq, pi_vec, tolerance,
+                        max_iter_grid, max_iter_final, warnings, resp_index, CS,
+                        R)
             }
           )
       },
@@ -341,7 +342,8 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
 
       # perform the grid search and final CAVI; save the results to res
       res[[resp_index]] <- cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq_vec,
-                                       sigmabetasq_vec, pi_vec, tolerance,
+                                       update_sigmasq, sigmabetasq_vec,
+                                       update_sigmabetasq, pi_vec, tolerance,
                                        max_iter_grid, max_iter_final, warnings,
                                        resp_index, CS, R)
 
@@ -359,6 +361,13 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   names(cavi_details) <- paste0("Variable ", 1:length(cavi_details))
   alpha_matrices <- lapply(res, `[[`, "alpha_matrix")
   warnings_vec <- unlist(lapply(res, `[[`, "warnings"))
+
+  # collect the fitted hyperparameters for each variable
+  hyperparameters <- vector("list", 3)
+  names(hyperparameters) <- c("pi", "sigmasq", "sigmabetasq")
+  hyperparameters[["pi"]] <- sapply(cavi_details, `[[`, pi)
+  hyperparameters[["sigmasq"]] <- sapply(cavi_details, `[[`, "sigmasq")
+  hyperparameters[["sigmabetasq"]] <- sapply(cavi_details, `[[`, "sigmabeta_sq")
 
   if (warnings){
 
@@ -495,8 +504,9 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   # define the list of return values
   ret <- list(graphs = graphs, inclusion_probs = incl_probs,
               alpha_matrices = incl_probs_asym, unique_graphs = unique_graphs,
-              CAVI_details = cavi_details, model_details = model_details,
-              weights = D, bandwidths = bandwidths, arguments = args)
+              hyperparameters = hyperparameters, CAVI_details = cavi_details,
+              model_details = model_details, weights = D,
+              bandwidths = bandwidths, arguments = args)
 
   # define the class of the return values
   class(ret) <- c("covdepGE", "list")

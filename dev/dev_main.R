@@ -32,7 +32,8 @@ if (package){
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_R.R")
   Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
   out <- covdepGE(data_mat, Z, tau_, kde = F, CS = !R_code, scale = F,
-                  sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10), R = R_code)
+                  sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10), R = R_code,
+                  max_iter_grid = 10, max_iter_final = 10, warnings = F)
 }
 
 # check to see that this modified code produces the same results as the original code
@@ -74,9 +75,14 @@ same_probs
 all.equal(unname(unlist(lapply(out$CAVI_details, `[[`, "ELBO"))), out_original$original_ELBO)
 
 # check for equality with original hyperparameter update results
-out_curr <- out
+
+# out <- covdepGE(data_mat, Z, tau_, kde = F, CS = !R_code, scale = F,
+#                 sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10), R = R_code,
+#                 max_iter_grid = 10, max_iter_final = 10, warnings = F)
+
 load("sigmasq_upd_results_orig.Rda")
 sum(sapply(1:length(out$inclusion_probs), function(
-  j) sum((out$alpha_matrices[[j]] - out_curr$alpha_matrices[[j]])^2))) < 1e-10
+  j) sum((out$alpha_matrices[[j]] - out_orig$alpha_matrices[[j]])^2))) < 1e-10
 sum(sapply(1:length(out$inclusion_probs), function(
-  j) sum((out$inclusion_probs[[j]] - out_curr$inclusion_probs[[j]])^2))) < 1e-10
+  j) sum((out$inclusion_probs[[j]] - out_orig$inclusion_probs[[j]])^2))) < 1e-10
+# plot(out, title_sum = T)

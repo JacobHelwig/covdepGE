@@ -303,8 +303,9 @@ sigma_update_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
 ## sigmabeta_sq: n x 1 vector; fitted slab variance for each individual
 ## -----------------------------------------------------------------------------
 ## [[Rcpp::export]]
-cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
-                   pi_est, tolerance, max_iter, upper_limit = 9) {
+cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
+                   sigmabeta_sq, update_sigmabetasq, pi_est, tolerance,
+                   max_iter, upper_limit = 9) {
 
   n <- nrow(X_mat)
   p <- ncol(X_mat)
@@ -352,10 +353,12 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
     }
 
     # update the variance terms using MAPE
-    sigma_update <- sigma_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq,
-                                   sigmabeta_sq)
-    sigmasq <- sigma_update$sigmasq
-    sigmabeta_sq <- sigma_update$sigmabeta_sq
+    if (update_sigmasq | update_sigmabetasq){
+      sigma_update <- sigma_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq,
+                                     sigmabeta_sq)
+      if (update_sigmasq) sigmasq <- sigma_update$sigmasq
+      if (update_sigmabetasq) sigmabeta_sq <- sigma_update$sigmabeta_sq
+    }
  }
 
  # calculate ELBO across n individuals
@@ -393,11 +396,11 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
 ## -----------------------------------------------------------------------------
 ## [[Rcpp::export]]
 grid_search_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-                          sigmabeta_sq_vec, pi_vec, tolerance, max_iter,
-                          upper_limit = 9){
+                          update_sigmasq, sigmabeta_sq_vec, update_sigmabetasq,
+                          pi_vec, tolerance, max_iter, upper_limit = 9){
 
  # get the number of grid points
- n_param <- length(sigmabeta_sq_vec)
+ n_param <- length(pi_vec)
 
  # vector for storing the ELBO corresponding to each grid point
  elbo <- rep(0, n_param)
@@ -418,8 +421,9 @@ grid_search_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
  for (j in 1:n_param){
 
   # run CAVI
-  out <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[j],
-                sigmabeta_sq_vec[j], pi_vec[j], tolerance, max_iter, upper_limit)
+  out <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[j], update_sigmasq,
+                sigmabeta_sq_vec[j], update_sigmabetasq, pi_vec[j], tolerance,
+                max_iter, upper_limit)
 
   # if cavi_R has converged, increment the convergence count
   converged_iter <- out$converged_iter
