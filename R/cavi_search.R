@@ -97,6 +97,10 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
   n <- nrow(X_mat)
   p <- ncol(X_mat)
 
+  if (length(unique(as.numeric(sigmasq_vec))) == 1){
+    sigmasq_vec <- matrix(var(y), n, length(pi_vec))
+  }
+
   # instantiate initial values of variational parameters; the l, j entry is
   # the variational approximation to the j-th parameter in a regression with
   # the resp_index predictor fixed as the response with weightings taken with
@@ -109,18 +113,9 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
   if (CS){
     idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
     probs <- 1 / (1 + exp(-idmod$logodds)) # need to convert to log base 10
-    sigmasq_vec <- rep(mean(idmod$sigma), length(sigmabetasq_vec))
-    pi_vec <- rep(mean(probs), length(sigmabetasq_vec))
-  }else{
-    n_param <- 10
-    pi_vec <- exp(seq(log(0.45), log(0.01), length = n_param))
-    sigmasq_vec <- rep(var(y), n_param)
-    sigmabetasq_vec <- rep(1, n_param)
+    sigmasq_vec <- matrix(mean(idmod$sigma), n, ncol(sigmabetasq_vec))
+    pi_vec <- rep(mean(probs), ncol(sigmabetasq_vec))
   }
-
-  # store the hyperparameter values
-  hyperparameters <- cbind(sigmasq = sigmasq_vec, sigmabetasq = sigmabetasq_vec,
-                           pi = pi_vec)
 
   # loop to optimize sigmabeta_sq; run CAVI for each grid points; store the
   # resulting ELBO
@@ -140,7 +135,6 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
 
   # get the resulting ELBO and the number of converged candidates
   elbo <- as.numeric(grid_search_out[["elbo"]])
-  hyperparameters <- cbind(hyperparameters, elbo = elbo)
   converged <- grid_search_out[["num_converged"]]
 
   # if any of the cavi did not converge, display a warning
@@ -153,10 +147,10 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
   }
 
   # Select the value of sigmasq that maximizes the ELBO
-  sigmasq <- sigmasq_vec[elbo == max(elbo)][1]
+  sigmasq <- sigmasq_vec[ , which(elbo == max(elbo))[1]]
 
   # Select the value of sigmabeta_sq that maximizes the ELBO
-  sigmabeta_sq <- sigmabetasq_vec[elbo == max(elbo)][1]
+  sigmabeta_sq <- sigmabetasq_vec[ , which(elbo == max(elbo))[1]]
 
   # Select the value of pi that maximizes the ELBO
   pi <- pi_vec[elbo == max(elbo)][1]
@@ -188,8 +182,7 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
   cavi_details <- list(sigmasq = result$sigmasq,
                        sigmabeta_sq = result$sigmabeta_sq,
                        pi = pi, ELBO = result$var_elbo,
-                       converged_iter = result$converged_iter,
-                       hyperparameters = hyperparameters)
+                       converged_iter = result$converged_iter)
 
   # var.alpha is an n by p matrix; the i,j-th entry is the probability of
   # inclusion for the i-th individual for the j-th variable according to the

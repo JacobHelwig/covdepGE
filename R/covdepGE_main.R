@@ -218,9 +218,9 @@
 #' Density Modeling*, Statistica Sinica, 2020
 ## -----------------------------------------------------------------------------
 covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
-                     sigmasq_vec = 0.5, update_sigmasq = T,
-                     sigmabetasq_vec = NULL, update_sigmabetasq = T,
-                     var_min = 0.01, var_max = 10, n_param = 8, pi_vec = 0.1,
+                     sigmasq_vec = NULL, update_sigmasq = NULL,
+                     sigmabetasq_vec = NULL, update_sigmabetasq = NULL,
+                     var_min = 0.01, var_max = 10, n_param = 10, pi_vec = NULL,
                      norm = 2, scale = T, tolerance = 1e-12, max_iter_grid = 10,
                      max_iter_final = 20, edge_threshold = 0.5,
                      sym_method = "mean", parallel = F, num_workers = NULL,
@@ -229,10 +229,10 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   start_time <- Sys.time()
 
   # run compatibility checks
-  covdepGE_checks(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec, sigmabetasq_vec,
-                  var_min, var_max, n_param, pi_vec, norm, scale, tolerance,
-                  max_iter_grid, max_iter_final, edge_threshold, sym_method,
-                  parallel, num_workers, stop_cluster, warnings)
+  # covdepGE_checks(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec, sigmabetasq_vec,
+  #                 var_min, var_max, n_param, pi_vec, norm, scale, tolerance,
+  #                 max_iter_grid, max_iter_final, edge_threshold, sym_method,
+  #                 parallel, num_workers, stop_cluster, warnings)
 
   # ensure that data_mat and Z are matrices
   data_mat <- as.matrix(data_mat)
@@ -249,10 +249,69 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   bandwidths <- D$bandwidths
   D <- D$D
 
-  # if sigmabetasq_vec is NULL, instantiate the grid
-  # if(is.null(sigmabetasq_vec)){
-  #   sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_param))
-  # }
+  # if the user has specified any hyperparameter values, get the number they
+  # specified
+  hyp_list <- list(sigmasq_vec, sigmabetasq_vec, pi_vec)
+  if (!all(sapply(hyp_list, is.null))){
+    n_param <- max(sapply(hyp_list, length))
+  }
+
+  # if the user has not provided values for pi_vec, instantiate the grid
+  if (is.null(pi_vec)){
+
+    pi_vec <- exp(seq(log(0.45), log(0.01), length = n_param))
+  }
+
+  # instantiate the matrices of hyperparameters
+  if (is.null(sigmasq_vec)){
+
+    # if no values have been passed to sigmasq_vec, instantiate as the variance
+    # of the data
+    sigmasq_vec <- matrix(var(as.vector(data_mat)), n, n_param)
+
+    if (is.null(update_sigmasq)){
+
+      # if the user has also not specified an option for updating sigmasq_vec,
+      # update sigmasq
+      update_sigmasq <- T
+    }
+  }else{
+
+    # otherwise, the user has passed some values for sigmasq; create a matrix
+    # where the j-th column is the j-th value repeated n times
+    sigmasq_vec <- matrix(sigmasq_vec, n, n_param, T)
+
+    if (is.null(update_sigmasq)){
+
+      # if the user has not specified an option for updating sigmasq_vec but has
+      # provided some values to sigmavec, do not update them
+      update_sigmasq <- F
+    }
+  }
+  if (is.null(sigmabetasq_vec)){
+
+    # if no values have been passed to sigmabetasq_vec, instantiate as 1
+    sigmabetasq_vec <- matrix(1, n, n_param)
+
+    if (is.null(update_sigmabetasq)){
+
+      # if the user has also not specified an option for updating
+      # sigmabetasq_vec, update sigmabetasq
+      update_sigmabetasq <- T
+    }
+  }else{
+
+    # otherwise, the user has passed some values for sigmabetasq; create a
+    # matrix where the j-th column is the j-th value repeated n times
+    sigmabetasq_vec <- matrix(sigmabetasq_vec, n, n_param, T)
+
+    if (is.null(update_sigmabetasq)){
+
+      # if the user has not specified an option for updating sigmabetasq_vec but
+      # has provided some values to sigmabetasq_vec, do not update them
+      update_sigmabetasq <- F
+    }
+  }
 
   # main loop over the predictors
 

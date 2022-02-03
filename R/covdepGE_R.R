@@ -310,10 +310,6 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
   n <- nrow(X_mat)
   p <- ncol(X_mat)
 
-  # instantiate initial values of variance hyperparameters for all individuals
-  sigmasq <- rep(sigmasq, n)
-  sigmabeta_sq <- rep(sigmabeta_sq, n)
-
   # instantiate matrices for updated variational parameters with starting
   # values dictated by the matrices passed as arguments
   mu <- mu_mat
@@ -396,46 +392,48 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
 ## -----------------------------------------------------------------------------
 ## [[Rcpp::export]]
 grid_search_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-                          update_sigmasq, sigmabeta_sq_vec, update_sigmabetasq,
+                          update_sigmasq, sigmabetasq_vec, update_sigmabetasq,
                           pi_vec, tolerance, max_iter, upper_limit = 9){
 
- # get the number of grid points
- n_param <- length(pi_vec)
+  # get dimensions of the data
+  n <- nrow(X_mat)
 
- # vector for storing the ELBO corresponding to each grid point
- elbo <- rep(0, n_param)
+  # get the number of grid points
+  n_param <- length(pi_vec)
 
- # instantiate a list to store the result of cavi_R
- out <- list()
+  # vector for storing the ELBO corresponding to each grid point
+  elbo <- rep(0, n_param)
 
- # double to store the ELBO of the estimated graphs
- elbo_graph <- 0
+  # instantiate a list to store the result of cavi_R
+  out <- list()
 
- # integer to store the number of iterations it took for cavi_R to converge
- converged_iter <- 0
+  # double to store the ELBO of the estimated graphs
+  elbo_graph <- 0
 
- # count the number of grid points for which convergence was attained
- converged_ct <- 0
+  # integer to store the number of iterations it took for cavi_R to converge
+  converged_iter <- 0
 
- # perform CAVI for each grid point
- for (j in 1:n_param){
+  # count the number of grid points for which convergence was attained
+  converged_ct <- 0
 
-  # run CAVI
-  out <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[j], update_sigmasq,
-                sigmabeta_sq_vec[j], update_sigmabetasq, pi_vec[j], tolerance,
-                max_iter, upper_limit)
+  # perform CAVI for each grid point
+  for (j in 1:n_param){
 
-  # if cavi_R has converged, increment the convergence count
-  converged_iter <- out$converged_iter
-  if (converged_iter != max_iter){
-    converged_ct <- converged_ct + 1
+    # run CAVI
+    out <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[ , j],
+                  update_sigmasq, sigmabetasq_vec[ , j], update_sigmabetasq,
+                  pi_vec[j], tolerance, max_iter, upper_limit)
+
+    # if cavi_R has converged, increment the convergence count
+    converged_iter <- out$converged_iter
+    if (converged_iter != max_iter){
+      converged_ct <- converged_ct + 1
+    }
+
+    # add the ELBO to the vector of ELBOs
+    elbo_graph <- out$var_elbo
+    elbo[j] <- elbo_graph
   }
 
-  # add the ELBO to the vector of ELBOs
-  elbo_graph <- out$var_elbo
-  elbo[j] <- elbo_graph
- }
-
-
- return(list(elbo = elbo, num_converged = converged_ct))
+  return(list(elbo = elbo, num_converged = converged_ct))
 }

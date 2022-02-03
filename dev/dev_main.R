@@ -3,6 +3,7 @@ rm(list = ls())
 source("generate_data.R")
 
 R_code <- T # true if R code instead of C++ should be used
+MAPE_upd <- F # true if MAPE updates for variance hyperparameters should be used
 
 # generate data and covariates
 discrete_data <- F # true if discrete example is desired
@@ -31,9 +32,15 @@ if (package){
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_R.R")
   Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
-  out <- covdepGE(data_mat, Z, tau_, kde = F, CS = !R_code, scale = F,
-                  sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10), R = R_code,
-                  max_iter_grid = 10, max_iter_final = 10, warnings = F)
+  if (MAPE_upd){
+    out <- covdepGE(data_mat, Z, tau_, kde = F, scale = F, R = R_code,
+                    max_iter_grid = 10, max_iter_final = 10, warnings = F)
+  }else{
+    out <- covdepGE(data_mat, Z, tau_, kde = F, CS = T, scale = F,
+                    sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
+                    update_sigmasq = F, update_sigmabetasq = F, R = T,
+                    max_iter_grid = 100, max_iter_final = 1000, warnings = F)
+  }
 }
 
 # check to see that this modified code produces the same results as the original code
