@@ -130,24 +130,36 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
                                      max_iter_grid)
   }
 
-  # if (update_sigmasq | update_sigmabetasq){
-  #
-  #   # if at least one of the variance hyperparameters is being updated via MAPE,
-  #   # repeat the grid search with the initial values of the hyperparameter(s)
-  #   # being updated as the final values from the first grid search, as well as
-  #   # the initial values for the variational parameters as the final values from '
-  #   # the first grid search
-  #   sigmasq_vec <- matrix(sigmasq, n, n_param)
-  #   sigmabetasq_vec <- matrix(sigmabetasq_vec, n, n_param)
-  #   grid_search_out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-  #                                    update_sigmasq, sigmabetasq_vec,
-  #                                    update_sigmabetasq, pi_vec, tolerance,
-  #                                    max_iter_grid)
-  # }
+  if (update_sigmasq | update_sigmabetasq){
+
+    # if at least one of the variance hyperparameters is being updated via MAPE,
+    # repeat the grid search until the optimal pi has stabilized
+    converged_pi <- F
+
+    for (j in 1:10){
+
+      # record the last values for the optimal pi
+      last_pi <- out$pi
+
+      # use the hyperparameters and the variational parameters from the last
+      # grid search as the initial values
+      sigmasq_vec <- matrix(out$sigmasq, n, n_param)
+      sigmabetasq_vec <- matrix(out$sigmabeta_sq, n, n_param)
+      mu_mat <- out$mu
+      alpha_mat <- out$alpha
+      out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
+                           update_sigmasq, sigmabetasq_vec, update_sigmabetasq,
+                           pi_vec, tolerance, max_iter_grid)
+
+      # check to see if the optimal pi has stabilized
+      if (out$pi == last_pi) break
+    }
+  }
 
   # save CAVI details
   cavi_details <- list(ELBO = out$elbo, iterations = out$iterations,
                        converged = out$iterations < max_iter_grid)
+  if (update_sigmabetasq | update_sigmasq) cavi_details[["pi_stable_iter"]] <- j
 
   # save hyperparameter details
   hyperparameters <- list(sigmasq = out$sigmasq, sigmabeta_sq = out$sigmabeta_sq,

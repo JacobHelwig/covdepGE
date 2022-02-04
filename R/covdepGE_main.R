@@ -220,9 +220,9 @@
 covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                      sigmasq_vec = NULL, update_sigmasq = NULL,
                      sigmabetasq_vec = NULL, update_sigmabetasq = NULL,
-                     var_min = 0.01, var_max = 10, n_param = 10, pi_vec = NULL,
-                     norm = 2, scale = T, tolerance = 1e-12, max_iter_grid = 10,
-                     max_iter_final = 20, edge_threshold = 0.5,
+                     var_min = 0.01, var_max = 10, n_param = 9, pi_vec = NULL,
+                     norm = 2, scale = T, tolerance = 1e-12, max_iter_grid = 100,
+                     max_iter_final = 100, edge_threshold = 0.5,
                      sym_method = "mean", parallel = F, num_workers = NULL,
                      stop_cluster = T, warnings = T, CS = F, R = F){
 
@@ -259,7 +259,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   # if the user has not provided values for pi_vec, instantiate the grid
   if (is.null(pi_vec)){
 
-    pi_vec <- exp(seq(log(0.45), log(0.01), length = n_param))
+    pi_vec <- seq(0.05, 0.45, length.out = n_param)
   }
 
   # instantiate the matrices of hyperparameters
