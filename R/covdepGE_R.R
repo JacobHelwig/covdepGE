@@ -362,8 +362,9 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
 
  # return final alpha matrix, the final ELBO, the number of iterations to
  # converge, and the elbo history matrix
- return(list(var_alpha = alpha, var_elbo = ELBO, converged_iter = converged_iter,
-             sigmasq = sigmasq, sigmabeta_sq = sigmabeta_sq))
+ return(list(var_mu = mu, var_alpha = alpha, var_elbo = ELBO,
+             converged_iter = converged_iter, sigmasq = sigmasq,
+             sigmabeta_sq = sigmabeta_sq))
 }
 
 ## -----------------------------------------------------------------------------
@@ -397,12 +398,21 @@ grid_search_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
 
   # get dimensions of the data
   n <- nrow(X_mat)
+  p <- ncol(X_mat)
 
   # get the number of grid points
   n_param <- length(pi_vec)
 
-  # vector for storing the ELBO corresponding to each grid point
-  elbo <- rep(0, n_param)
+  # storage for the best ELBO
+  elbo_best <- -Inf
+
+  # storage for the hyperparameters and variational parameters corresponding to
+  # the current best ELBO
+  mu_best <- matrix(NA, n, p)
+  alpha_best <- matrix(NA, n, p)
+  sigmasq_best <- rep(NA, n)
+  sigmabetasq_best <- rep(NA, n)
+  pi_best <- NA
 
   # instantiate a list to store the result of cavi_R
   out <- list()
@@ -424,16 +434,21 @@ grid_search_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
                   update_sigmasq, sigmabetasq_vec[ , j], update_sigmabetasq,
                   pi_vec[j], tolerance, max_iter, upper_limit)
 
-    # if cavi_R has converged, increment the convergence count
-    converged_iter <- out$converged_iter
-    if (converged_iter != max_iter){
-      converged_ct <- converged_ct + 1
-    }
+    # if the new ELBO is greater than the current best, update the best ELBO and
+    # parameters and whether or not the model converged
+    if (elbo_best < out$var_elbo){
 
-    # add the ELBO to the vector of ELBOs
-    elbo_graph <- out$var_elbo
-    elbo[j] <- elbo_graph
+      elbo_best <- out$var_elbo
+      mu_best <- out$var_mu
+      alpha_best <- out$var_alpha
+      sigmasq_best <- out$sigmasq
+      sigmabetasq_best <- out$sigmabeta_sq
+      pi_best <- pi_vec[j]
+      iterations_best <- out$converged_iter
+    }
   }
 
-  return(list(elbo = elbo, num_converged = converged_ct))
+  return(list(elbo = elbo_best, mu = mu_best, alpha = alpha_best,
+              sigmasq = sigmasq_best, sigmabeta_sq = sigmabetasq_best,
+              pi = pi_best, iterations = iterations_best))
 }

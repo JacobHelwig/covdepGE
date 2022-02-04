@@ -3,7 +3,7 @@ rm(list = ls())
 source("generate_data.R")
 
 R_code <- T # true if R code instead of C++ should be used
-MAPE_upd <- F # true if MAPE updates for variance hyperparameters should be used
+MAPE_upd <- T # true if MAPE updates for variance hyperparameters should be used
 
 # generate data and covariates
 discrete_data <- F # true if discrete example is desired
@@ -38,7 +38,7 @@ if (package){
   }else{
     out <- covdepGE(data_mat, Z, tau_, kde = F, CS = T, scale = F,
                     sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                    update_sigmasq = F, update_sigmabetasq = F, R = T,
+                    update_sigmasq = F, R = T,
                     max_iter_grid = 100, max_iter_final = 1000, warnings = F)
   }
 }
@@ -93,3 +93,4 @@ sum(sapply(1:length(out$inclusion_probs), function(
 sum(sapply(1:length(out$inclusion_probs), function(
   j) sum((out$inclusion_probs[[j]] - out_orig$inclusion_probs[[j]])^2))) < 1e-10
 # plot(out, title_sum = T)
+

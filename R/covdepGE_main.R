@@ -414,65 +414,30 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
     close(pb)
   }
 
-  # gather the cavi_details lists, alpha_matrix matrices, and
-  # warnings_vec vectors into their own lists/ vectors
+  # gather the cavi_details lists, hyperparameter_details lists, and
+  # alpha_matrix matrices into their own lists/ vectors
   cavi_details <- lapply(res, `[[`, "cavi_details")
-  names(cavi_details) <- paste0("Variable ", 1:length(cavi_details))
+  hp <- lapply(res, `[[`, "hyperparameters")
+  names(cavi_details) <- names(hp) <- paste0("Variable ", 1:length(cavi_details))
   alpha_matrices <- lapply(res, `[[`, "alpha_matrix")
-  warnings_vec <- unlist(lapply(res, `[[`, "warnings"))
 
-  # collect the fitted hyperparameters for each variable
-  hyperparameters <- vector("list", 3)
-  names(hyperparameters) <- c("pi", "sigmasq", "sigmabetasq")
-  hyperparameters[["pi"]] <- sapply(cavi_details, `[[`, pi)
-  hyperparameters[["sigmasq"]] <- sapply(cavi_details, `[[`, "sigmasq")
-  hyperparameters[["sigmabetasq"]] <- sapply(cavi_details, `[[`, "sigmabeta_sq")
+  # organize the hyperparameters into matrices
+  final_sigmasq <- sapply(hp, `[[`, "sigmasq")
+  final_sigmabetasq <- sapply(hp, `[[`, "sigmabeta_sq")
+  final_pi <- sapply(hp, `[[`, "pi")
+  hyperparameters <- list(sigmasq = final_sigmasq,
+                          sigmabeta_sq = final_sigmabetasq, pi = final_pi,
+                          pi_grid = pi_vec)
 
-  if (warnings){
+  # find the number of final CAVIs that converged
+  converged <- sapply(cavi_details, `[[`, "converged")
 
-    # if there are any warnings to be displayed in warnings_vec, display them
-    for (warning in warnings_vec){
-      warning(warning)
-    }
+  # if any of the CAVI for a variable did not converge, display a warning
+  if (warnings & sum(!converged) > 0){
 
-    # grid warnings - for each of the candidate grids (pi and sigmabeta_sq), if
-    # points along the grid boundaries were selected and the grid had more than
-    # 2 candidates, display a warning
-
-    # sigmabetasq_vec
-    if (length(sigmabetasq_vec) > 2){
-
-      # get the selected values of sigmabeta_sq for each variable
-      final_sigmabeta_sq <- unlist(lapply(cavi_details, `[[`, "sigmabeta_sq"))
-
-      # count the number of final_sigmabeta_sq that were on the boundary of the
-      # grid
-      grid_boundary <- sigmabetasq_vec[c(1, length(sigmabetasq_vec))]
-      on_boundary <- sum(final_sigmabeta_sq %in% grid_boundary)
-
-      # if any of the final sigma were on the boundary, display a warning
-      if (on_boundary > 0){
-        warning(paste0("For ", on_boundary, "/", p + 1,
-                       " variables, the selected value of sigmabeta_sq was on the grid boundary. See return value CAVI_details"))
-      }
-    }
-
-    # pi_vec
-    if (length(pi_vec) > 2){
-
-      # get the selected values of pi for each variable
-      final_pi <- unlist(lapply(cavi_details, `[[`, "pi"))
-
-      # count the number of final_pi that were on the boundary of the grid
-      grid_boundary <- pi_vec[c(1, length(pi_vec))]
-      on_boundary <- sum(final_pi %in% grid_boundary)
-
-      # if any of the final pi were on the boundary, display a warning
-      if (on_boundary > 0){
-        warning(paste0("For ", on_boundary, "/", p + 1,
-                       " variables, the selected value of pi was on the grid boundary. See return value cavi_details"))
-      }
-    }
+    sapply(which(!converged), function(var_index) warning(paste0(
+      "Variable ", var_index, ": final CAVI did not converge in ",
+      max_iter_final, " iterations")))
   }
 
   # Creating the graphs:
@@ -544,13 +509,10 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   # calculate the total ELBO
   total_elbo <- sum(sapply(cavi_details, `[[`, "ELBO"))
 
-  # find the number of final CAVIs that DNC
-  final_dnc <- sum(sapply(res, `[[`, "final_dnc"))
-
   # create a list for model details
   model_details <- list(elapsed = NA, n = n, p = p, ELBO = total_elbo,
                         num_unique = length(unique_graphs),
-                        final_DNC = final_dnc, grid_size = n_param)
+                        converged = sum(converged), grid_size = n_param)
 
   # create a named vector to return the function arguments
   args <- c(kde = kde, norm = norm, scale = scale, tolerance = tolerance,
@@ -604,7 +566,7 @@ print.covdepGE <- function(x, ...){
                             " points\n")))
 
          # print the number of converged final CAVIs
-         cat("CAVI converged for ", p + 1 - final_DNC, "/", p + 1,
+         cat("CAVI converged for ", converged, "/", p + 1,
              " variables\n\n", sep = "")
 
          # print time to fit

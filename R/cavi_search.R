@@ -93,12 +93,13 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
                         max_iter_grid, max_iter_final, warnings, resp_index, CS,
                         R = F){
 
-  # get the dimensions of the data
+  # get the dimensions of the data and hyperparameter candidates
   n <- nrow(X_mat)
   p <- ncol(X_mat)
+  n_param <- length(pi_vec)
 
   if (length(unique(as.numeric(sigmasq_vec))) == 1){
-    sigmasq_vec <- matrix(var(y), n, length(pi_vec))
+    sigmasq_vec <- matrix(var(y), n, n_param)
   }
 
   # instantiate initial values of variational parameters; the l, j entry is
@@ -120,75 +121,43 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
   # loop to optimize sigmabeta_sq; run CAVI for each grid points; store the
   # resulting ELBO
   if (R){
-    grid_search_out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-                                     update_sigmasq,  sigmabetasq_vec,
-                                     update_sigmabetasq, pi_vec, tolerance,
-                                     max_iter_grid)
+    out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
+                         update_sigmasq,  sigmabetasq_vec, update_sigmabetasq,
+                         pi_vec, tolerance, max_iter_grid)
   } else{
     grid_search_out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
                                      sigmabetasq_vec, pi_vec, tolerance,
                                      max_iter_grid)
   }
 
-  # total number of grid points
-  grid_size <- length(pi_vec)
+  # if (update_sigmasq | update_sigmabetasq){
+  #
+  #   # if at least one of the variance hyperparameters is being updated via MAPE,
+  #   # repeat the grid search with the initial values of the hyperparameter(s)
+  #   # being updated as the final values from the first grid search, as well as
+  #   # the initial values for the variational parameters as the final values from '
+  #   # the first grid search
+  #   sigmasq_vec <- matrix(sigmasq, n, n_param)
+  #   sigmabetasq_vec <- matrix(sigmabetasq_vec, n, n_param)
+  #   grid_search_out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
+  #                                    update_sigmasq, sigmabetasq_vec,
+  #                                    update_sigmabetasq, pi_vec, tolerance,
+  #                                    max_iter_grid)
+  # }
 
-  # get the resulting ELBO and the number of converged candidates
-  elbo <- as.numeric(grid_search_out[["elbo"]])
-  converged <- grid_search_out[["num_converged"]]
+  # save CAVI details
+  cavi_details <- list(ELBO = out$elbo, iterations = out$iterations,
+                       converged = out$iterations < max_iter_grid)
 
-  # if any of the cavi did not converge, display a warning
-  warning_vec <- c()
-  if (converged < grid_size & warnings){
-    warning_vec <- paste0("Variable ", resp_index,
-                          ": CAVI did not converge in ", max_iter_grid,
-                          " iterations for ", (grid_size - converged),
-                          "/", grid_size, " grid search candidates")
-  }
+  # save hyperparameter details
+  hyperparameters <- list(sigmasq = out$sigmasq, sigmabeta_sq = out$sigmabeta_sq,
+                          pi = out$pi, pi_grid = pi_vec)
 
-  # Select the value of sigmasq that maximizes the ELBO
-  sigmasq <- sigmasq_vec[ , which(elbo == max(elbo))[1]]
-
-  # Select the value of sigmabeta_sq that maximizes the ELBO
-  sigmabeta_sq <- sigmabetasq_vec[ , which(elbo == max(elbo))[1]]
-
-  # Select the value of pi that maximizes the ELBO
-  pi <- pi_vec[elbo == max(elbo)][1]
-
-  # run CAVI using these values of sigmabeta_sq and pi_est
-  if (R){
-    result <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
-                     sigmabeta_sq, update_sigmabetasq, pi, tolerance,
-                     max_iter_final)
-  }else {
-    result <- cavi_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq, sigmabeta_sq,
-                     pi, tolerance, max_iter_final)
-  }
-
-  # if the final CAVI did not converge, display a warning
-  if (result$converged_iter == max_iter_final & warnings){
-    warning_vec <- c(warning_vec, (paste0("Variable ", resp_index,
-                   ": final CAVI did not converge in ", max_iter_final,
-                   " iterations")))
-  }
-
-  # count 1 if the final CAVI DNC
-  final_dnc <- 0
-  if (result$converged_iter == max_iter_final){
-    final_dnc <- 1
-  }
-
-  # save the CAVI details
-  cavi_details <- list(sigmasq = result$sigmasq,
-                       sigmabeta_sq = result$sigmabeta_sq,
-                       pi = pi, ELBO = result$var_elbo,
-                       converged_iter = result$converged_iter)
-
-  # var.alpha is an n by p matrix; the i,j-th entry is the probability of
-  # inclusion for the i-th individual for the j-th variable according to the
-  # regression on y
-  alpha_matrix <- result$var_alpha
+  # alpha is an n by p matrix; the i,j-th entry is the probability of inclusion
+  # for the i-th individual for the j-th variable according to the regression on
+  # y
+  alpha_matrix <- out$alpha
 
   return(list(alpha_matrix = alpha_matrix, cavi_details = cavi_details,
-              warnings = warning_vec, final_dnc = final_dnc))
+              hyperparameters = hyperparameters))
 }
