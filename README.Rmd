@@ -149,7 +149,7 @@ num_neg <- length(true_graph_pos) * n - num_pos
 
 ## To-do
 
--   `update_sigmasq` and `update_sigmabetasq` to `checks`
+-   `update_sigmasq`, `update_sigmabetasq`, `sigmasq_vec`, and `pi_vec` to `checks`
 
 -   `sigmasq_vec` to `sigmasq` and `sigmabetasq_vec` to `sigmabetasq` in `covdepGE_main`; need to update this verbage
 
@@ -173,7 +173,7 @@ num_neg <- length(true_graph_pos) * n - num_pos
 
 -   Handle constant covariate with `CS = T`
 
--   Remove `CS` argument
+-   Remove `CS`, `R` and `resp_index` arguments
 
 -   Center `X`
 

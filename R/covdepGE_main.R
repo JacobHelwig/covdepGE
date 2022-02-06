@@ -220,19 +220,17 @@
 covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                      sigmasq_vec = NULL, update_sigmasq = NULL,
                      sigmabetasq_vec = NULL, update_sigmabetasq = NULL,
-                     var_min = 0.01, var_max = 10, n_param = 9, pi_vec = NULL,
-                     norm = 2, scale = T, tolerance = 1e-12, max_iter_grid = 100,
-                     max_iter_final = 100, edge_threshold = 0.5,
+                     n_param = 9, pi_vec = NULL, norm = 2, scale = T,
+                     tolerance = 1e-12, max_iter = 100, edge_threshold = 0.5,
                      sym_method = "mean", parallel = F, num_workers = NULL,
                      stop_cluster = T, warnings = T, CS = F, R = F){
 
   start_time <- Sys.time()
 
   # run compatibility checks
-  # covdepGE_checks(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec, sigmabetasq_vec,
-  #                 var_min, var_max, n_param, pi_vec, norm, scale, tolerance,
-  #                 max_iter_grid, max_iter_final, edge_threshold, sym_method,
-  #                 parallel, num_workers, stop_cluster, warnings)
+  covdepGE_checks(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec, sigmabetasq_vec,
+                  n_param, pi_vec, norm, scale, tolerance, max_iter, edge_threshold,
+                  sym_method, parallel, num_workers, stop_cluster, warnings)
 
   # ensure that data_mat and Z are matrices
   data_mat <- as.matrix(data_mat)
@@ -367,8 +365,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
             # perform the grid search and final CAVI; save the results to res
             cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
                         sigmabetasq_vec, update_sigmabetasq, pi_vec, tolerance,
-                        max_iter_grid, max_iter_final, warnings, resp_index, CS,
-                        R)
+                        max_iter, warnings, resp_index, CS, R)
             }
           )
       },
@@ -403,8 +400,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       res[[resp_index]] <- cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq_vec,
                                        update_sigmasq, sigmabetasq_vec,
                                        update_sigmabetasq, pi_vec, tolerance,
-                                       max_iter_grid, max_iter_final, warnings,
-                                       resp_index, CS, R)
+                                       max_iter, warnings, resp_index, CS, R)
 
       # update the progress bar
       utils::setTxtProgressBar(pb, resp_index)
@@ -437,7 +433,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
 
     sapply(which(!converged), function(var_index) warning(paste0(
       "Variable ", var_index, ": final CAVI did not converge in ",
-      max_iter_final, " iterations")))
+      max_iter, " iterations")))
   }
 
   # Creating the graphs:

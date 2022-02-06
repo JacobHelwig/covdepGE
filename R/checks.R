@@ -51,13 +51,13 @@
 ## warnings: logical; if T, convergence and grid warnings will be displayed
 ## -----------------------------------------------------------------------------
 covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
-                            sigmabetasq_vec, var_min, var_max, n_param, pi_vec,
-                            norm, scale, tolerance, max_iter_grid,
-                            max_iter_final, edge_threshold, sym_method,
+                            sigmabetasq_vec, n_param, pi_vec, norm, scale,
+                            tolerance, max_iter, edge_threshold, sym_method,
                             parallel, num_workers, stop_cluster, warnings){
 
   # ensure vector input for parameters that are expected to be vectors
-  args_vector <- list(tau = tau, sigmasq_vec, sigmasq_vec, pi_vec = pi_vec)
+  args_vector <- list(tau = tau, sigmasq_vec = sigmasq_vec,
+                      sigmabetasq_vec = sigmabetasq_vec, pi_vec = pi_vec)
   if (any(!sapply(args_vector, function(x) is.atomic(x) & is.null(dim(x))))){
 
     # get the name of the non-vector
@@ -68,14 +68,11 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
   }
 
   # ensure scalar input for parameters that are expected to be scalars
-  args_scalar <- list(kde = kde, alpha = alpha, mu = mu, var_min = var_min,
-                      var_max = var_max, n_param = n_param, norm = norm,
-                      scale = scale, tolerance = tolerance,
-                      max_iter_grid = max_iter_grid,
-                      max_iter_final = max_iter_final,
-                      edge_threshold = edge_threshold, sym_method = sym_method,
-                      parallel = parallel, stop_cluster = stop_cluster,
-                      warnings = warnings)
+  args_scalar <- list(kde = kde, alpha = alpha, mu = mu, n_param = n_param,
+                      norm = norm, scale = scale, tolerance = tolerance,
+                      max_iter = max_iter, edge_threshold = edge_threshold,
+                      sym_method = sym_method, parallel = parallel,
+                      stop_cluster = stop_cluster, warnings = warnings)
   if (any(!(sapply(args_scalar, length) == 1))){
 
     # get the name of the non-scalar
@@ -86,11 +83,8 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
 
   # ensure numeric input for parameters that are expected to be numeric
   args_numeric <- list(data_mat = data_mat, Z = Z, tau = tau, alpha = alpha,
-                       mu = mu, sigmasq_vec = sigmasq_vec, var_min = var_min,
-                       n_param = n_param, var_max = var_max, pi_vec = pi_vec,
-                       norm = norm, tolerance = tolerance,
-                       max_iter_grid = max_iter_grid,
-                       max_iter_final = max_iter_final,
+                       mu = mu, n_param = n_param, norm = norm,
+                       tolerance = tolerance, max_iter = max_iter,
                        edge_threshold = edge_threshold)
   if (any(!sapply(args_numeric, is.numeric))){
 
@@ -103,10 +97,9 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
   # ensure non-NA input for parameters that are to be non-NA
   args_nonNA <- list(data_mat = data_mat, Z = Z, tau = tau, kde = kde,
                      alpha = alpha, mu = mu, sigmasq_vec = sigmasq_vec,
-                     var_min = var_min, var_max = var_max, n_param= n_param,
+                     sigmabetasq_vec = sigmabetasq_vec, n_param = n_param,
                      pi_vec = pi_vec, norm = norm, scale = scale,
-                     tolerance = tolerance, max_iter_grid = max_iter_grid,
-                     max_iter_final = max_iter_final,
+                     tolerance = tolerance, max_iter = max_iter,
                      edge_threshold = edge_threshold, sym_method = sym_method,
                      parallel = parallel, stop_cluster = stop_cluster,
                      warnings = warnings)
@@ -119,10 +112,9 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
 
   # ensure finite input for parameters that are expected to be finite
   args_finite <- list(data_mat = data_mat, Z = Z, tau = tau, mu = mu,
-                      sigmasq_vec = sigmasq_vec, var_min = var_min, var_max = var_max,
-                      n_param = n_param, tolerance = tolerance,
-                      max_iter_grid = max_iter_grid,
-                      max_iter_final = max_iter_final)
+                      sigmasq_vec = sigmasq_vec,
+                      sigmabetasq_vec = sigmabetasq_vec, n_param = n_param,
+                      tolerance = tolerance, max_iter = max_iter)
   if (any(!sapply(args_finite, function (x) all(is.finite(x))))){
 
     # get the name of the non-finite
@@ -132,8 +124,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
   }
 
   # ensure integer input for parameters that are expected to be integers
-  args_integers <- list(n_param = n_param, max_iter_grid = max_iter_grid,
-                        max_iter_final = max_iter_final)
+  args_integers <- list(n_param = n_param, max_iter = max_iter)
   if (any(!(sapply(args_integers, function(x) x %% 1) == 0))){
 
     # get the name of the non-integer
@@ -164,10 +155,9 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
   }
 
   # ensure positive input for parameters that are expected to be positive
-  args_positive <- list(tau = tau, sigmasq_vec = sigmasq_vec, var_min = var_min,
-                        var_max = var_max, n_param = n_param,
-                        tolerance = tolerance, max_iter_grid = max_iter_grid,
-                        max_iter_final = max_iter_final,
+  args_positive <- list(tau = tau, sigmasq_vec = sigmasq_vec,
+                        sigmabetasq_vec = sigmabetasq_vec, n_param = n_param,
+                        tolerance = tolerance, max_iter = max_iter,
                         edge_threshold = edge_threshold)
   if (any(!sapply(args_positive, function (x) all(x > 0)))){
 
@@ -179,8 +169,7 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
 
   # ensure (0, 1) input for parameters that are expected to be in the interval
   # (0, 1)
-  args_01 <- list(alpha = alpha, pi_vec = pi_vec,
-                  edge_threshold = edge_threshold)
+  args_01 <- list(alpha = alpha, pi_vec = pi_vec, edge_threshold = edge_threshold)
   if (any(!sapply(args_01, function (x) all(0 < x & x < 1)))){
 
     # get the name of the non-(0, 1)
@@ -212,11 +201,6 @@ covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
   # ensure that tau is either of length 1 or n
   if (!(length(tau) %in% c(1, n))){
     stop(paste0("tau should be of length 1 or ", n, ", not ", length(tau)))
-  }
-
-  # check that var_max is greater than var_min
-  if (!(var_max > var_min)){
-    stop("var_max should be greater than var_min")
   }
 
   # if the user has specified sigmabeta_sq, ensure that it is of the proper form

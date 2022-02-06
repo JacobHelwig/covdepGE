@@ -90,8 +90,7 @@
 ## -----------------------------------------------------------------------------
 cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
                         sigmabetasq_vec, update_sigmabetasq, pi_vec, tolerance,
-                        max_iter_grid, max_iter_final, warnings, resp_index, CS,
-                        R = F){
+                        max_iter, warnings, resp_index, CS, R){
 
   # get the dimensions of the data and hyperparameter candidates
   n <- nrow(X_mat)
@@ -110,8 +109,8 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
   mu_mat <- matrix(mu, n, p)
 
   # get hyperparameter values from varbvs
-  set.seed(resp_index)
   if (CS){
+    set.seed(resp_index)
     idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
     probs <- 1 / (1 + exp(-idmod$logodds)) # need to convert to log base 10
     sigmasq_vec <- matrix(mean(idmod$sigma), n, ncol(sigmabetasq_vec))
@@ -123,11 +122,11 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
   if (R){
     out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
                          update_sigmasq,  sigmabetasq_vec, update_sigmabetasq,
-                         pi_vec, tolerance, max_iter_grid)
+                         pi_vec, tolerance, max_iter)
   } else{
-    grid_search_out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-                                     sigmabetasq_vec, pi_vec, tolerance,
-                                     max_iter_grid)
+    out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
+                         update_sigmasq, sigmabetasq_vec, update_sigmabetasq,
+                         pi_vec, tolerance, max_iter)
   }
 
   if (update_sigmasq | update_sigmabetasq){
@@ -147,9 +146,9 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
       sigmabetasq_vec <- matrix(out$sigmabeta_sq, n, n_param)
       mu_mat <- out$mu
       alpha_mat <- out$alpha
-      out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
+      out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
                            update_sigmasq, sigmabetasq_vec, update_sigmabetasq,
-                           pi_vec, tolerance, max_iter_grid)
+                           pi_vec, tolerance, max_iter)
 
       # check to see if the optimal pi has stabilized
       if (out$pi == last_pi) break
@@ -158,7 +157,7 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
 
   # save CAVI details
   cavi_details <- list(ELBO = out$elbo, iterations = out$iterations,
-                       converged = out$iterations < max_iter_grid)
+                       converged = out$iterations < max_iter)
   if (update_sigmabetasq | update_sigmasq) cavi_details[["pi_stable_iter"]] <- j
 
   # save hyperparameter details

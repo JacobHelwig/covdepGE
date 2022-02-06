@@ -73,7 +73,10 @@ total_ELBO_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
   for (l in 1:n){
 
    ## calculate the ELBO for l-th individual and add it to the total ELBO
-   elbo_tot <- elbo_tot + ELBO_calculator_R(
+   # elbo_tot <- elbo_tot + ELBO_calculator_R(
+   #   y, D[ , l], X_mat, S_sq[l, ], mu_mat[l, ], alpha_mat[l, ],
+   #   sigmasq[l], sigmabeta_sq[l], pi_est)
+   elbo_tot <- elbo_tot + ELBO_calculator_c(
      y, D[ , l], X_mat, S_sq[l, ], mu_mat[l, ], alpha_mat[l, ],
      sigmasq[l], sigmabeta_sq[l], pi_est)
   }
@@ -312,8 +315,8 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
 
   # instantiate matrices for updated variational parameters with starting
   # values dictated by the matrices passed as arguments
-  mu <- mu_mat
-  alpha <- alpha_mat
+  mu <- matrix(mu_mat, n, p)
+  alpha <- matrix(alpha_mat, n, p)
 
   # matrices for tracking the convergence of alpha parameters
   alpha_last <- matrix(NA, n, p)
@@ -330,13 +333,15 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
                                        matrix(sigmabeta_sq, n, p))
 
     # mu update
-    mu <- mu_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq);
+    #mu <- mu_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq);
+    mu_update_c(y, D, X_mat, S_sq, mu, alpha, sigmasq);
 
     # alpha update
 
     # save the last value of alpha and update it
-    alpha_last <- alpha
-    alpha <- alpha_update_R(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+    alpha_last <- matrix(alpha, n, p)
+    #alpha <- alpha_update_R(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+    alpha_update_c(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
 
     # calculate change in alpha
     change_alpha <- alpha - alpha_last;
@@ -350,15 +355,18 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
 
     # update the variance terms using MAPE
     if (update_sigmasq | update_sigmabetasq){
-      sigma_update <- sigma_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq,
-                                     sigmabeta_sq)
-      if (update_sigmasq) sigmasq <- sigma_update$sigmasq
-      if (update_sigmabetasq) sigmabeta_sq <- sigma_update$sigmabeta_sq
+      # sigma_update <- sigma_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq,
+      #                                sigmabeta_sq)
+      sigma_update_c(y, D, X_mat, S_sq, mu, alpha, sigmasq,
+                     sigmabeta_sq, update_sigmasq, update_sigmabetasq)
+      # if (update_sigmasq) sigmasq <- sigma_update$sigmasq
+      # if (update_sigmabetasq) sigmabeta_sq <- sigma_update$sigmabeta_sq
     }
  }
 
  # calculate ELBO across n individuals
- ELBO <- total_ELBO_R(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+ # ELBO <- total_ELBO_R(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+  ELBO <- total_ELBO_c(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
 
  # return final alpha matrix, the final ELBO, the number of iterations to
  # converge, and the elbo history matrix
@@ -417,20 +425,14 @@ grid_search_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
   # instantiate a list to store the result of cavi_R
   out <- list()
 
-  # double to store the ELBO of the estimated graphs
-  elbo_graph <- 0
-
-  # integer to store the number of iterations it took for cavi_R to converge
-  converged_iter <- 0
-
-  # count the number of grid points for which convergence was attained
-  converged_ct <- 0
-
   # perform CAVI for each grid point
   for (j in 1:n_param){
 
     # run CAVI
-    out <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[ , j],
+    # out <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[ , j],
+    #               update_sigmasq, sigmabetasq_vec[ , j], update_sigmabetasq,
+    #               pi_vec[j], tolerance, max_iter, upper_limit)
+    out <- cavi_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[ , j],
                   update_sigmasq, sigmabetasq_vec[ , j], update_sigmabetasq,
                   pi_vec[j], tolerance, max_iter, upper_limit)
 
