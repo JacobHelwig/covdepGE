@@ -33,12 +33,12 @@ ELBO_calculator_R <- function(y, D, X_mat, S_sq, mu, alpha, sigmasq,
     2 * sigmasq)
   t3 <- sum(alpha * (1 + log(S_sq))) / 2
   t4 <- -sum(alpha * log((alpha + 0.000001) / pi_est) + (1 - alpha) * log(
-   (1 - alpha + 0.000001) / (1 - pi_est)))
+    (1 - alpha + 0.000001) / (1 - pi_est)))
   t5 <- -sum(alpha * ((mu_sq + S_sq) / (2 * sigmasq * sigmabeta_sq) + log(
-   sigmasq * sigmabeta_sq) / 2))
+    sigmasq * sigmabeta_sq) / 2))
   t6 <- 0.5 * log(1 / (2 * + pi * sigmasq))
 
- return(t1 + t2 + t3 + t4 + t5 + t6)
+  return(t1 + t2 + t3 + t4 + t5 + t6)
 }
 
 ## -----------------------------------------------------------------------------
@@ -72,18 +72,18 @@ total_ELBO_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
   # loop over all individuals
   for (l in 1:n){
 
-   ## calculate the ELBO for l-th individual and add it to the total ELBO
-   # elbo_tot <- elbo_tot + ELBO_calculator_R(
-   #   y, D[ , l], X_mat, S_sq[l, ], mu_mat[l, ], alpha_mat[l, ],
-   #   sigmasq[l], sigmabeta_sq[l], pi_est)
-   elbo_tot <- elbo_tot + ELBO_calculator_c(
-     y, D[ , l], X_mat, S_sq[l, ], mu_mat[l, ], alpha_mat[l, ],
-     sigmasq[l], sigmabeta_sq[l], pi_est)
+    ## calculate the ELBO for l-th individual and add it to the total ELBO
+    elbo_tot <- elbo_tot + ELBO_calculator_R(
+      y, D[ , l], X_mat, S_sq[l, ], mu_mat[l, ], alpha_mat[l, ],
+      sigmasq[l], sigmabeta_sq[l], pi_est)
+    # elbo_tot <- elbo_tot + ELBO_calculator_c(
+    #   y, D[ , l], X_mat, S_sq[l, ], mu_mat[l, ], alpha_mat[l, ],
+    #   sigmasq[l], sigmabeta_sq[l], pi_est)
   }
 
   return(elbo_tot)
 
- }
+}
 
 ## -----------------------------------------------------------------------------
 ## -----------------------------mu_update_R-------------------------------------
@@ -101,43 +101,43 @@ total_ELBO_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
 ## -----------------------------------------------------------------------------
 mu_update_R <- function(y, D, X_mat, S_sq, mu, alpha, sigmasq){
 
- # get sample size and number of parameters
- n <- nrow(X_mat)
- p <- ncol(X_mat)
+  # get sample size and number of parameters
+  n <- nrow(X_mat)
+  p <- ncol(X_mat)
 
- # instantiate matrices for the update loop
- mu_stack <- matrix(NA, n, p)
- alpha_stack <- matrix(NA, n, p)
- X_mu_alpha <- matrix(NA, n, p)
- X_mu_alpha_k <- matrix(NA, n, p)
- y_k <- matrix(NA, n, p)
- d_x_y <- matrix(NA, n, p)
+  # instantiate matrices for the update loop
+  mu_stack <- matrix(NA, n, p)
+  alpha_stack <- matrix(NA, n, p)
+  X_mu_alpha <- matrix(NA, n, p)
+  X_mu_alpha_k <- matrix(NA, n, p)
+  y_k <- matrix(NA, n, p)
+  d_x_y <- matrix(NA, n, p)
 
- # loop over the individuals to update mu row by row
- for (l in 1:n){
+  # loop over the individuals to update mu row by row
+  for (l in 1:n){
 
-  # l-th row of mu_mat, alpha_mat stacked n times
-  mu_stack <- matrix(mu[l, ], n, p, T)
-  alpha_stack <- matrix(alpha[l, ], n ,p, T)
+    # l-th row of mu_mat, alpha_mat stacked n times
+    mu_stack <- matrix(mu[l, ], n, p, T)
+    alpha_stack <- matrix(alpha[l, ], n ,p, T)
 
-  # take the element-wise product of X_mat, mu_stack, and alpha stack
-  X_mu_alpha <- X_mat * mu_stack * alpha_stack
+    # take the element-wise product of X_mat, mu_stack, and alpha stack
+    X_mu_alpha <- X_mat * mu_stack * alpha_stack
 
-  # the k-th column is the rowSums of X_mu_alpha minus the k-th column of
-  # X_mu_alpha (accounts for m \neq k in summation)
-  X_mu_alpha_k <- matrix(rowSums(X_mu_alpha), n, p) - X_mu_alpha
+    # the k-th column is the rowSums of X_mu_alpha minus the k-th column of
+    # X_mu_alpha (accounts for m \neq k in summation)
+    X_mu_alpha_k <- matrix(rowSums(X_mu_alpha), n, p) - X_mu_alpha
 
-  # the k-th column is y minus the k-th column of X_mu_alpha_k
-  y_k <- matrix(y, n, p) - X_mu_alpha_k
+    # the k-th column is y minus the k-th column of X_mu_alpha_k
+    y_k <- matrix(y, n, p) - X_mu_alpha_k
 
-  # the k-th column is d_:,l * x_:,k * y_k_:,k
-  d_x_y <- matrix(D[ , l], n, p) * X_mat * y_k
+    # the k-th column is d_:,l * x_:,k * y_k_:,k
+    d_x_y <- matrix(D[ , l], n, p) * X_mat * y_k
 
-  # the update of the l-th row of mu
-  mu[l, ] <- S_sq[l, ] * colSums(d_x_y) / sigmasq[l]
- }
+    # the update of the l-th row of mu
+    mu[l, ] <- S_sq[l, ] * colSums(d_x_y) / sigmasq[l]
+  }
 
- return(mu)
+  return(mu)
 }
 
 ## -----------------------------------------------------------------------------
@@ -206,7 +206,7 @@ alpha_update_R <- function(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est,
 ## -----------------------------------------------------------------------------
 ## [[Rcpp::export]]
 sigma_update_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
-                             sigmabeta_sq) {
+                           sigmabeta_sq) {
 
   # get dimensions of the data
   n <- nrow(X_mat)
@@ -324,7 +324,7 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
 
   # integer for tracking the iteration at which convergence is reached
   converged_iter <- max_iter
-
+  big <- F
   # CAVI loop (optimize variational parameters)
   for (k in 1:max_iter){
 
@@ -333,15 +333,15 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
                                        matrix(sigmabeta_sq, n, p))
 
     # mu update
-    #mu <- mu_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq);
-    mu_update_c(y, D, X_mat, S_sq, mu, alpha, sigmasq);
+    mu <- mu_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq);
+    #mu_update_c(y, D, X_mat, S_sq, mu, alpha, sigmasq);
 
     # alpha update
 
     # save the last value of alpha and update it
     alpha_last <- matrix(alpha, n, p)
-    #alpha <- alpha_update_R(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
-    alpha_update_c(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+    alpha <- alpha_update_R(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+    #alpha_update_c(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
 
     # calculate change in alpha
     change_alpha <- alpha - alpha_last;
@@ -355,24 +355,33 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
 
     # update the variance terms using MAPE
     if (update_sigmasq | update_sigmabetasq){
-      # sigma_update <- sigma_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq,
-      #                                sigmabeta_sq)
-      sigma_update_c(y, D, X_mat, S_sq, mu, alpha, sigmasq,
-                     sigmabeta_sq, update_sigmasq, update_sigmabetasq)
-      # if (update_sigmasq) sigmasq <- sigma_update$sigmasq
-      # if (update_sigmabetasq) sigmabeta_sq <- sigma_update$sigmabeta_sq
+      sigma_update <- sigma_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq,
+                                     sigmabeta_sq)
+      # sigma_update_c(y, D, X_mat, S_sq, mu, alpha, sigmasq,
+      #                sigmabeta_sq, update_sigmasq, update_sigmabetasq)
+      if (update_sigmasq) sigmasq <- sigma_update$sigmasq
+      if (update_sigmabetasq) sigmabeta_sq <- sigma_update$sigmabeta_sq
     }
- }
 
- # calculate ELBO across n individuals
- # ELBO <- total_ELBO_R(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
-  ELBO <- total_ELBO_c(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+    if (any(sigmasq > 1e100 & !big)){
+      warning(paste0("sigmasq > 1e100; pi: ", pi_est, ", iteration: ", k))
+      big <- T
+    }
+    if (any(is.na(sigmasq) | is.nan(sigmasq))){
+      warning(k)
+      break
+    }
+  }
 
- # return final alpha matrix, the final ELBO, the number of iterations to
- # converge, and the elbo history matrix
- return(list(var_mu = mu, var_alpha = alpha, var_elbo = ELBO,
-             converged_iter = converged_iter, sigmasq = sigmasq,
-             sigmabeta_sq = sigmabeta_sq))
+  # calculate ELBO across n individuals
+  ELBO <- total_ELBO_R(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+  #ELBO <- total_ELBO_c(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+
+  # return final alpha matrix, the final ELBO, the number of iterations to
+  # converge, and the elbo history matrix
+  return(list(var_mu = mu, var_alpha = alpha, var_elbo = ELBO,
+              converged_iter = converged_iter, sigmasq = sigmasq,
+              sigmabeta_sq = sigmabeta_sq))
 }
 
 ## -----------------------------------------------------------------------------
@@ -429,12 +438,12 @@ grid_search_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
   for (j in 1:n_param){
 
     # run CAVI
-    # out <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[ , j],
-    #               update_sigmasq, sigmabetasq_vec[ , j], update_sigmabetasq,
-    #               pi_vec[j], tolerance, max_iter, upper_limit)
-    out <- cavi_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[ , j],
+    out <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[ , j],
                   update_sigmasq, sigmabetasq_vec[ , j], update_sigmabetasq,
                   pi_vec[j], tolerance, max_iter, upper_limit)
+    # out <- cavi_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[ , j],
+    #               update_sigmasq, sigmabetasq_vec[ , j], update_sigmabetasq,
+    #               pi_vec[j], tolerance, max_iter, upper_limit)
 
     # if the new ELBO is greater than the current best, update the best ELBO and
     # parameters and whether or not the model converged
