@@ -146,9 +146,15 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
       sigmabetasq_vec <- matrix(out$sigmabeta_sq, n, n_param)
       mu_mat <- out$mu
       alpha_mat <- out$alpha
-      out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-                           update_sigmasq, sigmabetasq_vec, update_sigmabetasq,
-                           pi_vec, tolerance, max_iter)
+      if (R){
+        out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
+                             update_sigmasq,  sigmabetasq_vec, update_sigmabetasq,
+                             pi_vec, tolerance, max_iter)
+      } else{
+        out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
+                             update_sigmasq, sigmabetasq_vec, update_sigmabetasq,
+                             pi_vec, tolerance, max_iter)
+      }
 
       # check to see if the optimal pi has stabilized
       if (out$pi == last_pi) break

@@ -2,8 +2,8 @@ setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/c
 rm(list = ls())
 source("generate_data.R")
 
-R_code <- F # true if R code instead of C++ should be used
-MAPE_upd <- F # true if MAPE updates for variance hyperparameters should be used
+R_code <- T # true if R code instead of C++ should be used
+MAPE_upd <- T # true if MAPE updates for variance hyperparameters should be used
 
 # generate data and covariates
 discrete_data <- F # true if discrete example is desired
@@ -18,7 +18,7 @@ if (discrete_data) {
 data_mat <- dat$data
 Z <- dat$covts
 
-package <- T # true if the package version is desired
+package <- F # true if the package version is desired
 if (package){
   out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, CS = T, scale = F,
                             sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),

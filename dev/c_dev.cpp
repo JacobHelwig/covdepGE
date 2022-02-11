@@ -4,26 +4,23 @@
 using namespace Rcpp;
 
 //[[Rcpp::export]]
-arma::mat S_sq_update(const arma::mat& D, const arma::mat& X_mat,
-                      arma::colvec& sigmasq, arma::colvec& sigmabeta_sq) {
+void test(arma::vec y, arma::vec x) {
 
-  int p = X_mat.n_cols;
+  double var_x = arma::var(x);
 
-  arma::mat S_sq = arma::repmat(sigmasq, 1, p) /
-    ((arma::pow(X_mat, 2).t() * D).t() + 1 / arma::repmat(sigmabeta_sq, 1, p));
+  if (arma::any(y > var_x)){
+    Rcout << y.elem(arma::find(y > var_x)) << "\n\n" << var_x;
+  }
 
-  return S_sq;
 }
 
 
 /***R
-set.seed(1)
-n <- 10; p <- 3
-D <- matrix(abs(rnorm(n^2)), n, n)
-X_mat <- matrix(rnorm(n * p), n, p)
-sigmasq <- rnorm(n)
-sigmabeta_sq <- rnorm(n)
 
-all.equal(S_sq_update(D, X_mat, sigmasq, sigmabeta_sq), matrix(sigmasq, n, p) / (t(t(X_mat^2) %*% D) + 1 / matrix(sigmabeta_sq, n, p)))
+set.seed(2)
 
+x <- rnorm(10); y <- rnorm(10)
+
+test(y, x)
+var(x)
 */

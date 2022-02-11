@@ -81,8 +81,8 @@ colors <- c(colors, sample(colors()[sapply(colors(), function(color)
 cont <- generate_continuous(p = 25)
 data_mat <- cont$data
 Z <- cont$covts
-n <- nrow(X)
-p <- ncol(X) - 1
+n <- nrow(data_mat)
+p <- ncol(data_mat) - 1
 
 
 # if the covariates should be centered and scaled, do so ([ , ] for attributes)
@@ -189,24 +189,3 @@ cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
         sigmabeta_sq, update_sigmabetasq, pi_est, tolerance,
         max_iter, upper_limit = 9)
 
-library(Rcpp)
-library(inline)
-z <- seq(from=1, to=10, by=0.1)
-z[c(5, 10, 15, 20, 40, 50, 80)] <- NA
-
-src <- '
- Rcpp::NumericVector vecz(z);
- Rcout << vecz.size();
- for (int i=0; i< vecz.size(); i++) {
-   if (std::isnan(vecz[i])) {
-     Rcpp::Rcout << "missing value at position " << i + 1  << std::endl;
-   }
-  }
-'
-
-func <- cxxfunction(signature(z="numeric"), src, plugin="Rcpp")
-
-## results
-func(z)
-
-func(as.numeric(res$hyperparameters$sigmasq))

@@ -324,7 +324,7 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
 
   # integer for tracking the iteration at which convergence is reached
   converged_iter <- max_iter
-  big <- F
+
   # CAVI loop (optimize variational parameters)
   for (k in 1:max_iter){
 
@@ -363,9 +363,9 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
       if (update_sigmabetasq) sigmabeta_sq <- sigma_update$sigmabeta_sq
     }
 
-    if (any(sigmasq > 1e100 & !big)){
+    if (any(sigmasq > 1e100)){
       warning(paste0("sigmasq > 1e100; pi: ", pi_est, ", iteration: ", k))
-      big <- T
+      break
     }
     if (any(is.na(sigmasq) | is.nan(sigmasq))){
       warning(k)

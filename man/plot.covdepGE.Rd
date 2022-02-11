@@ -4,7 +4,7 @@
 \alias{plot.covdepGE}
 \title{plot.covdepGE}
 \usage{
-\method{plot}{covdepGE}(x, graph_colors = NULL, ...)
+\method{plot}{covdepGE}(x, graph_colors = NULL, title_sum = F, ...)
 }
 \arguments{
 \item{x}{object of class covdepGE; return of \code{covdepGE} function}
@@ -13,6 +13,9 @@
 from out. The v-th element is the color for the v-th unique graph. Default is
 NULL, which results in
 \code{graph_colors <- rep("#500000", length(out$unique_graphs))}}
+
+\item{title_sum}{logical; whether the indices of the individuals
+corresponding to the graph should be included in the title. Default is \code{F}}
 
 \item{...}{additional arguments will be ignored}
 }
