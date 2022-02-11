@@ -362,15 +362,6 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
       if (update_sigmasq) sigmasq <- sigma_update$sigmasq
       if (update_sigmabetasq) sigmabeta_sq <- sigma_update$sigmabeta_sq
     }
-
-    if (any(sigmasq > 1e100)){
-      warning(paste0("sigmasq > 1e100; pi: ", pi_est, ", iteration: ", k))
-      break
-    }
-    if (any(is.na(sigmasq) | is.nan(sigmasq))){
-      warning(k)
-      break
-    }
   }
 
   # calculate ELBO across n individuals

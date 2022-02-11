@@ -348,7 +348,6 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
                   int max_iter, double upper_limit = 9) {
 
   // get dimensions of the data
-  int n = X_mat.n_rows;
   int p = X_mat.n_cols;
 
   // matrices and vectors for updated variational parameters and hyperparameters
@@ -366,9 +365,6 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
 
   // matrix for storing S_sq
   arma::mat S_sq;
-
-  // calculate the variance of y to ensure that sigmasq does not get too large
-  double var_y = arma::var(y);
 
   // CAVI loop (optimize variational parameters)
   for (int k = 0; k < max_iter; k++){
@@ -400,20 +396,6 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
     if (update_sigmasq | update_sigmabetasq){
       sigma_update_c(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq,
                      update_sigmasq, update_sigmabetasq);
-    }
-
-    // check if sigmasq is blowing up; if it is, reset to a fixed sigma and
-    // stop updating sigmasq
-    if (update_sigmasq){
-      if (arma::any(sigmasq > 10 * var_y))
-
-        // fix sigmasq as the variance of y
-        sigmasq = var_y * arma::colvec(n, arma::fill::ones);
-        update_sigmasq = false;
-
-        // reset mu and alpha
-        mu = arma::mat(n, p, arma::fill::zeros);
-        alpha = 0.01 * arma::mat(n, p, arma::fill::ones);
     }
   }
 

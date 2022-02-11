@@ -1,0 +1,304 @@
+---
+title: "pi stability analysis"
+output: pdf_document
+toc: true
+---
+
+```{r, echo = F, include = F}
+start <- Sys.time()
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_main.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/cavi_search.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_R.R")
+Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
+
+# function for generating the data and the covariates
+generate_continuous <- function(n1 = 60, n2 = 60, n3 = 60, p = 4){
+
+  # create covariate for individuals in each of the three intervals
+  
+  # define the dimensions of the data
+  n <- sum(n1, n2, n3)
+  
+  # define the limits of the intervals
+  limits1 <- c(-3, -1)
+  limits2 <- c(-1, 1)
+  limits3 <- c(1, 3)
+  
+  # define the covariate values within each interval
+  z1 <- runif(n1, limits1[1], limits1[2])
+  z2 <- runif(n2, limits2[1], limits2[2])
+  z3 <- runif(n3, limits3[1], limits3[2])
+  # z1 <- seq(limits1[1], limits1[2], length = n1)
+  # z2 <- seq(limits2[1], limits2[2], length = n2)
+  # z3 <- seq(limits3[1], limits3[2], length = n3)
+  Z <- matrix(sort(c(z1, z2, z3)), n, 1)
+  
+  # create precision matrices
+  
+  # the shared part of the structure for all three intervals is a 2 on the
+  # diagonal and a 1 in the (2, 3) position
+  common_str <- diag(p + 1)
+  common_str[2, 3] <- 1
+  
+  # define constants for the structure of interval 2
+  beta1 <- diff(limits2)^-1
+  beta0 <- -limits2[1] * beta1
+  
+  # interval 2 has two different linear functions of Z in the (1, 2) position
+  # and (1, 3) positions; define structures for each of these components
+  int2_str12 <- int2_str13 <- matrix(0, p + 1, p + 1)
+  int2_str12[1, 2] <- int2_str13[1, 3] <- 1
+  
+  # define the precision matrices for each of the individuals in interval 2
+  int2_prec <- lapply(z2, function(z) common_str +
+                        ((1 - beta0 - beta1*z)*int2_str12) +
+                        ((beta0 + beta1*z)*int2_str13))
+  
+  # interval 1 has a 1 in the (1, 2) and interval 3 has a 1 in the (1, 3) position;
+  # define structures for each of these components
+  int1_str12 <- int3_str13 <- matrix(0, p + 1, p + 1)
+  int1_str12[1, 2] <- int3_str13[1, 3] <- 1
+  
+  # define the precision matrices for each of the individuals in interval 1 and interval 3
+  int1_prec <- rep(list(common_str + int1_str12), n1)
+  int3_prec <- rep(list(common_str + int3_str13), n3)
+  
+  # put all of the precision matrices into one list
+  prec_mats <- c(int1_prec, int2_prec, int3_prec)
+  
+  # symmetrize the precision matrices
+  prec_mats <- lapply(prec_mats, function(mat) t(mat) + mat)
+  
+  # invert the precision matrices to get the covariance matrices
+  cov_mats <- lapply(prec_mats, solve)
+  
+  # generate the data using the covariance matrices
+  data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+  
+  return(list(data = data_mat, covts = Z, true_precision = prec_mats))
+}
+
+library(latex2exp)
+library(mclust)
+library(ggpubr)
+
+# colors for plots
+set.seed(1)
+colors <- c("chartreuse3", "chocolate2", "cornflowerblue", "darkgoldenrod1", 
+            "darkmagenta", "deepskyblue3", "forestgreen", "darkorchid3", 
+            "darkred", "darkslategray")
+colors <- c(colors, sample(colors()[sapply(colors(), function(color) 
+  !(substr(color, 1, 4)) %in% c("grey", "gray"))], 180))
+```
+
+# Experiment Overview
+
+This experiment was to analyze the new method of hyperparameter selection with a focus placed on the selection of the optimal $\pi$. 50 trials were performed. In each trial, for each variable, $\pi$ was selected by maximizing ELBO over the following grid:
+
+\[\underset\sim\pi = \{0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45\}\]
+
+$\sigma^2$ and $\sigma_\beta^2$ were fit to the data using MAPE.
+
+The optimal $\pi$ was stabilized in the following manner: upon concluding the first grid search, another grid search was performed using the values of $\mu, \alpha, \sigma^2,$ and $\sigma^2_\beta$ corresponding to the optimal $\pi$ as initial values. If the optimal $\pi$ remained unchanged from the first grid search, then the grid search was concluded and the final values for $\mu, \alpha, \sigma^2,$ and $\sigma^2_\beta$ were selected. However, if the optimal $\pi$ changed, then the grid search was repeated until the optimal $\pi$ stabilized.
+
+At the end of the trials, the distribution of the optimal $\pi$ values were visualized by variable. Additionally, the number of additional grid searches necesary for the choice of the optimal $\pi$ to stabilize was visualized - this distribution was not broken down by variable, and thus, there are $\# \text{ variables}\times \#\text{ trials}$ observations in this distribution. These visualiztions are in the *Results* section
+
+In addition, for each trial, the following were recorded:
+
+- the distribution of the covariates
+- the model summary
+- the unique graphs produced by the model
+- the number of grid searches performed before the optimal $\pi$ values stabilized 
+- the optimal $\pi$ values
+- a visualization of the fitted variance hyperparameters for the final model
+
+These trial by trial details are included in the final section, *Detailed Results*.
+
+
+# Data Generation
+
+## Extraneous Covariate
+
+I generated the covariate, $Z$, as the union of three almost disjoint intervals of equal measure. That is, $Z = Z_1 \cup Z_2 \cup Z_3$ with $Z_1 = (-3, -1), Z_2 = (a,b) = (-1, 1), Z_3 = (1, 3)$. Within each interval, I generated 60 covariate values from a uniform distribution. For example: 
+
+```{r, echo = F, fig.width = 11, fig.height = 4.5}
+cont <- generate_continuous()
+X <- cont$data
+Z <- cont$covts
+n <- nrow(X)
+p <- ncol(X) - 1
+
+interval <- c(rep(1, 60), rep(2, 60), rep(3, 60))
+cov_df <- cbind.data.frame(interval = interval, Z, individual_index = 1:n)
+cov_df$interval <- factor(cov_df$interval)
+ggplot(cov_df, aes(Z, fill = interval)) +
+  geom_histogram(color = "black", binwidth = 0.2) +
+  theme_classic() +
+  ggsci::scale_fill_jco() +
+  labs(title = ("Distribution of Covariate")) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Precision Matrix
+
+All of the individuals in interval 1 had the same precision matrix, $\Omega^{(1)}$: 
+
+\[\Omega^{(1)}_{i,j} = 
+\begin{cases}
+2 & i = j \\
+1 & (i,j)\in\{(1, 2), (2,1),(2,3),(3,2)\} \\
+0 & o.w.
+\end{cases}\]
+
+Also, all of the individuals in interval 3 had the same precision matrix, $\Omega^{(3)}$:
+
+\[\Omega^{(3)}_{i,j} = 
+\begin{cases}
+2 & i = j \\
+1 & (i,j)\in\{(1,3), (3,1),(2,3),(3,2)\} \\
+0 & o.w.
+\end{cases}\]
+
+However, the individuals in interval 2 had a precision matrix that was dependent upon $Z$ and $(a, b)$. Let $\beta_0 = -a / (b - a)$ and $\beta_1 = 1 / (b - a)$. Then:
+
+\[\Omega^{(2)}_{i,j}(z) = 
+\begin{cases}
+2 & i = j \\
+1 & (i,j)\in\{(2,3), (3,2)\} \\
+1 - \beta_0 - \beta_1z & (i,j)\in \{(1,2), (2,1)\} \\
+\beta_0 + \beta_1z & (i,j)\in\{(1,3),(3,1)\}\\
+0 & o.w.
+\end{cases}
+\]
+
+Thus, $\Omega^{(2)}(a) = \Omega^{(1)}$ and $\Omega^{(2)}(b) = \Omega^{(3)}$. That is, an individual on the left or right boundary of $Z_2$ would have precision matrix $\Omega^{(1)}$ or $\Omega^{(3)}$, respectively. The conditional dependence structures corresponding to each of these precision matrices are visualized below.
+
+```{r, echo = F, fig.width = 11, fig.height = 9}
+# get the true graphs
+true_graphs <- lapply(cont$true_precision, function(prec_mat) (prec_mat - diag(diag(prec_mat)) != 0) * 1)
+
+# get the unique true graphs
+strs <- unique(true_graphs)
+
+# get the individual indices corresponding to each of the structures
+ind_idx <- lapply(strs, function(strc) which(sapply(true_graphs, identical, strc)))
+
+# get the summary for each 
+ind_sum <- sapply(ind_idx, function(idx) paste0(min(idx), ",...,", max(idx)))
+
+# visualize each of the structures
+str_viz <- lapply(1:length(strs), function(strc_idx) 
+  gg_adjMat(strs[[strc_idx]], color1 = colors[strc_idx]) +
+    ggtitle(paste("Individuals ", ind_sum[strc_idx])))
+ggarrange(plotlist = str_viz)
+```
+
+## Data matrix
+
+Let $z_l$ be the extraneous covariate for the $l$-th individual. To generate the data matrix for the $l$-th individual, I took a random sample from $\mathcal N (0,\{\Omega_l(z_l)\}^{-1})$, where: \[\Omega_l(z_l) = 
+\begin{cases}
+\Omega^{(1)} & z_l\in Z_1 \\
+\Omega^{(2)}(z_l) & z_l \in Z_2 \\
+\Omega^{(3)} & z_l \in Z_3
+\end{cases}
+\]
+
+# Results
+
+```{r, echo = F, include = F}
+set.seed(1)
+
+n_trials <- 100
+
+results_j <- vector("list", 7)
+names(results_j) <- c("covariates", "summary", "unique_graphs", 
+                      "pi_stable_iter", "pi", "sigmasq", "sigmabetasq")
+
+results <- replicate(n_trials, results_j, F)
+
+names(results) <- paste0("trial", 1:n_trials)
+
+# perform n_trials trials
+for (j in 1:n_trials){
+  
+  # generate the data
+  cont <- generate_continuous()
+  X <- cont$data
+  Z <- cont$covts
+  print(mean(X))
+  # visualize the covariate
+  cov_df <- cbind.data.frame(interval = interval, Z, individual_index = 1:n)
+  cov_df$interval <- factor(cov_df$interval)
+  cov_plot <- ggplot(cov_df, aes(Z, fill = interval)) +
+    geom_histogram(color = "black", binwidth = 0.2) +
+    theme_classic() +
+    ggsci::scale_fill_jco() +
+    labs(title = paste0("Distribution of Covariate, Trial ", j))
+  results[[j]]$covariates <- cov_plot
+
+  # covariate dependent modeling
+  out_dep <- covdepGE(X, Z, R = T, warnings = F)
+  
+  # save the results
+  results[[j]]$summary <- out_dep
+  
+  # save the unique graphs
+  results[[j]]$unique_graphs <- c(
+    lapply(out_dep$unique_graphs, `[[`, "individuals_summary"), plot(out_dep, 
+                                                                     colors, T))
+  
+  # how many times did the grid search repeat until optimal pi stabilized?
+  results[[j]]$pi_stable_iter <- sapply(out_dep$CAVI_details, `[[`, "pi_stable_iter")
+  
+  # what were the optimal pi values? 
+  results[[j]]$pi <- out_dep$hyperparameters$pi
+  
+  # visualize the fitted variance hyperparameters
+  sigmasq_fitted <- reshape2::melt(out_dep$hyperparameters$sigmasq,
+                                   varnames = c("Individual", "Variable"),
+                                   value.name = "sigmasq")
+  results[[j]]$sigmasq <- ggplot(sigmasq_fitted, aes(Individual, sigmasq, color = Variable)) +
+    geom_line(size = 1) + ggtitle(TeX("Fitted $\\sigma^2$")) + 
+    ylab(TeX("$\\sigma^2$")) + theme_bw() + 
+    theme(plot.title = element_text(hjust = 0.5)) 
+  
+  sigmabetasq_fitted <- reshape2::melt(out_dep$hyperparameters$sigmabeta_sq,
+                                       varnames = c("Individual", "Variable"),
+                                       value.name = "sigmabetasq")
+  results[[j]]$sigmabetasq <- ggplot(sigmabetasq_fitted, aes(Individual, sigmabetasq, color = Variable)) +
+    geom_line(size = 1) + ggtitle(TeX("Fitted $\\sigma_\\beta^2$")) + 
+    ylab(TeX("$\\sigma_\\beta^2$")) + theme_bw() + 
+    theme(plot.title = element_text(hjust = 0.5)) 
+
+}
+```
+
+```{r, fig.width = 11, fig.height = 6, echo = F}
+# visualize the distribution of the optimal pi for each of the variables
+var_names <- names(results$trial1$pi)
+pi_var_mat <- sapply(var_names, function(var_name) sapply(results, function(trial) trial[["pi"]][var_name]))
+row.names(pi_var_mat) <- NULL
+lapply(var_names, function(var_name) ggplot(
+  data.frame(pi = pi_var_mat[ , var_name]), aes(pi)) + geom_histogram(
+    binwidth = 0.05, color = "black", fill = "#500000") + ggtitle(
+      TeX(paste("Optimal $\\pi$ values,", var_name))) + theme_bw() + theme(
+        plot.title = element_text(hjust = 0.5)) + xlab(TeX("$\\pi$")) + coord_cartesian(xlim = c(0, 0.5)))
+
+# how many iterations did it take to stabilize?
+ggplot(data.frame(gs = as.numeric(sapply(results, `[[`, "pi_stable_iter")))) + 
+  geom_histogram(binwidth = 1, color = "black", fill = "#500000", aes(gs)) + 
+  ggtitle("Number of grid searches before stability") + theme_bw() + 
+  theme(plot.title = element_text(hjust = 0.5)) + xlab("Grid Searches") +
+  scale_x_continuous(breaks = 1:10)
+```
+
+# Detailed Results
+
+```{r, fig.width = 4.5, fig.height = 3.5, echo = F}
+Sys.time() - start
+length(unique(sapply(results, function(res) res$model_details$ELBO)))
+results
+```
