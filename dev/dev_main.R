@@ -2,11 +2,12 @@ setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/c
 rm(list = ls())
 source("generate_data.R")
 
-R_code <- T # true if R code instead of C++ should be used
-MAPE_upd <- T # true if MAPE updates for variance hyperparameters should be used
+R_code <- F # true if R code instead of C++ should be used
+MAPE_upd <- F # true if MAPE updates for variance hyperparameters should be used
+package <- T # true if the package version is desired
+discrete_data <- T # true if discrete example is desired
 
 # generate data and covariates
-discrete_data <- F # true if discrete example is desired
 if (discrete_data) {
   dat <- generate_discrete()
   tau_ <- 0.1 # the bandwidth parameter
@@ -18,11 +19,16 @@ if (discrete_data) {
 data_mat <- dat$data
 Z <- dat$covts
 
-package <- F # true if the package version is desired
 if (package){
-  out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, CS = T, scale = F,
-                            sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                            parallel = T, num_workers = 5, update_sigmasq = F)
+  if (MAPE_upd){
+    out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, scale = F, R = R_code,
+                              max_iter = 10, warnings = F)
+  }else{
+    out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, CS = T, scale = F,
+                              sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
+                              update_sigmasq = F, R = R_code, max_iter = 100,
+                              warnings = F)
+  }
 }else{
   if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_main.R")
