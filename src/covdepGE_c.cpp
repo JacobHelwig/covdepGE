@@ -449,8 +449,9 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
   // get the number of grid points
   int n_param = pi_vec.n_elem;
 
-  // storage for the best ELBO
+  // storage for the best ELBO and new elbo
   double elbo_best = -1;
+  double elbo_new;
 
   // storage for the hyperparameters and variational parameters corresponding to
   // the current best ELBO
@@ -473,10 +474,11 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
     out = cavi_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec.col(j),
                  update_sigmasq, sigmabeta_sq_vec.col(j), update_sigmabetasq,
                  pi_vec(j), tolerance, max_iter, upper_limit);
+    elbo_new = as<double>(out["var_elbo"]);
 
     // if the new ELBO is greater than the current best, update the best ELBO and
     // parameters and whether or not the model converged
-    if (elbo_best < as<double>(out["var_elbo"]) or j == 0){
+    if ((elbo_best <  elbo_new or (std::isnan(elbo_best) and !std::isnan(elbo_new))) or j == 0){
 
       elbo_best = as<double>(out["var_elbo"]);
       mu_best = as<arma::mat>(out["var_mu"]);

@@ -76,7 +76,6 @@ generate_continuous <- function(n1 = 60, n2 = 60, n3 = 60, p = 4){
 
 library(covdepGE)
 library(latex2exp)
-library(mclust)
 library(ggpubr)
 
 # colors for plots
@@ -211,7 +210,7 @@ The function returns the number of iterations performed in the last grid search.
 It also seems that if the previous grid search did not converge for a sufficiently large number of iterations, neither will the last grid search.
 
 ```{r, fig.width = 4.5, fig.height = 3.5}
-out <- covdepGE(X, Z, max_iter = 1000, parallel = T, num_workers = 12, stop_cluster = F, R = T)
+out <- covdepGE(X, Z, max_iter = 1000, parallel = T, num_workers = 14)
 
 out
 

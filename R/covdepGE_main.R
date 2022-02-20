@@ -36,13 +36,6 @@
 #' entries; candidate values of `sigmabeta_sq`, the slab variance. `NULL` by
 #' default
 #'
-#' @param var_min positive numeric; if `sigmabetasq_vec` is `NULL`, `var_min` is
-#' the lower bound of the auto-generated `sigmabetasq_vec`. `0.01` by default
-#'
-#' @param var_max numeric in \eqn{(`varmin`, Inf)}; if `sigmabetasq_vec` is
-#' `NULL`, `var_max` is the upper bound of the auto-generated `sigmabetasq_vec`.
-#' `10` by default
-#'
 #' @param n_param positive integer; if `sigmabetasq_vec` is `NULL`, `n_param` is
 #' the number of candidate `sigmabeta_sq` that will be auto-generated as:
 #'
@@ -63,13 +56,8 @@
 #' iteration-to-iteration change in the alpha matrix are within tolerance.
 #' `1e-12` by default
 #'
-#' @param max_iter_grid positive integer; during the grid search, if the
-#' tolerance criteria has not been met by `max_iter_grid` iterations, end CAVI.
-#' `100` by default
-#'
-#' @param max_iter_final positive integer; for the final CAVI, if the tolerance
-#' criteria has not been met by `max_iter_final` iterations, end CAVI. `1000` by
-#' default
+#' @param max_iter positive integer; if the tolerance criteria has not been met
+#' by `max_iter_grid` iterations, end CAVI. `100` by default
 #'
 #' @param edge_threshold numeric in \eqn{(0, 1)}; when post-processing the
 #' inclusion probabilities, an edge will be added to the graph if the

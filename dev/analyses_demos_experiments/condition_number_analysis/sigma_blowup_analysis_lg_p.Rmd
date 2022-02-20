@@ -1,0 +1,566 @@
+---
+title: "sigma blowup analysis, large p"
+output: pdf_document
+toc: true
+---
+
+```{r, echo = F}
+knitr::opts_knit$set(root.dir = "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev/analyses_demos_experiments/hyperparameter_specification")
+```
+
+```{r, echo = F, include = F, error = T}
+start <- Sys.time()
+
+# function for generating the data and the covariates
+generate_continuous <- function(n1 = 60, n2 = 60, n3 = 60, p = 4){
+
+  # create covariate for individuals in each of the three intervals
+  
+  # define the dimensions of the data
+  n <- sum(n1, n2, n3)
+  
+  # define the limits of the intervals
+  limits1 <- c(-3, -1)
+  limits2 <- c(-1, 1)
+  limits3 <- c(1, 3)
+  
+  # define the covariate values within each interval
+  z1 <- runif(n1, limits1[1], limits1[2])
+  z2 <- runif(n2, limits2[1], limits2[2])
+  z3 <- runif(n3, limits3[1], limits3[2])
+  Z <- matrix(sort(c(z1, z2, z3)), n, 1)
+  
+  # create precision matrices
+  
+  # the shared part of the structure for all three intervals is a 2 on the
+  # diagonal and a 1 in the (2, 3) position
+  common_str <- diag(p + 1)
+  common_str[2, 3] <- 1
+  
+  # define constants for the structure of interval 2
+  beta1 <- diff(limits2)^-1
+  beta0 <- -limits2[1] * beta1
+  
+  # interval 2 has two different linear functions of Z in the (1, 2) position
+  # and (1, 3) positions; define structures for each of these components
+  int2_str12 <- int2_str13 <- matrix(0, p + 1, p + 1)
+  int2_str12[1, 2] <- int2_str13[1, 3] <- 1
+  
+  # define the precision matrices for each of the individuals in interval 2
+  int2_prec <- lapply(z2, function(z) common_str +
+                        ((1 - beta0 - beta1*z)*int2_str12) +
+                        ((beta0 + beta1*z)*int2_str13))
+  
+  # interval 1 has a 1 in the (1, 2) and interval 3 has a 1 in the (1, 3) position;
+  # define structures for each of these components
+  int1_str12 <- int3_str13 <- matrix(0, p + 1, p + 1)
+  int1_str12[1, 2] <- int3_str13[1, 3] <- 1
+  
+  # define the precision matrices for each of the individuals in interval 1 and interval 3
+  int1_prec <- rep(list(common_str + int1_str12), n1)
+  int3_prec <- rep(list(common_str + int3_str13), n3)
+  
+  # put all of the precision matrices into one list
+  prec_mats <- c(int1_prec, int2_prec, int3_prec)
+  
+  # symmetrize the precision matrices
+  prec_mats <- lapply(prec_mats, function(mat) t(mat) + mat)
+  
+  # invert the precision matrices to get the covariance matrices
+  cov_mats <- lapply(prec_mats, solve)
+  
+  # generate the data using the covariance matrices
+  data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+  
+  return(list(data = data_mat, covts = Z, true_precision = prec_mats))
+}
+
+library(covdepGE)
+library(latex2exp)
+library(ggpubr)
+library(tidyverse)
+
+# colors for plots
+set.seed(1)
+colors <- c("chartreuse3", "chocolate2", "cornflowerblue", "darkgoldenrod1", 
+            "darkmagenta", "deepskyblue3", "forestgreen", "darkorchid3", 
+            "darkred", "darkslategray")
+colors <- c(colors, sample(colors()[sapply(colors(), function(color) 
+  !(substr(color, 1, 4)) %in% c("grey", "gray"))], 180))
+```
+
+# Experiment Overview
+
+In this experiment, I analyze the behavior of the `covdepGE` algorithm when applied to a large dataset. Specifically, I have observed that in the large $p$ regime, the MAPE-fitted $\sigma^2$ values blow up along with the $\mu$ values, and so, the purpose of this analysis was to more closely examine this blowup. 
+
+I begin by running a single instance of CAVI using data that will cause the fitted $\sigma^2$ values to blow up (*Close Look at Cavi*). In this analysis, the data is generated as described in the section titled *Data Generation*, however, I fix just one variable as the response and then take a closer look at the evolution of the $\mu$ and $\sigma^2$ parameters in the first few iterations, as well as the terms involved in the calculation of the $\sigma^2$ update.
+
+I then perform 10 trials on data generated in the same manner (*Full Precision Trials*). Instead of focusing on one variable as before, I apply the whole algorithm to estimate the precision structure. In each trial, I will record the number of variables for which any of the MAPE fitted $\sigma^2$ values exceeded 10. I will also record the number of individuals whose $\sigma^2$ values exceeded this mark for each variable, and record the index of these individuals. Finally, I will include a visualization of the condition numbers of the weighted matrices corresponding to the variables for which blowup was observed. 
+
+# Data Generation
+
+## Extraneous Covariate
+
+I generated the covariate, $Z$, as the union of three almost disjoint intervals of equal measure. That is, $Z = Z_1 \cup Z_2 \cup Z_3$ with $Z_1 = (-3, -1), Z_2 = (a,b) = (-1, 1), Z_3 = (1, 3)$. Within each interval, I generated 60 covariate values from a uniform distribution. For example: 
+
+```{r, echo = F, fig.width = 11, fig.height = 4.5, error = T}
+cont <- generate_continuous(p = 24)
+X <- cont$data
+Z <- cont$covts
+n <- nrow(X)
+p <- ncol(X) - 1
+
+interval <- c(rep(1, 60), rep(2, 60), rep(3, 60))
+cov_df <- cbind.data.frame(interval = interval, Z, individual_index = 1:n)
+cov_df$interval <- factor(cov_df$interval)
+ggplot(cov_df, aes(Z, fill = interval)) +
+  geom_histogram(color = "black", binwidth = 0.2) +
+  theme_classic() +
+  ggsci::scale_fill_jco() +
+  labs(title = ("Distribution of Covariate")) +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+## Precision Matrix
+
+All of the individuals in interval 1 had the same precision matrix, $\Omega^{(1)}$: 
+
+\[\Omega^{(1)}_{i,j} = 
+\begin{cases}
+2 & i = j \\
+1 & (i,j)\in\{(1, 2), (2,1),(2,3),(3,2)\} \\
+0 & o.w.
+\end{cases}\]
+
+Also, all of the individuals in interval 3 had the same precision matrix, $\Omega^{(3)}$:
+
+\[\Omega^{(3)}_{i,j} = 
+\begin{cases}
+2 & i = j \\
+1 & (i,j)\in\{(1,3), (3,1),(2,3),(3,2)\} \\
+0 & o.w.
+\end{cases}\]
+
+However, the individuals in interval 2 had a precision matrix that was dependent upon $Z$ and $(a, b)$. Let $\beta_0 = -a / (b - a)$ and $\beta_1 = 1 / (b - a)$. Then:
+
+\[\Omega^{(2)}_{i,j}(z) = 
+\begin{cases}
+2 & i = j \\
+1 & (i,j)\in\{(2,3), (3,2)\} \\
+1 - \beta_0 - \beta_1z & (i,j)\in \{(1,2), (2,1)\} \\
+\beta_0 + \beta_1z & (i,j)\in\{(1,3),(3,1)\}\\
+0 & o.w.
+\end{cases}
+\]
+
+Thus, $\Omega^{(2)}(a) = \Omega^{(1)}$ and $\Omega^{(2)}(b) = \Omega^{(3)}$. That is, an individual on the left or right boundary of $Z_2$ would have precision matrix $\Omega^{(1)}$ or $\Omega^{(3)}$, respectively. The conditional dependence structures corresponding to each of these precision matrices are visualized below.
+
+```{r, echo = F, fig.width = 11, fig.height = 9, error = T}
+# get the true graphs
+true_graphs <- lapply(cont$true_precision, function(prec_mat) (prec_mat - diag(diag(prec_mat)) != 0) * 1)
+
+# get the unique true graphs
+strs <- unique(true_graphs)
+
+# get the individual indices corresponding to each of the structures
+ind_idx <- lapply(strs, function(strc) which(sapply(true_graphs, identical, strc)))
+
+# get the summary for each 
+ind_sum <- sapply(ind_idx, function(idx) paste0(min(idx), ",...,", max(idx)))
+
+# visualize each of the structures
+str_viz <- lapply(1:length(strs), function(strc_idx) 
+  gg_adjMat(strs[[strc_idx]], color1 = colors[strc_idx]) +
+    ggtitle(paste("Individuals ", ind_sum[strc_idx])))
+ggarrange(plotlist = str_viz)
+```
+
+## Data matrix
+
+Let $z_l$ be the extraneous covariate for the $l$-th individual. To generate the data matrix for the $l$-th individual, I took a random sample from $\mathcal N (0,\{\Omega_l(z_l)\}^{-1})$, where: \[\Omega_l(z_l) = 
+\begin{cases}
+\Omega^{(1)} & z_l\in Z_1 \\
+\Omega^{(2)}(z_l) & z_l \in Z_2 \\
+\Omega^{(3)} & z_l \in Z_3
+\end{cases}
+\]
+
+# Results
+
+## Close look at CAVI
+
+```{r, echo = F, fig.width = 11, fig.height = 4.5}
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_R.R")
+
+# function for performing cavi
+cavi0 <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
+                  sigmabeta_sq, update_sigmabetasq, pi_est, tolerance,
+                  max_iter, upper_limit = 9) {
+
+  mean_alpha_tracker <- mean_mu_tracker <- mean_ssq_tracker <- t1_tracker <-
+    t2_tracker <- t3_tracker <- denom_tracker <- rep(NA, max_iter)
+
+  ELBO_tracker <- rep(NA, ceiling(max_iter / 5))
+
+  n <- nrow(X_mat)
+  p <- ncol(X_mat)
+
+  # instantiate matrices for updated variational parameters with starting
+  # values dictated by the matrices passed as arguments
+  mu <- matrix(mu_mat, n, p)
+  alpha <- matrix(alpha_mat, n, p)
+
+  # matrices for tracking the convergence of alpha parameters
+  alpha_last <- matrix(NA, n, p)
+  change_alpha <- matrix(NA, n, p)
+
+  # integer for tracking the iteration at which convergence is reached
+  converged_iter <- max_iter
+
+  # CAVI loop (optimize variational parameters)
+  for (k in 1:max_iter){
+
+    mean_alpha_tracker[k] <- mean(alpha)
+    mean_ssq_tracker[k] <- mean(sort(sigmasq, T)[1:20])
+    mean_mu_tracker[k] <- mean((abs(mu[order(rowMeans(abs(mu)), decreasing = T)[1:20], ])))
+
+    if (k %% 5 == 0) ELBO_tracker[k] <- total_ELBO_R(y, D, X_mat, S_sq, mu,
+                                                     alpha, sigmasq, sigmabeta_sq,
+                                                     pi_est)
+
+    # S_sq update
+    S_sq <- matrix(sigmasq, n, p) / (t(t(X_mat^2) %*% D) + 1 /
+                                       matrix(sigmabeta_sq, n, p))
+
+    # mu update
+    mu <- mu_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq);
+    #mu_update_c(y, D, X_mat, S_sq, mu, alpha, sigmasq);
+
+    # alpha update
+
+    # save the last value of alpha and update it
+    alpha_last <- matrix(alpha, n, p)
+    alpha <- alpha_update_R(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+    #alpha_update_c(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+
+    # calculate change in alpha
+    change_alpha <- alpha - alpha_last;
+
+    # if the square root of the sum of squared changes in alpha is within the
+    # tolerance, break from the for loop
+    if (sqrt(sum((change_alpha^2))) < tolerance){
+      converged_iter <- k
+      break;
+    }
+
+    # update the variance terms using MAPE
+    if (update_sigmasq | update_sigmabetasq){
+      sigma_update <- sig_upd(y, D, X_mat, S_sq, mu, alpha, sigmasq,
+                                     sigmabeta_sq)
+      # sigma_update_c(y, D, X_mat, S_sq, mu, alpha, sigmasq,
+      #                sigmabeta_sq, update_sigmasq, update_sigmabetasq)
+      if (update_sigmasq) sigmasq <- sigma_update$sigmasq
+      if (update_sigmabetasq) sigmabeta_sq <- sigma_update$sigmabeta_sq
+      t1_tracker[k] <- sigma_update$t1
+      t2_tracker[k] <- sigma_update$t2
+      t3_tracker[k] <- sigma_update$t3
+      denom_tracker[k] <- sigma_update$den
+    }
+
+    if (any(is.na(sigmasq))){
+      warning(k); break
+    }
+  }
+
+  # calculate ELBO across n individuals
+  ELBO <- total_ELBO_R(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+  #ELBO <- total_ELBO_c(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est)
+
+  # return final alpha matrix, the final ELBO, the number of iterations to
+  # converge, and the elbo history matrix
+  return(list(var_mu = mu, var_alpha = alpha, var_elbo = ELBO,
+              converged_iter = converged_iter, sigmasq = sigmasq,
+              sigmabeta_sq = sigmabeta_sq, mat = na.omit(mean_alpha_tracker),
+              mmt = na.omit(mean_mu_tracker), mst = na.omit(mean_ssq_tracker),
+              elb = na.omit(ELBO_tracker), t1 = na.omit(t1_tracker),
+              t2 = na.omit(t2_tracker), t3 = na.omit(t3_tracker),
+              den = na.omit(denom_tracker)))
+}
+
+sig_upd <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
+                    sigmabeta_sq) {
+
+  # get dimensions of the data
+  n <- nrow(X_mat)
+  p <- ncol(X_mat)
+
+  # terms for sigmasq update:
+
+  # calulate alpha^2 and mu^2
+  alpha_sq <- alpha_mat^2
+  mu_sq <- mu_mat^2
+
+  # calculate expected value of beta for each individual; l-th row is
+  # E(beta) for individual l
+  rho <- mu_mat * alpha_mat
+
+  # find fitted values using expected value of beta for each individual; l-th
+  # column is fitted values for individual l
+  fitted <- X_mat %*% t(rho)
+
+  # calculate the squared residuals for each of the fitted values for each
+  # individual; l-th column is residuals for individual l
+  resid2 <- (matrix(y, n, n) - fitted)^2
+
+  # calculate the sum of the weighted squared residuals for each individual;
+  # l-th value is the SWSR for individual l
+  resid_w <- colSums(resid2 * D)
+
+  # calculate the second values in the numerator for each individual; the l-th
+  # row is for individual l
+  num_term2 <- alpha_mat * S_sq + alpha_mat * mu_sq - alpha_sq * mu_sq
+
+  # calculate the third values in the numerator for each individual; the l-th
+  # value is for individual l
+  num_term3 <- rowSums(alpha_mat * (S_sq + mu_sq)) / sigmabeta_sq
+
+  # calculate the denominator for each individual; l-th value is for individual l
+  denom <- rowSums(alpha_mat) + n
+
+  nt_l <- rep(NA, n)
+  # iterate over the individuals to update each error variance
+  for (l in 1:n){
+
+    # sigmasq update for individual l:
+
+    # calculate weighted version of X
+    weights <- sqrt(D[ , l])
+    X_w <- X_mat * matrix(weights, n, p)
+
+    # diagonal elements of X transpose X weighted
+    XtX_w <- diag(t(X_w) %*% X_w)
+
+    # second numerator term
+    num_term2_l <- t(XtX_w) %*% num_term2[l , ]
+    nt_l[l] <- num_term2_l
+    # apply update
+    sigmasq[l] <- (resid_w[l] + num_term2_l + num_term3[l]) / denom[l]
+  }
+
+  # terms for sigmabeta_sq update
+
+  # numerator is num_term3 without the division by sigmabeta_sq
+  num <- num_term3 * sigmabeta_sq
+
+
+  den_old <- denom
+  # denominator is denom without summing n, and also scaled by sigmasq
+  denom <- sigmasq * (denom - n)
+
+  # update the slab variance
+  sigmabeta_sq <- num / denom
+
+  return(list(sigmasq = sigmasq, sigmabeta_sq = sigmabeta_sq,
+              t1 = mean(sort(abs(resid_w), T)[1:20]),
+              t2 = mean(sort(abs(nt_l), T)[1:20]),
+              t3 = mean(sort(abs(num_term3), T)[1:20]),
+              den = mean(sort(abs(den_old), T)[1:20])))
+}
+
+# prep the inputs for cavi_R
+#save(input, file = "dev/analyses_demos_experiments/hyperparameter_specification/blowup_input.Rda")
+load("blowup_input.Rda")
+n <- nrow(input$X); p <- ncol(input$X) - 1
+y <- input$X[ , 15]
+D <- input$D
+X_mat <- input$X[ , -15]
+mu_mat <- matrix(0, n, p)
+alpha_mat <- matrix(0.2, n, p)
+sigmasq <- rep(var(y), n)
+update_sigma <- update_sigmabetasq <- T
+sigmabeta_sq <- rep(1, n)
+pi_est <- 0.45
+tolerance <- 1e-12
+max_iter <- 1e3
+
+# out = grid_search_c(y, D, X_mat, mu_mat, alpha_mat, matrix(sigmasq, n, 9), update_sigma, matrix(sigmabeta_sq, n, 9), update_sigmabetasq, seq(0.05, 0.45, 0.05), tolerance, max_iter)
+
+# blow up
+out1 <- cavi0(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigma,
+              sigmabeta_sq, update_sigmabetasq, pi_est, tolerance, max_iter)
+```
+
+The MAPE update for $\sigma^2$ with variable $j$ fixed as the response and with respect to individual $l$ is given by:
+
+\[\sigma^2_{\textit{MAPE}} = \frac{\lVert X_{j}^{w_l} - X_{-j}^{w_l}\rho_j^l \rVert^2 + \sum_{k = 1}^{p - 1}[X_{-j}^{w_l}]^\top_{k}[X_{-j}^{w_l}]_{k} \left[{\alpha_{j,k}^l}{s_{j,k}^l}^2 + {\alpha_{j,k}^l}{\mu_{j,k}^l}^2 - {\alpha_{j,k}^l}^2{\mu_{j,k}^l}^2\right] + \frac1{\sigma^2_\beta}\mathbb \sum_{k = 1}^{p-1}\alpha_{j,k}^l({s_{j,k}^l}^2 + {\mu_{j,k}^l}^2)}{n + \mathbb \sum_{k = 1}^{p - 1}\alpha_{j,k}^l}\]
+
+Where $X_{-j}^{w_l}$ denotes the data matrix with the $j$-th column removed and weighted with respect to individual $l$, and $\rho_j^l = \mathbb E (\beta^l_j) = \alpha_j^l*\mu_j^l$.
+
+There are three terms in the numerator of the update, which will be referred to later on as: 
+
+\[\text{term1} = \lVert X_{j}^{w_l} - X_{-j}^{w_l}\rho_j^l \rVert^2\] 
+\[\text{term2} = \sum_{k = 1}^{p - 1}[X_{-j}^{w_l}]^\top_{k}[X_{-j}^{w_l}]_{k} \left[{\alpha_{j,k}^l}{s_{j,k}^l}^2 + {\alpha_{j,k}^l}{\mu_{j,k}^l}^2 - {\alpha_{j,k}^l}^2{\mu_{j,k}^l}^2\right]\]
+\[\text{term3}= \frac1{\sigma^2_\beta}\mathbb \sum_{k = 1}^{p-1}\alpha_{j,k}^l({s_{j,k}^l}^2 + {\mu_{j,k}^l}^2)\]
+
+I first visualize the centered and scaled values of $\mu$ and $\sigma^2$ through the first ten iterations by averaging the 20 largest values across all individuals. It would appear as though $\sigma^2$ begins to blow up before $\mu$ does.
+
+```{r, echo = F, fig.width = 11, fig.height = 4.5}
+burn <- 10
+
+# visualize sigma versus mu
+sig_mu <- reshape2::melt(data.frame(index = 1:burn, mu = scale(out1$mmt[1:burn]),
+                                    sigmasq = scale(out1$mst[1:burn])),
+                         measure.vars = c("mu", "sigmasq"),
+                         variable.name = "parameter", value.name = "z-score")
+
+ggplot(sig_mu, aes(index, `z-score`, color = parameter)) +
+  geom_line() + theme_bw() +
+  ggtitle(TeX(paste("Values of $\\sigma^2$ and $\\mu$, first ten iterations, p + 1 = 25"))) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_color_discrete(labels = unname(TeX(c("$\\mu$", "$\\sigma^2$"))))
+
+# not blow up
+out2 <- cavi0(input$X[ , 1], D, input$X[ , 2:5], mu_mat[ , 1:4],
+              alpha_mat[ , 1:4], sigmasq, update_sigma, sigmabeta_sq,
+              update_sigmabetasq, pi_est, tolerance, max_iter)
+
+# visualize sigma versus mu
+sig_mu <- reshape2::melt(data.frame(index = 1:burn,
+                                    mu = scale(out2$mmt[1:burn]),
+                                    sigmasq = scale(out2$mst[1:burn])),
+                         measure.vars = c("mu", "sigmasq"),
+                         variable.name = "parameter", value.name = "z-score")
+```
+
+I next create the same visualization, but on a smaller data set that does not result in blow up.
+
+```{r, echo = F, fig.width = 11, fig.height = 4.5}
+ggplot(sig_mu, aes(index, `z-score`, color = parameter)) +
+  geom_line() + theme_bw() +
+  ggtitle(TeX(paste("Values of $\\sigma^2$ and $\\mu$, first ten iterations, p + 1 = 5"))) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_color_discrete(labels = unname(TeX(c("$\\mu$", "$\\sigma^2$"))))
+
+sig_sigterms <- reshape2::melt(data.frame(index = 1:burn,
+                                          sigmasq = scale(out1$mst[1:burn]),
+                                          term1 = scale(out1$t1[1:burn]),
+                                          term2 = scale(out1$t2[1:burn]),
+                                          term3 = scale(out1$t3[1:burn]),
+                                          denom = scale(out1$den[1:burn])),
+                               id.vars = "index", variable.name = "parameter",
+                               value.name = "z-score")
+sig_sigterms_un <- reshape2::melt(data.frame(index = 1:burn,
+                                             sigmasq = out1$mst[1:burn],
+                                             term1 = out1$t1[1:burn],
+                                             term2 = out1$t2[1:burn],
+                                             term3 = out1$t3[1:burn],
+                                             denom = out1$den[1:burn]),
+                                  id.vars = "index", variable.name = "parameter")
+```
+
+Finally, I examine the evolution of each term in the $\sigma^2$ update alongside the value of $\sigma^2$. I again reduce the values at each iteration to a scalar by averaging across the 20 largest values. 
+
+First, I visualize the raw values for each of these quantities through the first ten iterations. It would seem that term 1, the sum of squared weighted residuals, is driving the blowup. 
+
+```{r, echo = F, fig.width = 11, fig.height = 4.5}
+ggplot(sig_sigterms_un, aes(index, value, color = parameter)) +
+  geom_line() + theme_bw() +
+  ggtitle(TeX(paste("Values of $\\sigma^2$ and terms in $\\sigma^2$ update, first ten iterations, p + 1 = 25"))) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_color_discrete(labels = unname(TeX(c("$\\sigma^2$", "term 1", "term 2", "term 3", "denom"))))
+```
+
+However, after centering and scaling these values, it appears that they grow in conjunction, and so it is not clear whether the true cause of the blowup is the large residual values. 
+
+```{r, echo = F, fig.width = 11, fig.height = 4.5}
+ggplot(sig_sigterms, aes(index, `z-score`, color = parameter)) +
+  geom_line() + theme_bw() +
+  ggtitle(TeX(paste("Values of $\\sigma^2$ and terms in $\\sigma^2$ update, first ten iterations, p + 1 = 25"))) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_color_discrete(labels = unname(TeX(c("$\\sigma^2$", "term 1", "term 2", "term 3", "denom"))))
+```
+
+However, in isolating the centered and scaled value of term 1 and $\sigma^2$, it is clear that although term 1 may not be the cause of the blow up, it is indeed driving the rapid increase in $\sigma^2$. 
+
+```{r, echo = F, fig.width = 11, fig.height = 4.5}
+ggplot(sig_sigterms[sig_sigterms$parameter %in% c("sigmasq", "term1"), ],
+       aes(index, `z-score`, color = parameter)) +
+  geom_line() + theme_bw() +
+  ggtitle(TeX(paste("Values of $\\sigma^2$ and terms in $\\sigma^2$ update, first ten iterations, p + 1 = 25"))) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_color_discrete(labels = unname(TeX(c("$\\sigma^2$", "term 1"))))
+```
+
+## Full Precision Trials
+
+In this section, I run 10 trials on the $p + 1 = 25$ dataset and report the individuals whose fitted $\sigma^2$ values blew up by variable. For each of these trials, I visualize the condition numbers of the weighted data matrices for each individual for the variables that had blown up $\sigma^2$ values. 
+
+```{r, echo = F, fig.width = 11, fig.height = 4.5, error = T}
+rm(list = setdiff(ls(), c("generate_continuous", "cov_df")))
+n <- 180; p <- 24
+n_trials <- 10
+
+results <- vector("list", n_trials)
+
+names(results) <- paste0("trial", 1:n_trials)
+
+doParallel::registerDoParallel(15)
+
+for (j in 1:n_trials){
+  
+  # generate the data 
+  cont <- generate_continuous(p = p)
+  X <- cont$data
+  Z <- cont$covts
+  
+  # run the algorithm
+  out <- covdepGE(X, Z, max_iter = 1e3, parallel = T, warnings = F, stop_cluster = F)
+  
+  # which of the sigmas blew up?
+  blown_sigs <- out$hyperparameters$sigmasq > 10 | is.na(out$hyperparameters$sigmasq)
+  
+  # find the total number of blownup sigmas per variable
+  blown_by_var <- colSums(blown_sigs)
+  
+  # which variables have at least one blown up sigma?
+  blown_vars <- which(blown_by_var > 0)
+  
+  # find the blown up counts that are greater than 0
+  blown0_ct <- blown_by_var[blown_vars]
+  
+  # find the individual indices corresponding to the blown up sigmas
+  blown_inds <- apply(blown_sigs[ , blown_vars, drop = F], 2, which)
+  
+  # visualize condition numbers and bandwidths 
+  cond_nums <- lapply((blown_vars), function(idx) sapply(1:180, function(j) kappa(X[ , -idx] * matrix(out$weights[ , j]^0.5, n ,p))))
+  
+  cov_df$bandwidths <- out$bandwidths
+  
+  cond_num_fig <- lapply(cond_nums, function(cond_nums) 
+    ggplot(cbind.data.frame(cov_df, cond_nums = cond_nums), aes(individual_index, cond_nums, color = interval)) +
+    geom_line(size = 1) +
+    theme_classic() +
+    ggsci::scale_color_jco() +
+    labs(title = ("Condition Number")) +
+    theme(plot.title = element_text(hjust = 0.5)))
+  
+  bandwidth_fig <- ggplot(cov_df, aes(individual_index, bandwidths, color = interval)) +
+    geom_line(size = 1) +
+    theme_classic() +
+    ggsci::scale_color_jco() +
+    labs(title = ("Bandwidths")) +
+    theme(plot.title = element_text(hjust = 0.5))
+  
+  results[[j]] <- list(summary = out, sigma_blowup_by_individual = blown_inds, 
+                       condition_numbers = cond_num_fig, bandwidths = bandwidth_fig, 
+                       sigmasq = out$sigmasq[ , blown_by_var > 0]) 
+}
+
+doParallel::stopImplicitCluster()
+
+Sys.time() - start
+
+results
+
+save(results, file = "large_p_res.Rda")
+```
