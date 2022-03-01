@@ -87,7 +87,7 @@ for (j in 1:n_trials){
   Z <- cont$covts
 
   # run the algorithm
-  out <- tryCatch(covdepGE(X, Z, max_iter = 1e3, parallel = T, warnings = F,
+  out <- tryCatch(covdepGE(X, Z, max_iter = 1e2, parallel = T, warnings = F,
                            stop_cluster = F),
                   error = function(msg) as.character(msg))
 
@@ -103,7 +103,7 @@ doParallel::stopImplicitCluster()
 
 Sys.time() - start
 
-#save(results, file = "cond_number_models.Rda")
+#save(results, file = "cond_number_models100.Rda")
 
 library(ggplot2)
 library(latex2exp)
@@ -248,7 +248,6 @@ blown_wt_mat2 <- unlist(unlist(blown_wt_mat, F), F)
 unblown_wt_mat2 <- unlist(unlist(unblown_wt_mat, F), F)
 
 # find the condition number for each of the blown up matrices
-all_conds <- sapply()
 blown_cond <- sapply(blown_wt_mat2, kappa)
 unblown_cond <- sapply(unblown_wt_mat2, kappa)
 ggplot(data.frame(condition_number = blown_cond), aes(condition_number)) +
