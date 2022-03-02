@@ -307,17 +307,17 @@ blown_mats <- data_mats[blown_trials]
 unblown_mats <- data_mats[!blown_trials]
 
 # find the condition number for both
-blown_cond_nums <- sapply(blown_mats, kappa)
-unblown_cond_nums <- sapply(unblown_mats, kappa)
+blown_cond_nums <- sapply(blown_mats, function(mat) kappa(crossprod(mat)))
+unblown_cond_nums <- sapply(unblown_mats, function(mat) kappa(crossprod(mat)))
 ggplot(data.frame(condition_number = blown_cond_nums),aes(condition_number)) +
-  geom_histogram(color = "black", fill = "tomato3", binwidth = 0.1) + theme_bw() +
+  geom_histogram(color = "black", fill = "tomato3", binwidth = 0.25) + theme_bw() +
   ggtitle("Distribution of condition numbers for data with at least one blowup (unweighted)") +
-  theme(plot.title = element_text(hjust = 0.5)) + coord_cartesian(xlim = c(2.9, 4.3))
+  theme(plot.title = element_text(hjust = 0.5)) + coord_cartesian(xlim = c(6, 11))
 summary(blown_cond_nums)
 ggplot(data.frame(condition_number = unblown_cond_nums),aes(condition_number)) +
-  geom_histogram(color = "black", fill = "forestgreen", binwidth = 0.1) + theme_bw() +
+  geom_histogram(color = "black", fill = "forestgreen", binwidth = 0.25) + theme_bw() +
   ggtitle("Distribution of condition numbers for data with no blowups (unweighted)") +
-  theme(plot.title = element_text(hjust = 0.5)) + coord_cartesian(xlim = c(2.9, 4.3))
+  theme(plot.title = element_text(hjust = 0.5)) + coord_cartesian(xlim = c(6, 11))
 summary(unblown_cond_nums)
 ```
 
@@ -370,17 +370,17 @@ blown_wt_mat2 <- unlist(unlist(blown_wt_mat, F), F)
 unblown_wt_mat2 <- unlist(unlist(unblown_wt_mat, F), F)
 
 # find the condition number for each of the blown up matrices
-blown_cond <- sapply(blown_wt_mat2, kappa)
-unblown_cond <- sapply(unblown_wt_mat2, kappa)
+blown_cond <- sapply(blown_wt_mat2, function(mat) kappa(crossprod(mat)))
+unblown_cond <- sapply(unblown_wt_mat2, function(mat) kappa(crossprod(mat)))
 ggplot(data.frame(condition_number = blown_cond), aes(condition_number)) +
-  geom_histogram(color = "black", fill = "tomato3", binwidth = 0.25) + theme_bw() +
+  geom_histogram(color = "black", fill = "tomato3", binwidth = 1) + theme_bw() +
   ggtitle("Distribution of condition numbers for weighted matrices that blew up") +
-  theme(plot.title = element_text(hjust = 0.5)) + coord_cartesian(xlim = c(2.8, 9))
+  theme(plot.title = element_text(hjust = 0.5)) + coord_cartesian(xlim = c(5, 45))
 summary(blown_cond)
 ggplot(data.frame(condition_number = unblown_cond), aes(condition_number)) +
-  geom_histogram(color = "black", fill = "forestgreen", binwidth = 0.25) + theme_bw() +
+  geom_histogram(color = "black", fill = "forestgreen", binwidth = 1) + theme_bw() +
   ggtitle("Distribution of condition numbers for weighted matrices that did not blow up") +
-  theme(plot.title = element_text(hjust = 0.5)) + coord_cartesian(xlim = c(2.8, 9))
+  theme(plot.title = element_text(hjust = 0.5)) + coord_cartesian(xlim = c(5, 45))
 summary(unblown_cond)
 ```
 
@@ -396,7 +396,7 @@ wt_mats2500 <- unlist(wted_mats, F)
 wt_mat_indv <- lapply(1:n, function(indv_ind) lapply(1:(n_trials * p), function (ind25) wt_mats2500[[ind25]][[indv_ind]]))
 
 # calculate the condition number for each of these matrices
-cond_num_indv_180 <- lapply(wt_mat_indv, sapply, kappa)
+cond_num_indv_180 <- lapply(wt_mat_indv, sapply, function(mat) kappa(crossprod(mat)))
 
 # calculate the median condition number for each of the individuals
 med_cond_num_180 <- sapply(cond_num_indv_180, median)
@@ -405,7 +405,7 @@ med_cond_num_180 <- sapply(cond_num_indv_180, median)
 ggplot(data.frame(Individual = 1:n, median_condition_number = med_cond_num_180), aes(
   Individual, median_condition_number)) + geom_bar(stat = "identity", fill = "tomato3") + theme_bw() +
   ggtitle("Median Condition Number By Individual") + theme(plot.title = element_text(hjust = 0.5)) +
-  coord_cartesian(ylim = c(4.5, 6)) + scale_x_continuous(breaks = c(1, seq(10, 180, 10)), labels = c(1, seq(10, 180, 10)))
+  coord_cartesian(ylim = c(11.9, 18.6)) + scale_x_continuous(breaks = c(1, seq(10, 180, 10)), labels = c(1, seq(10, 180, 10)))
 ```
 
 I now display the counts of the blowups for each individual. Note that each individual had $100 * 25 = 2,500$ opportunities to blow up; the greatest number of blowups was achieved by individual 171, with 25. 
@@ -467,9 +467,11 @@ indv_171_blow_mats <- unlist(unlist(blown_indvs_blow_mats[["individual171"]], F)
 
 # find condition numbers for each of the matrices
 blown_indvs_blow_conds <- lapply(blown_indvs_blow_mats, lapply, lapply, lapply,
-                                 function(mat) if (!is.null(mat)) kappa(mat))
+                                 function(mat) if (!is.null(mat))
+                                   kappa(crossprod(mat)))
 blown_indvs_unblow_conds <- lapply(blown_indvs_unblow_mats, lapply, lapply, lapply,
-                                   function(mat) if (!is.null(mat)) kappa(mat))
+                                   function(mat) if (!is.null(mat))
+                                     kappa(crossprod(mat)))
 
 # # visualize these
 # ggplot(data.frame(condition_numbers = unlist(blown_indvs_blow_conds)), aes(condition_numbers)) +
@@ -499,7 +501,7 @@ blown_indvs_unblow_conds2 <- lapply(blown_indvs_unblow_conds, unlist)
 mean_blow_conds <- sapply(blown_indvs_blow_conds2, mean)
 mean_unblow_conds <- sapply(blown_indvs_unblow_conds2, mean)
 ggplot(data.frame(X = mean_blow_conds - mean_unblow_conds), aes(X)) +
-  geom_histogram(binwidth = .05, color = "black", fill = "forestgreen") + theme_bw() +
+  geom_histogram(binwidth = .25, color = "black", fill = "forestgreen") + theme_bw() +
   ggtitle("Condition number for blown up matrices minus non-blown up matrices by individual") +
   theme(plot.title = element_text(hjust = 0.5)) + xlab("Condition number")
 summary(mean_blow_conds - mean_unblow_conds)
@@ -512,11 +514,11 @@ I finally display the distribution of the blown-up condition numbers versus the 
 ```{r}
 # visualize the condition numbers for individual 171
 ggplot(data.frame(blown_indvs_blow_conds2["individual171"]), aes(individual171)) +
-  geom_histogram(binwidth = 0.25, color = "black", fill = "tomato3") + theme_bw() +
+  geom_histogram(binwidth = 1, color = "black", fill = "tomato3") + theme_bw() +
   ggtitle("Condition number for matrices that blew up, individual 171") +
-  theme(plot.title = element_text(hjust = 0.5)) + coord_cartesian(xlim = c(4, 9))
+  theme(plot.title = element_text(hjust = 0.5)) + coord_cartesian(xlim = c(9, 41))
 ggplot(data.frame(blown_indvs_unblow_conds2["individual171"]), aes(individual171)) +
-  geom_histogram(binwidth = 0.25, color = "black", fill = "forestgreen") + theme_bw() +
+  geom_histogram(binwidth = 1, color = "black", fill = "forestgreen") + theme_bw() +
   ggtitle("Condition number for matrices that did not blow up, individual 171") +
-  theme(plot.title = element_text(hjust = 0.5))
+  theme(plot.title = element_text(hjust = 0.5)) + coord_cartesian(xlim = c(9, 41))
 ```

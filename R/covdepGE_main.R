@@ -211,7 +211,9 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
                      n_param = 9, pi_vec = NULL, norm = 2, scale = T,
                      tolerance = 1e-12, max_iter = 100, edge_threshold = 0.5,
                      sym_method = "mean", parallel = F, num_workers = NULL,
-                     stop_cluster = T, warnings = T, CS = F, R = F){
+                     stop_cluster = T, warnings = T, CS = F, R = F,
+                     bound_ssq = T, ssq_bound_mult = 2, bound_sbsq = T,
+                     sbsq_bound_mult = 5){
 
   start_time <- Sys.time()
 
@@ -353,7 +355,8 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
             # perform the grid search and final CAVI; save the results to res
             cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
                         sigmabetasq_vec, update_sigmabetasq, pi_vec, tolerance,
-                        max_iter, warnings, resp_index, CS, R)
+                        max_iter, warnings, resp_index, CS, R, bound_ssq,
+                        ssq_bound_mult, bound_sbsq, sbsq_bound_mult)
             }
           )
       },
@@ -388,7 +391,9 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       res[[resp_index]] <- cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq_vec,
                                        update_sigmasq, sigmabetasq_vec,
                                        update_sigmabetasq, pi_vec, tolerance,
-                                       max_iter, warnings, resp_index, CS, R)
+                                       max_iter, warnings, resp_index, CS, R,
+                                       bound_ssq, ssq_bound_mult, bound_sbsq,
+                                       sbsq_bound_mult)
 
       # update the progress bar
       utils::setTxtProgressBar(pb, resp_index)
@@ -404,6 +409,9 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   hp <- lapply(res, `[[`, "hyperparameters")
   names(cavi_details) <- names(hp) <- paste0("Variable ", 1:length(cavi_details))
   alpha_matrices <- lapply(res, `[[`, "alpha_matrix")
+  mu_matrices <- lapply(res, `[[`, "mu_matrix")
+  update_sigma_l <- sapply(res, `[[`, "update_sigma_l")
+  update_sbsq_l <- sapply(res, `[[`, "update_sbsq_l")
 
   # organize the hyperparameters into matrices
   final_sigmasq <- sapply(hp, `[[`, "sigmasq")
@@ -423,6 +431,29 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       "Variable ", var_index, ": final CAVI did not converge in ",
       max_iter, " iterations")))
   }
+
+  # if any of the variables had individuals that blew up, display a warning for
+  # instable sigmasq
+  if (warnings & any(!update_sigma_l)){
+
+    sapply(which(colSums(!update_sigma_l) > 0), function(var_index) warning(
+      paste0("Variable ", var_index,
+             ": Detected sigmasq instability for individuals ",
+             paste0(which(!update_sigma_l[ , var_index]), collapse = ", "),
+             "; using weighted OLS sigmasq")))
+  }
+
+  # if any of the variables had individuals that blew up, display a warning for
+  # instable sigmabeta_sq
+  if (warnings & any(!update_sbsq_l)){
+
+    sapply(which(colSums(!update_sbsq_l) > 0), function(var_index) warning(
+      paste0("Variable ", var_index,
+             ": Detected sigmabeta_sq instability for individuals ",
+             paste0(which(!update_sbsq_l[ , var_index]), collapse = ", "),
+             "; using weighted OLS sigmabeta_sq")))
+  }
+
 
   # Creating the graphs:
   # transform p + 1 n by n matrices to n p + 1 by p + 1 matrices using
@@ -509,9 +540,10 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   # define the list of return values
   ret <- list(graphs = graphs, inclusion_probs = incl_probs,
               alpha_matrices = incl_probs_asym, unique_graphs = unique_graphs,
-              hyperparameters = hyperparameters, CAVI_details = cavi_details,
-              model_details = model_details, weights = D,
-              bandwidths = bandwidths, arguments = args)
+              mu_matrices = mu_matrices, hyperparameters = hyperparameters,
+              CAVI_details = cavi_details, model_details = model_details,
+              weights = D, bandwidths = bandwidths, arguments = args,
+              bounded = list(ssq = update_sigma_l, sbsq = update_sbsq_l))
 
   # define the class of the return values
   class(ret) <- c("covdepGE", "list")

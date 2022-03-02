@@ -2,9 +2,9 @@ setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/c
 rm(list = ls())
 source("generate_data.R")
 
-R_code <- F # true if R code instead of C++ should be used
-MAPE_upd <- T # true if MAPE updates for variance hyperparameters should be used
-package <- T # true if the package version is desired
+R_code <- T # true if R code instead of C++ should be used
+MAPE_upd <- F # true if MAPE updates for variance hyperparameters should be used
+package <- F # true if the package version is desired
 discrete_data <- F # true if discrete example is desired
 
 # generate data and covariates

@@ -206,7 +206,7 @@ alpha_update_R <- function(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pi_est,
 ## -----------------------------------------------------------------------------
 ## [[Rcpp::export]]
 sigma_update_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
-                           sigmabeta_sq) {
+                           sigmabeta_sq, update_sigma_l) {
 
   # get dimensions of the data
   n <- nrow(X_mat)
@@ -248,7 +248,9 @@ sigma_update_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
   # iterate over the individuals to update each error variance
   for (l in 1:n){
 
-    # sigmasq update for individual l:
+    # sigmasq update for individual l: if that individual is not to be updated
+    # due to blowup, skip their update
+    if (!update_sigma_l[l]) next
 
     # calculate weighted version of X
     weights <- sqrt(D[ , l])
@@ -306,9 +308,10 @@ sigma_update_R <- function(y, D, X_mat, S_sq, mu_mat, alpha_mat, sigmasq,
 ## sigmabeta_sq: n x 1 vector; fitted slab variance for each individual
 ## -----------------------------------------------------------------------------
 ## [[Rcpp::export]]
-cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
-                   sigmabeta_sq, update_sigmabetasq, pi_est, tolerance,
-                   max_iter, upper_limit = 9) {
+cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, LS_sigmasq, sigmasq,
+                   update_sigmasq, LS_sbsq, sigmabeta_sq, update_sigmabetasq,
+                   pi_est, tolerance, max_iter, bound_ssq, ssq_bound_mult,
+                   bound_sbsq, sbsq_bound_mult, upper_limit = 9) {
 
   n <- nrow(X_mat)
   p <- ncol(X_mat)
@@ -321,6 +324,9 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
   # matrices for tracking the convergence of alpha parameters
   alpha_last <- matrix(NA, n, p)
   change_alpha <- matrix(NA, n, p)
+
+  # logicals for tracking sigmasq and sigmabetasq blowups
+  update_sigma_l <- update_sbsq_l <- rep(T, n)
 
   # integer for tracking the iteration at which convergence is reached
   converged_iter <- max_iter
@@ -356,11 +362,42 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
     # update the variance terms using MAPE
     if (update_sigmasq | update_sigmabetasq){
       sigma_update <- sigma_update_R(y, D, X_mat, S_sq, mu, alpha, sigmasq,
-                                     sigmabeta_sq)
+                                     sigmabeta_sq, update_sigma_l)
       # sigma_update_c(y, D, X_mat, S_sq, mu, alpha, sigmasq,
       #                sigmabeta_sq, update_sigmasq, update_sigmabetasq)
-      if (update_sigmasq) sigmasq <- sigma_update$sigmasq
-      if (update_sigmabetasq) sigmabeta_sq <- sigma_update$sigmabeta_sq
+      if (update_sigmasq){
+        sigmasq[update_sigma_l] <- sigma_update$sigmasq[update_sigma_l]
+
+        # check to see if any of the updated sigma exceed 2 times the least
+        # squares sigma
+        if (bound_ssq){
+
+          # flag sigma that exceed the bound and reduce these sigma to their LS
+          # value; ensure that these sigma will not be updated on future
+          # iterations
+          unbounded_sigma <- sigmasq > ssq_bound_mult * LS_sigmasq
+          sigmasq[unbounded_sigma] <- LS_sigmasq[unbounded_sigma]
+          update_sigma_l <- update_sigma_l & !unbounded_sigma
+        }
+      }
+
+      if (update_sigmabetasq){
+        sigmabeta_sq[update_sbsq_l] <- sigma_update$sigmabeta_sq[update_sbsq_l]
+
+        # check to see if any of the updated sigmabeta_sq exceed 2 times the
+        # least squares sigmabeta_sq
+        if (bound_sbsq){
+
+          # flag sigmabeta_sq that exceed the bound and reduce these
+          # sigmabeta_sq to their LS value; ensure that these sigmabeta_sq will
+          # not be updated on future iterations
+          # unbounded_sbsq <- sigmabeta_sq > sbsq_bound_mult * LS_sbsq
+          # sigmabeta_sq[unbounded_sbsq] <- LS_sbsq[unbounded_sbsq]
+          # update_sbsq_l <- update_sbsq_l & !unbounded_sbsq
+          sigmabeta_sq[unbounded_sigma] <- median(sigmabeta_sq[!unbounded_sigma])
+        }
+
+      }
     }
   }
 
@@ -372,7 +409,8 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
   # converge, and the elbo history matrix
   return(list(var_mu = mu, var_alpha = alpha, var_elbo = ELBO,
               converged_iter = converged_iter, sigmasq = sigmasq,
-              sigmabeta_sq = sigmabeta_sq))
+              sigmabeta_sq = sigmabeta_sq, update_sigma_l = update_sigma_l,
+              update_sbsq_l = update_sbsq_l))
 }
 
 ## -----------------------------------------------------------------------------
@@ -400,9 +438,11 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq, update_sigmasq,
 ## the CAVI converged
 ## -----------------------------------------------------------------------------
 ## [[Rcpp::export]]
-grid_search_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-                          update_sigmasq, sigmabetasq_vec, update_sigmabetasq,
-                          pi_vec, tolerance, max_iter, upper_limit = 9){
+grid_search_R <- function(y, D, X_mat, mu_mat, alpha_mat, LS_sigmasq,
+                          sigmasq_vec, update_sigmasq, LS_sbsq, sigmabetasq_vec,
+                          update_sigmabetasq, pi_vec, tolerance, max_iter,
+                          bound_ssq, ssq_bound_mult, bound_sbsq, sbsq_bound_mult,
+                          upper_limit = 9){
 
   # get dimensions of the data
   n <- nrow(X_mat)
@@ -429,15 +469,16 @@ grid_search_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
   for (j in 1:n_param){
 
     # run CAVI
-    out <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[ , j],
-                  update_sigmasq, sigmabetasq_vec[ , j], update_sigmabetasq,
-                  pi_vec[j], tolerance, max_iter, upper_limit)
+    out <- cavi_R(y, D, X_mat, mu_mat, alpha_mat, LS_sigmasq, sigmasq_vec[ , j],
+                  update_sigmasq, LS_sbsq, sigmabetasq_vec[ , j],
+                  update_sigmabetasq, pi_vec[j], tolerance, max_iter,
+                  bound_ssq, ssq_bound_mult, bound_sbsq, sbsq_bound_mult)
     # out <- cavi_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[ , j],
     #               update_sigmasq, sigmabetasq_vec[ , j], update_sigmabetasq,
     #               pi_vec[j], tolerance, max_iter, upper_limit)
 
     # if the new ELBO is greater than the current best, update the best ELBO and
-    # parameters and whether or not the model converged
+    # corresponding return values
     if (elbo_best < out$var_elbo){
 
       elbo_best <- out$var_elbo
@@ -447,10 +488,14 @@ grid_search_R <- function(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
       sigmabetasq_best <- out$sigmabeta_sq
       pi_best <- pi_vec[j]
       iterations_best <- out$converged_iter
+      update_sigma_l_best <- out$update_sigma_l
+      update_sbsq_l_best <- out$update_sbsq_l
     }
   }
 
   return(list(elbo = elbo_best, mu = mu_best, alpha = alpha_best,
               sigmasq = sigmasq_best, sigmabeta_sq = sigmabetasq_best,
-              pi = pi_best, iterations = iterations_best))
+              pi = pi_best, iterations = iterations_best,
+              update_sigma_l = update_sigma_l_best,
+              update_sbsq_l = update_sbsq_l_best))
 }

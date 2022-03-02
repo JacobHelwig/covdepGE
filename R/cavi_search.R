@@ -1,5 +1,5 @@
 ## -----------------------------------------------------------------------------
-## -----------------------------cavi_search---------------------------------------
+## -----------------------------cavi_search-------------------------------------
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
 ## Performs CAVI and grid search for a fixed data matrix and response for n
@@ -90,7 +90,8 @@
 ## -----------------------------------------------------------------------------
 cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
                         sigmabetasq_vec, update_sigmabetasq, pi_vec, tolerance,
-                        max_iter, warnings, resp_index, CS, R){
+                        max_iter, warnings, resp_index, CS, R, bound_ssq,
+                        ssq_bound_mult, bound_sbsq, sbsq_bound_mult){
 
   # get the dimensions of the data and hyperparameter candidates
   n <- nrow(X_mat)
@@ -99,6 +100,37 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
 
   if (length(unique(as.numeric(sigmasq_vec))) == 1){
     sigmasq_vec <- matrix(var(y), n, n_param)
+  }
+
+  # find bounds for variance of error terms
+  LS_sigmasq <- LS_sbsq <- rep(NA, n)
+  if ((bound_ssq | bound_sbsq) & (update_sigmasq | update_sigmabetasq)){
+
+    for (l in 1:n){
+
+      # perform the weighted regression with respect to individual l
+      w <- D[ , l]
+
+      # get the residual variance
+      lm_lj <- lm(y~X_mat, weights = w)
+      LS_sigmasq[l] <- summary(lm_lj)$sigma^2
+      # same as:
+      # lm_lj <- lm(sqrt(w) * y~0 + I(cbind(1, X_mat) * sqrt(w)))
+      # resid <- lm_lj$residuals / sqrt(w)
+      # rss <- sum(w * resid^2)
+      # resvar <- rss / lm_lj$df.residual
+      # LS_sigmasq[l] <- resvar
+
+      # get an estimate to the slab variance: the median standard error divided
+      # by sigmasq
+      LS_sbsq[l] <- ((median(summary(lm_lj)$coef[-1 , "Std. Error"]))^2) / LS_sigmasq[l]
+
+    }
+
+    # set the initial values for the sigma parameters as their least squares values
+    sigmasq_vec <- matrix(LS_sigmasq, n, n_param)
+    sigmabetasq_vec <- matrix(LS_sbsq, n, n_param)
+
   }
 
   # instantiate initial values of variational parameters; the l, j entry is
@@ -120,10 +152,12 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
   # loop to optimize sigmabeta_sq; run CAVI for each grid points; store the
   # resulting ELBO
   if (R){
-    out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-                         update_sigmasq,  sigmabetasq_vec, update_sigmabetasq,
-                         pi_vec, tolerance, max_iter)
-  } else{
+    out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, LS_sigmasq,
+                         sigmasq_vec, update_sigmasq, LS_sbsq,
+                         sigmabetasq_vec, update_sigmabetasq, pi_vec, tolerance,
+                         max_iter, bound_ssq, ssq_bound_mult, bound_sbsq,
+                         sbsq_bound_mult)
+  }else{
     out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
                          update_sigmasq, sigmabetasq_vec, update_sigmabetasq,
                          pi_vec, tolerance, max_iter)
@@ -147,9 +181,11 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
       mu_mat <- out$mu
       alpha_mat <- out$alpha
       if (R){
-        out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-                             update_sigmasq,  sigmabetasq_vec, update_sigmabetasq,
-                             pi_vec, tolerance, max_iter)
+        out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, LS_sigmasq,
+                             sigmasq_vec, update_sigmasq, LS_sbsq,
+                             sigmabetasq_vec, update_sigmabetasq, pi_vec,
+                             tolerance, max_iter, bound_ssq, ssq_bound_mult,
+                             bound_sbsq, sbsq_bound_mult)
       } else{
         out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
                              update_sigmasq, sigmabetasq_vec, update_sigmabetasq,
@@ -175,6 +211,11 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
   # y
   alpha_matrix <- out$alpha
 
-  return(list(alpha_matrix = alpha_matrix, cavi_details = cavi_details,
-              hyperparameters = hyperparameters))
+  # REMOVE
+  if (!R) out$update_sigma_l <- out$update_sbsq_l <- rep(T, n)
+
+  return(list(alpha_matrix = alpha_matrix, mu_matrix = out$mu,
+              cavi_details = cavi_details, hyperparameters = hyperparameters,
+              update_sigma_l = out$update_sigma_l,
+              update_sbsq_l = out$update_sbsq_l))
 }
