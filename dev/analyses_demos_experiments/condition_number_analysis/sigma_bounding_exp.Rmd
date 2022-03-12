@@ -1,0 +1,179 @@
+---
+title: "sigma bounding experiment"
+output: pdf_document
+---
+
+```{r}
+load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev/analyses_demos_experiments/condition_number_analysis/cond_number_models.Rda")
+library(covdepGE)
+dat <- results$trial86$data
+X <- dat$data
+Z <- dat$covts
+```
+
+# Model 1
+
+In this model, I do not bound any of the hyperparameters. Both $\sigma^2$ and $\mu$ exhibit instability, while $\sigma^2_\beta$ remains stable.
+
+```{r}
+# fit the model without restricting the size of ssq
+out1 <- covdepGE(X, Z, bound_ssq = F, bound_sbsq = F, max_iter = 100,
+                 parallel = T, num_workers = 14, R = T)
+out1
+```
+
+## $\sigma^2$
+
+```{r}
+# analyze ssq
+ssq1 <- out1$hyperparameters$sigmasq
+summary(as.numeric(ssq1))
+
+# analyze the ssq were in excess of 1.25
+summary(as.numeric(ssq1[ssq1 < 1.25]))
+sum(ssq1 < 1.25)
+summary(as.numeric(ssq1[ssq1 > 1.25]))
+sum(ssq1 > 1.25)
+
+# which of the individuals had at least 1 ssq exceed 1.25?
+which(rowSums(ssq1 > 1.25) > 0)
+
+# which of the variables had at least 1 ssq exceed 1.25?
+which(colSums(ssq1 > 1.25) > 0)
+```
+
+## $\mu$ and $\sigma^2_\beta$
+
+```{r}
+# analyze mu and sbsq
+summary(abs(unlist(out1$mu_matrices)))
+summary(as.numeric(out1$hyperparameters$sigmabeta_sq))
+```
+
+# Model 2
+
+In this model, I bound $\sigma^2$ using the weighted least squares estimate, $\hat\sigma^2$. Let $\sigma^2_{l,j}$ denote the error term variance for the regression weighted with respect to individual $l$ and with variable $j$ fixed as the response. Then, if the MAPE-fitted $\sigma^2_{l,j}$ exceeds two times $\hat\sigma^2_{l,j}$, $\sigma^2_{l,j}$ is fixed as $\hat\sigma^2_{l,j}$ and is not updated any further. 
+
+The results show that although $\sigma^2$ is stabilized, $\sigma^2_\beta$ is now unstable, as is $\mu$. Examining the MAPE update for $\sigma^2_\beta$, it seems this instability comes from the instability in $\mu$ appearing in the numerator of the update. 
+
+$$
+{\sigma^2_\beta}_{\textit{MAPE}} = \frac{\sum_{k = 1}^{p-1}\alpha_{j,k}^l({s_{j,k}^l}^2 + {\mu_{j,k}^l}^2)}{\sigma^2\sum_{k = 1}^{p - 1}\alpha_{j,k}^l}
+$$
+
+Note also that the same variables and individuals suffer from this instability as before.
+
+```{r}
+# fit a model restricting ssq but not sbsq
+out2 <- covdepGE(X, Z, bound_ssq = T, ssq_bound_mult = 2, bound_sbsq = F,
+                 max_iter = 100, parallel = T, num_workers = 15, R = T)
+out2
+```
+
+## $\mu$ and $\sigma^2$
+
+```{r}
+# analyze mu and ssq
+summary(as.numeric(out2$hyperparameters$sigmasq))
+summary(abs(unlist(out2$mu_matrices)))
+```
+
+## $\sigma^2_\beta$
+
+```{r}
+# analyze sbsq
+sbsq2 <- out2$hyperparameters$sigmabeta_sq
+summary(as.numeric(sbsq2))
+
+# analyze the sbsq in excess of 0.5
+summary(as.numeric(sbsq2[sbsq2 < 0.5]))
+sum(sbsq2 < 0.5)
+summary(as.numeric(sbsq2[sbsq2 > 0.5]))
+sum(sbsq2 > 0.5)
+
+# which of the individuals had at least 1 sbsq exceed 0.5?
+which(rowSums(sbsq2 > 0.5) > 0)
+
+# which of the variables had at least 1 ssq exceed 0.5?
+which(colSums(sbsq2 > 0.5) > 0)
+```
+
+# Model 3
+
+Finally, I bound both $\sigma^2$ and $\sigma^2_\beta$. If $\sigma^2_{l,j}$ exceeds $2\hat\sigma^2_{l,j}$, I again fix its value as $\hat\sigma^2_{l,j}$ and stop updating it. Additionally, I also stop updating ${\sigma^2_\beta}_{l,j}$ and fix it's value as:
+
+$$
+{\sigma^2_\beta}_{l,j} = \text{median}\{{\sigma^2_\beta}_{k,j}:\sigma^2_{k,j} \text{ is still being updated}\}
+$$
+
+The results show that although both $\sigma^2$ and $\sigma^2_\beta$ are now stable, $\mu$ remains unstable. Note that the same individuals and variables suffer from instability as in the first 2 models. 
+
+```{r}
+# fit a model restricting both ssq and sbsq
+out3 <- covdepGE(X, Z, bound_ssq = T, ssq_bound_mult = 3, bound_sbsq = T,
+                 sbsq_bound_mult = 2, max_iter = 100, parallel = T,
+                 num_workers = 15, R = T)
+out3
+```
+
+## $\sigma^2$ and $\sigma^2_\beta$
+ 
+```{r}
+summary(as.numeric(out3$hyperparameters$sigmasq))
+summary(as.numeric(out3$hyperparameters$sigmabeta_sq))
+```
+
+## $\mu$
+
+```{r}
+mu3 <- abs(unlist(out3$mu_matrices))
+summary(mu3)
+
+# analyze the mu that are in excess of 1
+summary(mu3[mu3 < 1])
+sum(mu3 < 1)
+summary(mu3[mu3 > 1])
+sum(mu3 > 1)
+
+# which of the variables have at least one mu in excess of 1?
+which(sapply(out3$mu_matrices, function(mat) any(abs(mat) > 1)))
+
+# which of the individuals have at least one mu in excess of 1?
+which(rowSums(sapply(out3$mu_matrices, function(mat) rowSums(abs(mat) > 1) > 0)) > 0)
+```
+
+# Model 4
+
+Model 4 performs a 3-D grid search over the hyperparameter space. 
+
+```{r}
+hp <- expand.grid(ssq = exp(seq(log(0.0001), log(2), length.out = 5)), 
+                            sbsq = exp(seq(log(0.0001), log(2), length.out = 5)), 
+                                       pi = c(0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45))
+hp <- expand.grid(ssq = seq(0.0001, 2, length.out = 5), 
+                  sbsq = seq(0.0001, 25, length.out = 10), 
+                                       pi = seq(0.1, 0.5, 0.1))
+
+out4 <- covdepGE(X, Z, sigmasq_vec = hp$ssq, sigmabetasq_vec = hp$sbsq, pi_vec = hp$pi, 
+                 max_iter = 100, parallel = T, num_workers = 15)
+out4
+out4$hyperparameters$sigmasq[1, ]
+out4$hyperparameters$sigmabeta_sq[1, ]
+out4$hyperparameters$pi
+```
+
+## $mu$
+
+```{r}
+summary(abs(unlist(out4$mu_matrices)))
+```
+
+
+```{r}
+library(glmnet)
+ls_mods <- lapply(1:ncol(X), function(j) cv.glmnet(X[ , -j], X[ , j]))
+non0 <- sapply(ls_mods, function(ls_mod)sum(coef(ls_mod, s = "lambda.min")[-1] != 0))
+pi_hat <- mean(non0) / (ncol(X) - 1)
+sum(sapply(results$trial86$data$true_precision, sum)) / sum(sapply(results$trial86$data$true_precision, `==`, 0))
+vars <- apply(X, 2, var)
+sapply(1:25, function(j) 25 / (pi_hat * sum(vars[-j])))
+```

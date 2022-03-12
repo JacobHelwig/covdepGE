@@ -104,6 +104,7 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
 
   # find bounds for variance of error terms
   LS_sigmasq <- LS_sbsq <- rep(NA, n)
+  LS_mu <- matrix(NA, n, p)
   if ((bound_ssq | bound_sbsq) & (update_sigmasq | update_sigmabetasq)){
 
     for (l in 1:n){
@@ -114,6 +115,7 @@ cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
       # get the residual variance
       lm_lj <- lm(y~X_mat, weights = w)
       LS_sigmasq[l] <- summary(lm_lj)$sigma^2
+      LS_mu[l, ] <- coef(lm_lj)[-1]
       # same as:
       # lm_lj <- lm(sqrt(w) * y~0 + I(cbind(1, X_mat) * sqrt(w)))
       # resid <- lm_lj$residuals / sqrt(w)

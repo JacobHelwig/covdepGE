@@ -367,35 +367,39 @@ cavi_R <- function(y, D, X_mat, mu_mat, alpha_mat, LS_sigmasq, sigmasq,
       #                sigmabeta_sq, update_sigmasq, update_sigmabetasq)
       if (update_sigmasq){
         sigmasq[update_sigma_l] <- sigma_update$sigmasq[update_sigma_l]
+        sigmasq <- rep(min(sigmasq), n)
 
-        # check to see if any of the updated sigma exceed 2 times the least
-        # squares sigma
-        if (bound_ssq){
-
-          # flag sigma that exceed the bound and reduce these sigma to their LS
-          # value; ensure that these sigma will not be updated on future
-          # iterations
-          unbounded_sigma <- sigmasq > ssq_bound_mult * LS_sigmasq
-          sigmasq[unbounded_sigma] <- LS_sigmasq[unbounded_sigma]
-          update_sigma_l <- update_sigma_l & !unbounded_sigma
-        }
+        # # check to see if any of the updated sigma exceed 2 times the least
+        # # squares sigma
+        # if (bound_ssq){
+        #
+        #   # flag sigma that exceed the bound and reduce these sigma to their LS
+        #   # value; ensure that these sigma will not be updated on future
+        #   # iterations
+        #   unbounded_sigma <- sigmasq > ssq_bound_mult * LS_sigmasq
+        #   sigmasq[unbounded_sigma] <- LS_sigmasq[unbounded_sigma]
+        #   #mu[unbounded_sigma, ] <- 0
+        #   update_sigma_l <- update_sigma_l & !unbounded_sigma
+        # }
       }
 
       if (update_sigmabetasq){
         sigmabeta_sq[update_sbsq_l] <- sigma_update$sigmabeta_sq[update_sbsq_l]
+        sigmabeta_sq <- rep(min(sigmabeta_sq), n)
 
-        # check to see if any of the updated sigmabeta_sq exceed 2 times the
-        # least squares sigmabeta_sq
-        if (bound_sbsq){
 
-          # flag sigmabeta_sq that exceed the bound and reduce these
-          # sigmabeta_sq to their LS value; ensure that these sigmabeta_sq will
-          # not be updated on future iterations
-          # unbounded_sbsq <- sigmabeta_sq > sbsq_bound_mult * LS_sbsq
-          # sigmabeta_sq[unbounded_sbsq] <- LS_sbsq[unbounded_sbsq]
-          # update_sbsq_l <- update_sbsq_l & !unbounded_sbsq
-          sigmabeta_sq[unbounded_sigma] <- median(sigmabeta_sq[!unbounded_sigma])
-        }
+        # # check to see if any of the updated sigmabeta_sq exceed 2 times the
+        # # least squares sigmabeta_sq
+        # if (bound_sbsq){
+        #
+        #   # flag sigmabeta_sq that exceed the bound and reduce these
+        #   # sigmabeta_sq to their LS value; ensure that these sigmabeta_sq will
+        #   # not be updated on future iterations
+        #   # unbounded_sbsq <- sigmabeta_sq > sbsq_bound_mult * LS_sbsq
+        #   # sigmabeta_sq[unbounded_sbsq] <- LS_sbsq[unbounded_sbsq]
+        #   # update_sbsq_l <- update_sbsq_l & !unbounded_sbsq
+        #   sigmabeta_sq[!update_sigma_l] <- median(sigmabeta_sq[update_sigma_l])
+        # }
 
       }
     }
