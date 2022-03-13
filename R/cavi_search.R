@@ -89,8 +89,8 @@
 ## the j-th variable fixed as the response
 ## -----------------------------------------------------------------------------
 cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip,
-                        ssq_upper_mult, var_lower, tol, max_iter, warnings,
-                        resp_index, CS, R){
+                        ssq_upper_mult, var_lower, elbo_tol, alpha_tol,
+                          max_iter, warnings, resp_index, CS, R, grid_search){
 
   # get the dimensions of the data and hyperparameter candidates
   n <- nrow(X)
@@ -122,10 +122,10 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
     lasso <- glmnet::cv.glmnet(X, y)
     non0 <- sum(coef(lasso, s = "lambda.min")[-1] != 0)
     non0 <- max(non0, 1)
-    pi_hat <- mean(non0) / (ncol(X) - 1)
+    pi_hat <- mean(non0) / p
 
     # find the sum of the variances for each of the columns of X_mat
-    s2_sum <- sum(apply(X, 1, var))
+    s2_sum <- sum(apply(X, 2, var))
 
     # find the upper bound for the grid of sbsq
     sbsq_upper <- 25 / (pi_hat * s2_sum)
@@ -143,19 +143,32 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
     hp <- data.frame(pip = pip, ssq = ssq, sbsq = sbsq)
   }
 
-  # loop to optimize sigmabeta_sq; run CAVI for each grid points; store the
+  # loop to optimize hyperparameters; run CAVI for each grid points; store the
   # resulting ELBO
   if (R){
-    out <- grid_search_R(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip, tol, max_iter)
+    out <- grid_search_R(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip, elbo_tol,
+                         alpha_tol, max_iter, grid_search)
+    best_pip <- out$pip
+    # use the best hyperparameters from the grid search to perform a proper CAVI
+    # until max_iter is reached or alpha converges
+    out <- cavi_R(y, D, X, out$mu, out$alpha, out$ssq, out$sbsq, best_pip,
+                  elbo_tol, alpha_tol, max_iter, F)
   }else{
-    out <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip, tol, max_iter)}
+    out <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip, elbo_tol,
+                         alpha_tol, max_iter, grid_search)
+    best_pip <- out$pip
+    # use the best hyperparameters from the grid search to perform a proper CAVI
+    # until max_iter is reached or alpha converges
+    out <- cavi_c(y, D, X, out$mu, out$alpha, out$ssq, out$sbsq, best_pip,
+                  elbo_tol, alpha_tol, max_iter, F)
+  }
 
   # save CAVI details
-  cavi_details <- list(ELBO = out$elbo, iterations = out$iterations,
-                       converged = out$iterations < max_iter)
+  cavi_details <- list(ELBO = out$elbo, iterations = out$converged_iter,
+                       converged = out$converged_iter < max_iter)
 
   # save hyperparameter details
-  hyp <- list(ssq = out$ssq, sbsq = out$sbsq, pip = out$pip, pip_cands = pip,
+  hyp <- list(ssq = out$ssq, sbsq = out$sbsq, pip = best_pip, pip_cands = pip,
               ssq_cands = ssq, sbsq_cands = sbsq, grid_sz = nrow(hp))
 
   return(list(alpha_matrix = out$alpha, mu_matrix = out$mu,

@@ -208,10 +208,10 @@
 covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, sbsq = NULL,
                      pip = NULL, nssq = 5, nsbsq = 5, npip = 5,
                      ssq_upper_mult = 4, var_lower = 1e-3, tau = 0.1, kde = T,
-                     norm = 2, scale = T, tol = 1e-12, max_iter = 100,
-                     edge_threshold = 0.5, sym_method = "mean", parallel = F,
-                     num_workers = NULL, stop_cluster = T, warnings = T, CS = F,
-                     R = F){
+                     norm = 2, scale = T, elbo_tol = 1e-1, alpha_tol = 1e-5,
+                     max_iter = 100, edge_threshold = 0.5, sym_method = "mean",
+                     parallel = F, num_workers = NULL, stop_cluster = T,
+                     warnings = T, CS = F, R = F, grid_search = T){
 
   start_time <- Sys.time()
 
@@ -220,7 +220,7 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, sbsq = NULL,
   #                 sym_method, parallel, num_workers, stop_cluster, warnings)
 
   # ensure that data_mat and Z are matrices
-  data <- as.matrix(data_mat)
+  data <- as.matrix(data)
   Z <- as.matrix(Z)
 
   # get sample size and number of parameters
@@ -287,8 +287,8 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, sbsq = NULL,
 
             # perform the grid search and final CAVI; save the results to res
             cavi_search(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip,
-                        ssq_upper_mult, var_lower, tol, max_iter, warnings,
-                        resp_index, CS, R)
+                        ssq_upper_mult, var_lower, elbo_tol, alpha_tol,
+                        max_iter, warnings, resp_index, CS, R, grid_search)
             }
           )
       },
@@ -322,8 +322,8 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, sbsq = NULL,
       # perform the grid search and final CAVI; save the results to res
       res[[resp_index]] <- cavi_search(X, Z, D, y, alpha, mu, ssq, sbsq, pip,
                                        nssq, nsbsq, npip, ssq_upper_mult,
-                                       var_lower, tol, max_iter, warnings,
-                                       resp_index, CS, R)
+                                       var_lower, elbo_tol, alpha_tol, max_iter,
+                                       warnings, resp_index, CS, R, grid_search)
 
       # update the progress bar
       utils::setTxtProgressBar(pb, resp_index)
@@ -438,9 +438,9 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, sbsq = NULL,
                         converged = sum(converged), grid_size = grid_sz)
 
   # create a named vector to return the function arguments
-  args <- c(kde = kde, norm = norm, scale = scale, tolerance = tol,
-            edge_threshold = edge_threshold, sym_method = sym_method,
-            parallel = parallel)
+  args <- c(kde = kde, norm = norm, scale = scale, elbo_tol = elbo_tol,
+            alpha_tol = alpha_tol, edge_threshold = edge_threshold,
+            sym_method = sym_method, parallel = parallel)
 
   # record the elapsed time and add it to the model details
   model_details[["elapsed"]] <- Sys.time() - start_time

@@ -200,7 +200,8 @@ alpha_update_R <- function(ssq_var, mu, alpha, alpha1, alpha2_denom, alpha3,
 ## sigmabeta_sq: n x 1 vector; fitted slab variance for each individual
 ## -----------------------------------------------------------------------------
 ## [[Rcpp::export]]
-cavi_R <- function(y, D, X, mu_, alpha_, ssq, sbsq, pip, tol, max_iter) {
+cavi_R <- function(y, D, X, mu_, alpha_, ssq, sbsq, pip, elbo_tol, alpha_tol,
+                   max_iter, grid_search) {
 
   n <- nrow(X)
   p <- ncol(X)
@@ -225,6 +226,11 @@ cavi_R <- function(y, D, X, mu_, alpha_, ssq, sbsq, pip, tol, max_iter) {
   alpha3 <- log(sqrt(ssq_var / (ssq * sbsq)))
   alpha2_denom <- 2 * ssq_var
 
+  # if this CAVI is part of a grid search, define the last elbo
+  if (grid_search){
+    last_elbo <- total_ELBO_R(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip)
+  }
+
   # CAVI loop (optimize variational parameters)
   for (k in 1:max_iter){
 
@@ -240,19 +246,31 @@ cavi_R <- function(y, D, X, mu_, alpha_, ssq, sbsq, pip, tol, max_iter) {
                             ssq, sbsq, pip)
     #alpha_update_c(S_sq, mu, alpha, sigmasq, sigmabeta_sq, pip_est)
 
+    # if a grid search is being performed, check for the convergence of ELBO
+    if (grid_search){
+      cur_elbo <- total_ELBO_R(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip)
+      if (cur_elbo - last_elbo < elbo_tol){
+        converged_iter <- k
+        break
+      }
+      last_elbo <- cur_elbo
+    }
+
     # calculate change in alpha
     change_alpha <- alpha - alpha_last;
 
     # if the square root of the sum of squared changes in alpha is within the
     # tolerance, break from the for loop
-    if (sqrt(sum((change_alpha^2))) < tol){
+    if (sqrt(sum((change_alpha^2))) < alpha_tol){
       converged_iter <- k
       break;
     }
+
   }
 
   # calculate ELBO across n individuals
-  ELBO <- total_ELBO_R(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip)
+  ELBO <- ifelse(grid_search, cur_elbo,
+                 total_ELBO_R(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip))
   #ELBO <- total_ELBO_c(y, D, X_mat, S_sq, mu, alpha, sigmasq, sigmabeta_sq, pip_est)
 
   return(list(mu = mu, alpha = alpha, elbo = ELBO,
@@ -284,7 +302,8 @@ cavi_R <- function(y, D, X, mu_, alpha_, ssq, sbsq, pip, tol, max_iter) {
 ## the CAVI converged
 ## -----------------------------------------------------------------------------
 ## [[Rcpp::export]]
-grid_search_R <- function(y, D, X, mu, alpha, ssq, sbsq, pip, tol, max_iter){
+grid_search_R <- function(y, D, X, mu, alpha, ssq, sbsq, pip, elbo_tol,
+                          alpha_tol, max_iter, grid_search){
 
   # get dimensions of the data
   n <- nrow(X)
@@ -311,7 +330,8 @@ grid_search_R <- function(y, D, X, mu, alpha, ssq, sbsq, pip, tol, max_iter){
   for (j in 1:n_param){
 
     # run CAVI
-    out <- cavi_R(y, D, X, mu, alpha, ssq[j], sbsq[j], pip[j], tol, max_iter)
+    out <- cavi_R(y, D, X, mu, alpha, ssq[j], sbsq[j], pip[j], elbo_tol,
+                  alpha_tol, max_iter, grid_search)
     # out <- cavi_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec[ , j],
     #               update_sigmasq, sigmabetasq_vec[ , j], update_sigmabetasq,
     #               pip_vec[j], tolerance, max_iter, upper_limit)

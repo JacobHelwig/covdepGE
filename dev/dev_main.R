@@ -3,8 +3,8 @@ rm(list = ls())
 source("generate_data.R")
 
 R_code <- !T # true if R code instead of C++ should be used
-package <- F # true if the package version is desired
-discrete_data <- T # true if discrete example is desired
+package <- T # true if the package version is desired
+discrete_data <- !T # true if discrete example is desired
 
 # generate data and covariates
 if (discrete_data) {
@@ -19,10 +19,10 @@ data_mat <- dat$data
 Z <- dat$covts
 
 if (package){
-  out <- covdepGE::covdepGE(data_mat, Z, tau_, kde = F, CS = T, scale = F,
-                            sigmabetasq_vec = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                            update_sigmasq = F, R = R_code, max_iter = 100,
-                            warnings = F, create_grid = F)
+  out <- covdepGE::covdepGE(data_mat, Z, tau = tau_, kde = F, CS = T, scale = F,
+                            sbsq = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
+                            R = R_code, max_iter = 100, warnings = F,
+                            alpha_tol = 1e-10)
 
 }else{
   if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
@@ -35,7 +35,7 @@ if (package){
   Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
   out <- covdepGE(data_mat, Z, tau = tau_, kde = F, CS = T, scale = F,
                   sbsq = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                  R = R_code, max_iter = 100, warnings = F)
+                  R = R_code, max_iter = 100, warnings = F, alpha_tol = 1e-10)
 }
 
 
@@ -76,3 +76,4 @@ same_probs
 
 # check for equality between ELBO
 all.equal(unname(unlist(lapply(out$CAVI_details, `[[`, "ELBO"))), out_original$original_ELBO)
+
