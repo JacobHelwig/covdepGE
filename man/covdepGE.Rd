@@ -30,7 +30,11 @@ covdepGE(
   stop_cluster = T,
   warnings = T,
   CS = F,
-  R = F
+  R = F,
+  bound_ssq = T,
+  ssq_bound_mult = 2,
+  bound_sbsq = T,
+  sbsq_bound_mult = 5
 )
 
 \method{print}{covdepGE}(x, ...)
@@ -85,6 +89,9 @@ candidate values of \code{pi}. \code{0.1} by default}
 iteration-to-iteration change in the alpha matrix are within tolerance.
 \code{1e-12} by default}
 
+\item{max_iter}{positive integer; if the tolerance criteria has not been met
+by \code{max_iter_grid} iterations, end CAVI. \code{100} by default}
+
 \item{edge_threshold}{numeric in \eqn{(0, 1)}; when post-processing the
 inclusion probabilities, an edge will be added to the graph if the
 \eqn{(i, j)} edge has probability of inclusion greater than \code{edge_threshold}.
@@ -126,21 +133,6 @@ to Carbonetto-Stephens. \code{F} by default}
 \item{x}{object of class covdepGE; the return of the covdepGE function}
 
 \item{...}{additional arguments will be ignored}
-
-\item{var_min}{positive numeric; if \code{sigmabetasq_vec} is \code{NULL}, \code{var_min} is
-the lower bound of the auto-generated \code{sigmabetasq_vec}. \code{0.01} by default}
-
-\item{var_max}{numeric in \eqn{(`varmin`, Inf)}; if \code{sigmabetasq_vec} is
-\code{NULL}, \code{var_max} is the upper bound of the auto-generated \code{sigmabetasq_vec}.
-\code{10} by default}
-
-\item{max_iter_grid}{positive integer; during the grid search, if the
-tolerance criteria has not been met by \code{max_iter_grid} iterations, end CAVI.
-\code{100} by default}
-
-\item{max_iter_final}{positive integer; for the final CAVI, if the tolerance
-criteria has not been met by \code{max_iter_final} iterations, end CAVI. \code{1000} by
-default}
 }
 \value{
 Returns \code{list} with the following values:

@@ -88,136 +88,76 @@
 ## individual in the final model. Column j corresponds to the regression with
 ## the j-th variable fixed as the response
 ## -----------------------------------------------------------------------------
-cavi_search <- function(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
-                        sigmabetasq_vec, update_sigmabetasq, pi_vec, tolerance,
-                        max_iter, warnings, resp_index, CS, R, bound_ssq,
-                        ssq_bound_mult, bound_sbsq, sbsq_bound_mult){
+cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip,
+                        ssq_upper_mult, var_lower, tol, max_iter, warnings,
+                        resp_index, CS, R){
 
   # get the dimensions of the data and hyperparameter candidates
-  n <- nrow(X_mat)
-  p <- ncol(X_mat)
-  n_param <- length(pi_vec)
-
-  if (length(unique(as.numeric(sigmasq_vec))) == 1){
-    sigmasq_vec <- matrix(var(y), n, n_param)
-  }
-
-  # find bounds for variance of error terms
-  LS_sigmasq <- LS_sbsq <- rep(NA, n)
-  LS_mu <- matrix(NA, n, p)
-  if ((bound_ssq | bound_sbsq) & (update_sigmasq | update_sigmabetasq)){
-
-    for (l in 1:n){
-
-      # perform the weighted regression with respect to individual l
-      w <- D[ , l]
-
-      # get the residual variance
-      lm_lj <- lm(y~X_mat, weights = w)
-      LS_sigmasq[l] <- summary(lm_lj)$sigma^2
-      LS_mu[l, ] <- coef(lm_lj)[-1]
-      # same as:
-      # lm_lj <- lm(sqrt(w) * y~0 + I(cbind(1, X_mat) * sqrt(w)))
-      # resid <- lm_lj$residuals / sqrt(w)
-      # rss <- sum(w * resid^2)
-      # resvar <- rss / lm_lj$df.residual
-      # LS_sigmasq[l] <- resvar
-
-      # get an estimate to the slab variance: the median standard error divided
-      # by sigmasq
-      LS_sbsq[l] <- ((median(summary(lm_lj)$coef[-1 , "Std. Error"]))^2) / LS_sigmasq[l]
-
-    }
-
-    # set the initial values for the sigma parameters as their least squares values
-    sigmasq_vec <- matrix(LS_sigmasq, n, n_param)
-    sigmabetasq_vec <- matrix(LS_sbsq, n, n_param)
-
-  }
+  n <- nrow(X)
+  p <- ncol(X)
 
   # instantiate initial values of variational parameters; the l, j entry is
   # the variational approximation to the j-th parameter in a regression with
   # the resp_index predictor fixed as the response with weightings taken with
   # respect to the l-th individual
-  alpha_mat <- matrix(alpha, n, p)
-  mu_mat <- matrix(mu, n, p)
+  alpha <- matrix(alpha, n, p)
+  mu <- matrix(mu, n, p)
 
   # get hyperparameter values from varbvs
   if (CS){
     set.seed(resp_index)
-    idmod <- varbvs::varbvs(X_mat, y, Z = Z[ , 1], verbose = FALSE)
+    idmod <- varbvs::varbvs(X, y, Z = Z[ , 1], verbose = FALSE)
     probs <- 1 / (1 + exp(-idmod$logodds)) # need to convert to log base 10
-    sigmasq_vec <- matrix(mean(idmod$sigma), n, ncol(sigmabetasq_vec))
-    pi_vec <- rep(mean(probs), ncol(sigmabetasq_vec))
+    ssq <- rep(mean(idmod$sigma), length(sbsq))
+    pip <- rep(mean(probs), length(sbsq))
+  }
+
+  # if the hyperparameter grid has not been supplied, create it
+  if (any(is.null(c(ssq, sbsq, pip)))){
+
+    # find the upper bound for the grid of ssq
+    ssq_upper <- ssq_upper_mult * var(y)
+
+    # find the lasso estimate to the proportion of non-zero coefficients
+    lasso <- glmnet::cv.glmnet(X, y)
+    non0 <- sum(coef(lasso, s = "lambda.min")[-1] != 0)
+    non0 <- max(non0, 1)
+    pi_hat <- mean(non0) / (ncol(X) - 1)
+
+    # find the sum of the variances for each of the columns of X_mat
+    s2_sum <- sum(apply(X, 1, var))
+
+    # find the upper bound for the grid of sbsq
+    sbsq_upper <- 25 / (pi_hat * s2_sum)
+
+    # create the grid candidates for ssq and sbsq
+    ssq <- exp(seq(log(var_lower), log(ssq_upper), length.out = nssq))
+    sbsq <- exp(seq(log(var_lower), log(sbsq_upper), length.out = nsbsq))
+
+    # create posterior inclusion probability grid
+    pip <- seq(0.05, 0.45, length.out = npip)
+
+    # create the grid
+    hp <- expand.grid(pip = pip, ssq = ssq, sbsq = sbsq)
+  }else{
+    hp <- data.frame(pip = pip, ssq = ssq, sbsq = sbsq)
   }
 
   # loop to optimize sigmabeta_sq; run CAVI for each grid points; store the
   # resulting ELBO
   if (R){
-    out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, LS_sigmasq,
-                         sigmasq_vec, update_sigmasq, LS_sbsq,
-                         sigmabetasq_vec, update_sigmabetasq, pi_vec, tolerance,
-                         max_iter, bound_ssq, ssq_bound_mult, bound_sbsq,
-                         sbsq_bound_mult)
+    out <- grid_search_R(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip, tol, max_iter)
   }else{
-    out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-                         update_sigmasq, sigmabetasq_vec, update_sigmabetasq,
-                         pi_vec, tolerance, max_iter)
-  }
-
-  if (update_sigmasq | update_sigmabetasq){
-
-    # if at least one of the variance hyperparameters is being updated via MAPE,
-    # repeat the grid search until the optimal pi has stabilized
-    converged_pi <- F
-
-    for (j in 1:10){
-
-      # record the last values for the optimal pi
-      last_pi <- out$pi
-
-      # use the hyperparameters and the variational parameters from the last
-      # grid search as the initial values
-      sigmasq_vec <- matrix(out$sigmasq, n, n_param)
-      sigmabetasq_vec <- matrix(out$sigmabeta_sq, n, n_param)
-      mu_mat <- out$mu
-      alpha_mat <- out$alpha
-      if (R){
-        out <- grid_search_R(y, D, X_mat, mu_mat, alpha_mat, LS_sigmasq,
-                             sigmasq_vec, update_sigmasq, LS_sbsq,
-                             sigmabetasq_vec, update_sigmabetasq, pi_vec,
-                             tolerance, max_iter, bound_ssq, ssq_bound_mult,
-                             bound_sbsq, sbsq_bound_mult)
-      } else{
-        out <- grid_search_c(y, D, X_mat, mu_mat, alpha_mat, sigmasq_vec,
-                             update_sigmasq, sigmabetasq_vec, update_sigmabetasq,
-                             pi_vec, tolerance, max_iter)
-      }
-
-      # check to see if the optimal pi has stabilized
-      if (out$pi == last_pi) break
-    }
-  }
+    out <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip, tol, max_iter)}
 
   # save CAVI details
   cavi_details <- list(ELBO = out$elbo, iterations = out$iterations,
                        converged = out$iterations < max_iter)
-  if (update_sigmabetasq | update_sigmasq) cavi_details[["pi_stable_iter"]] <- j
 
   # save hyperparameter details
-  hyperparameters <- list(sigmasq = out$sigmasq, sigmabeta_sq = out$sigmabeta_sq,
-                          pi = out$pi, pi_grid = pi_vec)
+  hyp <- list(ssq = out$ssq, sbsq = out$sbsq, pip = out$pip, pip_cands = pip,
+              ssq_cands = ssq, sbsq_cands = sbsq, grid_sz = nrow(hp))
 
-  # alpha is an n by p matrix; the i,j-th entry is the probability of inclusion
-  # for the i-th individual for the j-th variable according to the regression on
-  # y
-  alpha_matrix <- out$alpha
-
-  # REMOVE
-  if (!R) out$update_sigma_l <- out$update_sbsq_l <- rep(T, n)
-
-  return(list(alpha_matrix = alpha_matrix, mu_matrix = out$mu,
-              cavi_details = cavi_details, hyperparameters = hyperparameters,
-              update_sigma_l = out$update_sigma_l,
-              update_sbsq_l = out$update_sbsq_l))
+  return(list(alpha_matrix = out$alpha, mu_matrix = out$mu,
+              cavi_details = cavi_details, hyperparameters = hyp))
 }

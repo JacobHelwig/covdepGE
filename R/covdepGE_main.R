@@ -205,29 +205,26 @@
 #' 2. Dasgupta S., Pati D., Srivastava A., *A Two-Step Geometric Framework For
 #' Density Modeling*, Statistica Sinica, 2020
 ## -----------------------------------------------------------------------------
-covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
-                     sigmasq_vec = NULL, update_sigmasq = NULL,
-                     sigmabetasq_vec = NULL, update_sigmabetasq = NULL,
-                     n_param = 9, pi_vec = NULL, norm = 2, scale = T,
-                     tolerance = 1e-12, max_iter = 100, edge_threshold = 0.5,
-                     sym_method = "mean", parallel = F, num_workers = NULL,
-                     stop_cluster = T, warnings = T, CS = F, R = F,
-                     bound_ssq = T, ssq_bound_mult = 2, bound_sbsq = T,
-                     sbsq_bound_mult = 5){
+covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, sbsq = NULL,
+                     pip = NULL, nssq = 5, nsbsq = 5, npip = 5,
+                     ssq_upper_mult = 4, var_lower = 1e-3, tau = 0.1, kde = T,
+                     norm = 2, scale = T, tol = 1e-12, max_iter = 100,
+                     edge_threshold = 0.5, sym_method = "mean", parallel = F,
+                     num_workers = NULL, stop_cluster = T, warnings = T, CS = F,
+                     R = F){
 
   start_time <- Sys.time()
 
   # run compatibility checks
-  covdepGE_checks(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec, sigmabetasq_vec,
-                  n_param, pi_vec, norm, scale, tolerance, max_iter, edge_threshold,
-                  sym_method, parallel, num_workers, stop_cluster, warnings)
+  # covdepGE_checks(data, Z, tau, kde, alpha, mu, ssq, sbsq, pi_vec, norm, scale, tolerance, max_iter, edge_threshold,
+  #                 sym_method, parallel, num_workers, stop_cluster, warnings)
 
   # ensure that data_mat and Z are matrices
-  data_mat <- as.matrix(data_mat)
+  data <- as.matrix(data_mat)
   Z <- as.matrix(Z)
 
   # get sample size and number of parameters
-  n <- nrow(data_mat); p <- ncol(data_mat) - 1
+  n <- nrow(data); p <- ncol(data) - 1
 
   # if the covariates should be centered and scaled, do so ([ , ] for attributes)
   if (scale) Z <- matrix(scale(Z)[ , ], n)
@@ -236,70 +233,6 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   D <- get_weights(Z, norm, kde, tau)
   bandwidths <- D$bandwidths
   D <- D$D
-
-  # if the user has specified any hyperparameter values, get the number they
-  # specified
-  hyp_list <- list(sigmasq_vec, sigmabetasq_vec, pi_vec)
-  if (!all(sapply(hyp_list, is.null))){
-    n_param <- max(sapply(hyp_list, length))
-  }
-
-  # if the user has not provided values for pi_vec, instantiate the grid
-  if (is.null(pi_vec)){
-
-    pi_vec <- seq(0.05, 0.45, length.out = n_param)
-  }
-
-  # instantiate the matrices of hyperparameters
-  if (is.null(sigmasq_vec)){
-
-    # if no values have been passed to sigmasq_vec, instantiate as the variance
-    # of the data
-    sigmasq_vec <- matrix(var(as.vector(data_mat)), n, n_param)
-
-    if (is.null(update_sigmasq)){
-
-      # if the user has also not specified an option for updating sigmasq_vec,
-      # update sigmasq
-      update_sigmasq <- T
-    }
-  }else{
-
-    # otherwise, the user has passed some values for sigmasq; create a matrix
-    # where the j-th column is the j-th value repeated n times
-    sigmasq_vec <- matrix(sigmasq_vec, n, n_param, T)
-
-    if (is.null(update_sigmasq)){
-
-      # if the user has not specified an option for updating sigmasq_vec but has
-      # provided some values to sigmavec, do not update them
-      update_sigmasq <- F
-    }
-  }
-  if (is.null(sigmabetasq_vec)){
-
-    # if no values have been passed to sigmabetasq_vec, instantiate as 1
-    sigmabetasq_vec <- matrix(1, n, n_param)
-
-    if (is.null(update_sigmabetasq)){
-
-      # if the user has also not specified an option for updating
-      # sigmabetasq_vec, update sigmabetasq
-      update_sigmabetasq <- T
-    }
-  }else{
-
-    # otherwise, the user has passed some values for sigmabetasq; create a
-    # matrix where the j-th column is the j-th value repeated n times
-    sigmabetasq_vec <- matrix(sigmabetasq_vec, n, n_param, T)
-
-    if (is.null(update_sigmabetasq)){
-
-      # if the user has not specified an option for updating sigmabetasq_vec but
-      # has provided some values to sigmabetasq_vec, do not update them
-      update_sigmabetasq <- F
-    }
-  }
 
   # main loop over the predictors
 
@@ -347,16 +280,15 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
           {
 
             # Set variable number `resp_index` as the response
-            y <- data_mat[, resp_index]
+            y <- data[, resp_index]
 
             # Set the remaining p variables as predictors
-            X_mat <- data_mat[, -resp_index]
+            X <- data[, -resp_index]
 
             # perform the grid search and final CAVI; save the results to res
-            cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq_vec, update_sigmasq,
-                        sigmabetasq_vec, update_sigmabetasq, pi_vec, tolerance,
-                        max_iter, warnings, resp_index, CS, R, bound_ssq,
-                        ssq_bound_mult, bound_sbsq, sbsq_bound_mult)
+            cavi_search(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip,
+                        ssq_upper_mult, var_lower, tol, max_iter, warnings,
+                        resp_index, CS, R)
             }
           )
       },
@@ -382,18 +314,16 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
     for (resp_index in 1:(p + 1)) {
 
       # Set variable number `resp_index` as the response
-      y <- data_mat[, resp_index]
+      y <- data[, resp_index]
 
       # Set the remaining p variables as predictors
-      X_mat <- data_mat[, -resp_index]
+      X <- data[, -resp_index]
 
       # perform the grid search and final CAVI; save the results to res
-      res[[resp_index]] <- cavi_search(X_mat, Z, D, y, alpha, mu, sigmasq_vec,
-                                       update_sigmasq, sigmabetasq_vec,
-                                       update_sigmabetasq, pi_vec, tolerance,
-                                       max_iter, warnings, resp_index, CS, R,
-                                       bound_ssq, ssq_bound_mult, bound_sbsq,
-                                       sbsq_bound_mult)
+      res[[resp_index]] <- cavi_search(X, Z, D, y, alpha, mu, ssq, sbsq, pip,
+                                       nssq, nsbsq, npip, ssq_upper_mult,
+                                       var_lower, tol, max_iter, warnings,
+                                       resp_index, CS, R)
 
       # update the progress bar
       utils::setTxtProgressBar(pb, resp_index)
@@ -407,19 +337,20 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   # alpha_matrix matrices into their own lists/ vectors
   cavi_details <- lapply(res, `[[`, "cavi_details")
   hp <- lapply(res, `[[`, "hyperparameters")
+  grid_sz <- hp[[1]]$grid_sz
   names(cavi_details) <- names(hp) <- paste0("Variable ", 1:length(cavi_details))
   alpha_matrices <- lapply(res, `[[`, "alpha_matrix")
   mu_matrices <- lapply(res, `[[`, "mu_matrix")
-  update_sigma_l <- sapply(res, `[[`, "update_sigma_l")
-  update_sbsq_l <- sapply(res, `[[`, "update_sbsq_l")
 
   # organize the hyperparameters into matrices
-  final_sigmasq <- sapply(hp, `[[`, "sigmasq")
-  final_sigmabetasq <- sapply(hp, `[[`, "sigmabeta_sq")
-  final_pi <- sapply(hp, `[[`, "pi")
-  hyperparameters <- list(sigmasq = final_sigmasq,
-                          sigmabeta_sq = final_sigmabetasq, pi = final_pi,
-                          pi_grid = pi_vec)
+  ssq <- sapply(hp, `[[`, "ssq")
+  ssq_cands <- sapply(hp, `[[`, "ssq_cands")
+  sbsq <- sapply(hp, `[[`, "sbsq")
+  sbsq_cands <- sapply(hp, `[[`, "sbsq_cands")
+  pip <- sapply(hp, `[[`, "pip")
+  pip_cands <- sapply(hp, `[[`, "pip_cands")
+  hyperparameters <- list(ssq = ssq, sbsq = sbsq, pip = pip, ssq_cands = ssq_cands,
+                          sbsq_cands = sbsq_cands, pip_cands = pip_cands)
 
   # find the number of final CAVIs that converged
   converged <- sapply(cavi_details, `[[`, "converged")
@@ -431,29 +362,6 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
       "Variable ", var_index, ": final CAVI did not converge in ",
       max_iter, " iterations")))
   }
-
-  # if any of the variables had individuals that blew up, display a warning for
-  # instable sigmasq
-  if (warnings & any(!update_sigma_l)){
-
-    sapply(which(colSums(!update_sigma_l) > 0), function(var_index) warning(
-      paste0("Variable ", var_index,
-             ": Detected sigmasq instability for individuals ",
-             paste0(which(!update_sigma_l[ , var_index]), collapse = ", "),
-             "; using weighted OLS sigmasq")))
-  }
-
-  # if any of the variables had individuals that blew up, display a warning for
-  # instable sigmabeta_sq
-  if (warnings & any(!update_sbsq_l)){
-
-    sapply(which(colSums(!update_sbsq_l) > 0), function(var_index) warning(
-      paste0("Variable ", var_index,
-             ": Detected sigmabeta_sq instability for individuals ",
-             paste0(which(!update_sbsq_l[ , var_index]), collapse = ", "),
-             "; using weighted OLS sigmabeta_sq")))
-  }
-
 
   # Creating the graphs:
   # transform p + 1 n by n matrices to n p + 1 by p + 1 matrices using
@@ -527,10 +435,10 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
   # create a list for model details
   model_details <- list(elapsed = NA, n = n, p = p, ELBO = total_elbo,
                         num_unique = length(unique_graphs),
-                        converged = sum(converged), grid_size = n_param)
+                        converged = sum(converged), grid_size = grid_sz)
 
   # create a named vector to return the function arguments
-  args <- c(kde = kde, norm = norm, scale = scale, tolerance = tolerance,
+  args <- c(kde = kde, norm = norm, scale = scale, tolerance = tol,
             edge_threshold = edge_threshold, sym_method = sym_method,
             parallel = parallel)
 
@@ -542,8 +450,7 @@ covdepGE <- function(data_mat, Z, tau = 0.1, kde = T, alpha = 0.2, mu = 0,
               alpha_matrices = incl_probs_asym, unique_graphs = unique_graphs,
               mu_matrices = mu_matrices, hyperparameters = hyperparameters,
               CAVI_details = cavi_details, model_details = model_details,
-              weights = D, bandwidths = bandwidths, arguments = args,
-              bounded = list(ssq = update_sigma_l, sbsq = update_sbsq_l))
+              weights = D, bandwidths = bandwidths, arguments = args)
 
   # define the class of the return values
   class(ret) <- c("covdepGE", "list")
