@@ -86,25 +86,13 @@ for (j in 1:length(results_gr_sch)){
   identical(res_j_grs$graphs, res_j_nelbo$graphs)
 }
 
-results_no_elbo$trial1$results$CAVI_details
-results_gr_sch$trial1$results$CAVI_details
-
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
 dt <- blown_data[[1]]
-X <- dt$data[ , -1]
-y <- dt$data[ , 1]
-Z <- dt$covts
-D <- get_weights(Z, 2, T)$D
-n <- nrow(X)
-p <- ncol(X)
-mu <- matrix(0, n, p)
-alpha <- matrix(0.2, n, p)
 
-out_gs <- covdepGE(dt$data, dt$covts, parallel = T, num_workers = 13, alpha_tol = 1e-12, elbo_tol = 1e-3)
-out_ngs <- covdepGE(dt$data, dt$covts, parallel = T, num_workers = 13, alpha_tol = 1e-12, grid_search = F, elbo_tol = 1e-3)
-
-
-mean(sapply(lapply(lapply(results0, `[[`, "results"), `[[`, "model_details"), `[[`, "ELBO"), na.rm = T)
-min(sapply(lapply(lapply(results_gr_sch, `[[`, "results"), `[[`, "model_details"), `[[`, "ELBO"), na.rm = T)
-mean(sapply(lapply(lapply(results0, `[[`, "results"), `[[`, "model_details"), `[[`, "num_unique"), na.rm = T)
-mean(sapply(lapply(lapply(results_gr_sch, `[[`, "results"), `[[`, "model_details"), `[[`, "num_unique"), na.rm = T)
+# out_gs <- covdepGE(dt$data, dt$covts, parallel = T, num_workers = 13, alpha_tol = 1e-12, elbo_tol = 1e-3)
+# out_ngs <- covdepGE(dt$data, dt$covts, parallel = T, num_workers = 13, alpha_tol = 1e-12, grid_search = F, elbo_tol = 1e-3)
+#
+#
+# mean(sapply(lapply(lapply(results0, `[[`, "results"), `[[`, "model_details"), `[[`, "ELBO"), na.rm = T)
+# min(sapply(lapply(lapply(results_gr_sch, `[[`, "results"), `[[`, "model_details"), `[[`, "ELBO"), na.rm = T)
+# mean(sapply(lapply(lapply(results0, `[[`, "results"), `[[`, "model_details"), `[[`, "num_unique"), na.rm = T)
+# mean(sapply(lapply(lapply(results_gr_sch, `[[`, "results"), `[[`, "model_details"), `[[`, "num_unique"), na.rm = T)

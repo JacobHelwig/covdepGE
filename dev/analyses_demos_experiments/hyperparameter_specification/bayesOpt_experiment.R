@@ -27,11 +27,11 @@ ssq_upper <- 10 * var(y)
 
 # create an initial grid to get ELBO on
 var_lower <- 1e-3
-sbsq0 <- seq(var_lower, sbsq_upper / 10, length.out = 3)
-ssq0 <- seq(var_lower, ssq_upper / 10, length.out = 3)
+sbsq0 <- seq(var_lower, sbsq_upper, length.out = 5)
+ssq0 <- seq(var_lower, ssq_upper, length.out = 5)
 pip_lower <- 0.01
 pip_upper <- 0.99
-pip0 <- seq(pip_lower, pip_upper / 2, length.out = 3)
+pip0 <- seq(pip_lower, pip_upper, length.out = 5)
 grid0 <- expand.grid(ssq = ssq0, sbsq = sbsq0, pip = pip0)
 
 # find ELBO at each point on the initial grid

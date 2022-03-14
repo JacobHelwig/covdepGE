@@ -342,6 +342,10 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, sbsq = NULL,
   alpha_matrices <- lapply(res, `[[`, "alpha_matrix")
   mu_matrices <- lapply(res, `[[`, "mu_matrix")
 
+  # gather progress of ELBO and alpha
+  progress <- lapply(res, `[[`, "progress")
+  names(progress) <- names(hp)
+
   # organize the hyperparameters into matrices
   ssq <- sapply(hp, `[[`, "ssq")
   ssq_cands <- sapply(hp, `[[`, "ssq_cands")
@@ -450,7 +454,8 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, sbsq = NULL,
               alpha_matrices = incl_probs_asym, unique_graphs = unique_graphs,
               mu_matrices = mu_matrices, hyperparameters = hyperparameters,
               CAVI_details = cavi_details, model_details = model_details,
-              weights = D, bandwidths = bandwidths, arguments = args)
+              weights = D, bandwidths = bandwidths, arguments = args,
+              progress = progress)
 
   # define the class of the return values
   class(ret) <- c("covdepGE", "list")

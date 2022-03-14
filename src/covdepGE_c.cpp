@@ -240,6 +240,10 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
     last_elbo = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
   }
 
+  // vectors for storing ELBO and frobenius norm of change in alpha matrix
+  arma::colvec elbo_prog(max_iter);
+  arma::colvec alpha_prog(max_iter);
+
   // CAVI loop (optimize variational parameters)
   for (int k = 0; k < max_iter; k++){
 
@@ -266,8 +270,16 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
     // calculate change in alpha
     change_alpha = alpha - alpha_last;
 
+    // record progress of alpha and elbo
+    elbo_prog(k) = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
+    alpha_prog(k) = sqrt(arma::accu(arma::pow(change_alpha, 2)));
+
     // if the square root of the sum of squared changes in alpha is within the
     // tolerance, break from the for loop
+
+    // add a condition here: if any of the entries of alpha are NaN, break and set alpha
+    // as the last alpha
+
     if (sqrt(arma::accu(arma::pow(change_alpha, 2))) < alpha_tol){
       converged_iter = k;
       break;
@@ -287,7 +299,8 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
   return(Rcpp::List::create(
       Rcpp::Named("mu") = mu, Rcpp::Named("alpha") = alpha,
       Rcpp::Named("elbo") = ELBO, Rcpp::Named("converged_iter") = converged_iter,
-      Rcpp::Named("ssq") = ssq, Rcpp::Named("sbsq") = sbsq));
+      Rcpp::Named("ssq") = ssq, Rcpp::Named("sbsq") = sbsq,
+      Rcpp::Named("elbo_prog") = elbo_prog, Rcpp::Named("alpha_prog") = alpha_prog));
 }
 
 // -----------------------------------------------------------------------------

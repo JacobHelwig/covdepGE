@@ -3,7 +3,7 @@ rm(list = ls())
 source("generate_data.R")
 
 R_code <- !T # true if R code instead of C++ should be used
-package <- T # true if the package version is desired
+package <- F # true if the package version is desired
 discrete_data <- !T # true if discrete example is desired
 
 # generate data and covariates
@@ -77,3 +77,31 @@ same_probs
 # check for equality between ELBO
 all.equal(unname(unlist(lapply(out$CAVI_details, `[[`, "ELBO"))), out_original$original_ELBO)
 
+# visualizations of progress
+sapply(out$CAVI_details, `[[`, "iterations")
+iter1 <- out$CAVI_details$`Variable 1`$iterations
+prog1 <- out$progress$`Variable 1`
+elbo1 <- prog1$elbo[1:iter1]
+alpha1 <- prog1$alpha[1:iter1]
+elbo1_diff <- diff(elbo1)
+
+alpha1_sc <- scale(alpha1)
+elbo1_sc <- scale(elbo1_diff)
+
+library(ggplot2)
+ggplot(data.frame(iteration = 1:iter1, ELBO = c(NA, elbo1_sc), alpha = alpha1_sc)) +
+  geom_line(aes(iteration, ELBO), color = "tomato3") +
+  geom_line(aes(iteration, alpha), color = "dodgerblue") +
+  coord_cartesian(ylim = c(-0.3, -0.15))
+
+trunc_iter <- 7
+alpha1_trunc <- alpha1[trunc_iter:length(alpha1)]
+elbo1_trunc <- diff(elbo1[(trunc_iter - 1):length(elbo1)])
+
+alpha1_trunc_sc <- scale(alpha1_trunc, scale = F)
+elbo1_trunc_sc <- scale(elbo1_trunc, scale = F)
+
+ggplot(data.frame(iteration = trunc_iter:iter1, ELBO = elbo1_trunc_sc, alpha = alpha1_trunc_sc)) +
+  geom_line(aes(iteration, ELBO), color = "tomato3") +
+  geom_line(aes(iteration, alpha), color = "dodgerblue")# +
+  coord_cartesian(ylim = c(-0.3, -0.15))

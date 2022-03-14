@@ -159,7 +159,7 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
     best_pip <- out$pip
     # use the best hyperparameters from the grid search to perform a proper CAVI
     # until max_iter is reached or alpha converges
-    out <- cavi_c(y, D, X, out$mu, out$alpha, out$ssq, out$sbsq, best_pip,
+    out <- cavi_c(y, D, X, mu, alpha, out$ssq, out$sbsq, best_pip,
                   elbo_tol, alpha_tol, max_iter, F)
   }
 
@@ -171,6 +171,9 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
   hyp <- list(ssq = out$ssq, sbsq = out$sbsq, pip = best_pip, pip_cands = pip,
               ssq_cands = ssq, sbsq_cands = sbsq, grid_sz = nrow(hp))
 
+  # save progress of alpha and elbo
+  prog <- list(alpha = out$alpha_prog, elbo = out$elbo_prog)
+
   return(list(alpha_matrix = out$alpha, mu_matrix = out$mu,
-              cavi_details = cavi_details, hyperparameters = hyp))
+              cavi_details = cavi_details, hyperparameters = hyp, progress = prog))
 }
