@@ -54,7 +54,7 @@ for (j in 1:n_trials){
 
   # run the algorithm
   out <- tryCatch(covdepGE(X, Z, max_iter = 1e2, parallel = T, warnings = F,
-                           stop_cluster = F, alpha_tol = 1e-12, grid_search = F),
+                           stop_cluster = F, alpha_tol = 1e-12, elbo_tol = 1e-4),
                   error = function(msg) as.character(msg))
 
   # save the data and the results
@@ -69,22 +69,26 @@ doParallel::stopImplicitCluster()
 
 Sys.time() - start
 
-save(results, file = paste0("grid_sch_models_no_ELBO", n_trials, ".Rda"))
+#save(results, file = paste0("grid_sch_models", n_trials, ".Rda"))
 
 load("grid_sch_models27.Rda")
 results_gr_sch <- results
-load("analyses_demos_experiments/condition_number_analysis/grid_sch_models_no_ELBO27.Rda")
+load("grid_sch_models_no_ELBO27.Rda")
 results_no_elbo <- results
 
 for (j in 1:length(results_gr_sch)){
   res_j_grs <- results_gr_sch[[j]]$results
-  time_grs <- as.numeric(res_j$model_details$elapsed, units = "secs")
+  time_grs <- as.numeric(res_j_grs$model_details$elapsed, units = "secs")
 
   res_j_nelbo <- results_no_elbo[[j]]$results
   time_nelbo <- as.numeric(res_j_nelbo$model_details$elapsed, units = "secs")
 
-  identical(res_j_grs$graphs, res_j_nelbo$graphs)
+  print(identical(res_j_grs$graphs, res_j_nelbo$graphs))
 }
+
+plot(results_gr_sch[[3]]$results, title_sum = T)
+
+plot(results_no_elbo[[3]]$results, title_sum = T)
 
 dt <- blown_data[[1]]
 
@@ -96,3 +100,8 @@ dt <- blown_data[[1]]
 # min(sapply(lapply(lapply(results_gr_sch, `[[`, "results"), `[[`, "model_details"), `[[`, "ELBO"), na.rm = T)
 # mean(sapply(lapply(lapply(results0, `[[`, "results"), `[[`, "model_details"), `[[`, "num_unique"), na.rm = T)
 # mean(sapply(lapply(lapply(results_gr_sch, `[[`, "results"), `[[`, "model_details"), `[[`, "num_unique"), na.rm = T)
+results_no_elbo$trial1$results$model_details$elapsed
+
+lapply
+
+names(lapply(results_no_elbo, lapply, `[[`, "model_details")[1])

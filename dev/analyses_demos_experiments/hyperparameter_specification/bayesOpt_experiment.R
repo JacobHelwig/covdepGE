@@ -26,12 +26,12 @@ sbsq_upper <- 25 / (pi_hat * var_sum)
 ssq_upper <- 10 * var(y)
 
 # create an initial grid to get ELBO on
-var_lower <- 1e-3
-sbsq0 <- seq(var_lower, sbsq_upper, length.out = 5)
-ssq0 <- seq(var_lower, ssq_upper, length.out = 5)
+var_lower <- 1e-5
+sbsq0 <- exp(seq(log(var_lower), log(sbsq_upper), length.out = 5))
+ssq0 <- exp(seq(log(var_lower), log(ssq_upper), length.out = 5))
 pip_lower <- 0.01
 pip_upper <- 0.99
-pip0 <- seq(pip_lower, pip_upper, length.out = 5)
+pip0 <- exp(seq(log(pip_lower), log(pip_upper), length.out = 5))
 grid0 <- expand.grid(ssq = ssq0, sbsq = sbsq0, pip = pip0)
 
 # find ELBO at each point on the initial grid
@@ -49,9 +49,10 @@ grid0 <- cbind.data.frame(grid0, elbos)
 
 # filter out the elbo that are NaN
 grid0 <- grid0[!is.na(grid0$elbos), ]
+rownames(grid0) <- 1:nrow(grid0)
 
 # create a grid of candidate points
-d <- 10
+d <- 30
 ssq_cand <- exp(seq(log(var_lower), log(ssq_upper), length.out = d))
 sbsq_cand <- exp(seq(log(var_lower), log(sbsq_upper), length.out = d))
 pip_cand <- exp(seq(log(pip_lower), log(pip_upper), length.out = d))
@@ -67,7 +68,7 @@ grid_cand01 <- cbind(ssq_cand01, sbsq_cand01, pip_cand01)
 ssq01 <- (grid0$ssq - var_lower) / (ssq_upper - var_lower)
 sbsq01 <- (grid0$sbsq - var_lower) / (sbsq_upper - var_lower)
 pip01 <- (grid0$pip - pip_lower) / (pip_upper - pip_lower)
-grid0 <- cbind(grid0, ssq01, sbsq01, pip01)
+grid0 <- round(cbind(grid0, ssq01, sbsq01, pip01), 16)
 
 # fit a GP regression to obtain a surrogate to the ELBO as a function of the
 # hyperparameters

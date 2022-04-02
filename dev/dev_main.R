@@ -3,7 +3,7 @@ rm(list = ls())
 source("generate_data.R")
 
 R_code <- !T # true if R code instead of C++ should be used
-package <- F # true if the package version is desired
+package <- !F # true if the package version is desired
 discrete_data <- !T # true if discrete example is desired
 
 # generate data and covariates
@@ -103,5 +103,6 @@ elbo1_trunc_sc <- scale(elbo1_trunc, scale = F)
 
 ggplot(data.frame(iteration = trunc_iter:iter1, ELBO = elbo1_trunc_sc, alpha = alpha1_trunc_sc)) +
   geom_line(aes(iteration, ELBO), color = "tomato3") +
-  geom_line(aes(iteration, alpha), color = "dodgerblue")# +
-  coord_cartesian(ylim = c(-0.3, -0.15))
+  geom_line(aes(iteration, alpha), color = "dodgerblue")
+
+

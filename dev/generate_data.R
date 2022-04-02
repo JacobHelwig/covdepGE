@@ -109,6 +109,6 @@ generate_discrete <- function(seed = 1, n = 100, p = 10, lambda = 15,
   X2 <- MASS::mvrnorm(n %/% 2, rep(0, p + 1), Var2)
   data_mat <- rbind(X1, X2)
 
-  return(list(data = data_mat, covts = Z, true_covariance = list(Var1, Var2)))
+  return(list(data = data_mat, covts = Z, true_precision = list(solve(Var1), solve(Var2))))
 
 }
