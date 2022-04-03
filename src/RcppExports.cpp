@@ -11,6 +11,25 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// ELBO_calculator_c
+double ELBO_calculator_c(const arma::colvec& y, const arma::colvec& D, const arma::mat& X, const arma::colvec& ssq_var, const arma::colvec& mu, const arma::colvec& alpha, double ssq, double sbsq, double pip);
+RcppExport SEXP _covdepGE_ELBO_calculator_c(SEXP ySEXP, SEXP DSEXP, SEXP XSEXP, SEXP ssq_varSEXP, SEXP muSEXP, SEXP alphaSEXP, SEXP ssqSEXP, SEXP sbsqSEXP, SEXP pipSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::colvec& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type D(DSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type ssq_var(ssq_varSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type mu(muSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< double >::type ssq(ssqSEXP);
+    Rcpp::traits::input_parameter< double >::type sbsq(sbsqSEXP);
+    Rcpp::traits::input_parameter< double >::type pip(pipSEXP);
+    rcpp_result_gen = Rcpp::wrap(ELBO_calculator_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cavi_c
 Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X, const arma::mat& mu0, const arma::mat& alpha0, double ssq, double sbsq, double pip, double elbo_tol, double alpha_tol, int max_iter, bool grid_search);
 RcppExport SEXP _covdepGE_cavi_c(SEXP ySEXP, SEXP DSEXP, SEXP XSEXP, SEXP mu0SEXP, SEXP alpha0SEXP, SEXP ssqSEXP, SEXP sbsqSEXP, SEXP pipSEXP, SEXP elbo_tolSEXP, SEXP alpha_tolSEXP, SEXP max_iterSEXP, SEXP grid_searchSEXP) {
@@ -57,6 +76,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_covdepGE_ELBO_calculator_c", (DL_FUNC) &_covdepGE_ELBO_calculator_c, 9},
     {"_covdepGE_cavi_c", (DL_FUNC) &_covdepGE_cavi_c, 12},
     {"_covdepGE_grid_search_c", (DL_FUNC) &_covdepGE_grid_search_c, 12},
     {NULL, NULL, 0}

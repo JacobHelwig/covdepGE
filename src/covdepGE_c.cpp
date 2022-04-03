@@ -22,6 +22,7 @@ using namespace Rcpp;
 // Returns: double; ELBO for the l-th individual and j-th column fixed as the
 // response
 // -----------------------------------------------------------------------------
+// [[Rcpp::export]]
 double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
                           const arma::mat& X, const arma::colvec& ssq_var,
                           const arma::colvec& mu, const arma::colvec& alpha,
@@ -298,9 +299,10 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
   // iterations to converge, and the fitted variance hyperparameters
   return(Rcpp::List::create(
       Rcpp::Named("mu") = mu, Rcpp::Named("alpha") = alpha,
-      Rcpp::Named("elbo") = ELBO, Rcpp::Named("converged_iter") = converged_iter,
-      Rcpp::Named("ssq") = ssq, Rcpp::Named("sbsq") = sbsq,
-      Rcpp::Named("elbo_prog") = elbo_prog, Rcpp::Named("alpha_prog") = alpha_prog));
+      Rcpp::Named("ssq_var") = ssq_var, Rcpp::Named("elbo") = ELBO,
+      Rcpp::Named("converged_iter") = converged_iter, Rcpp::Named("ssq") = ssq,
+      Rcpp::Named("sbsq") = sbsq, Rcpp::Named("elbo_prog") = elbo_prog,
+      Rcpp::Named("alpha_prog") = alpha_prog));
 }
 
 // -----------------------------------------------------------------------------

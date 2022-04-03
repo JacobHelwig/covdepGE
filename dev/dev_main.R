@@ -3,7 +3,7 @@ rm(list = ls())
 source("generate_data.R")
 
 R_code <- !T # true if R code instead of C++ should be used
-package <- !F # true if the package version is desired
+package <- F # true if the package version is desired
 discrete_data <- !T # true if discrete example is desired
 
 # generate data and covariates
