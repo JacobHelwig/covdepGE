@@ -370,8 +370,13 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, ssq_p = NULL,
   sbsq_cands <- sapply(hp, `[[`, "sbsq_cands")
   pip <- sapply(hp, `[[`, "pip")
   pip_cands <- sapply(hp, `[[`, "pip_cands")
+  weights <- lapply(hp, `[[`, "weights")
+  elbo_theta <- lapply(hp, `[[`, "elbo")
+  hyper_grid <- lapply(hp, `[[`, "hyperparameter_grid")
   hyperparameters <- list(ssq = ssq, sbsq = sbsq, pip = pip, ssq_cands = ssq_cands,
-                          sbsq_cands = sbsq_cands, pip_cands = pip_cands)
+                          sbsq_cands = sbsq_cands, pip_cands = pip_cands,
+                          weight = weights, elbo = elbo_theta,
+                          hyperparameter_grid = hyper_grid)
 
   # find the number of final CAVIs that converged
   converged <- sapply(cavi_details, `[[`, "converged")

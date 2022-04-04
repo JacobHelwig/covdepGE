@@ -490,7 +490,7 @@ gg_inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 #' gg_inclusionCurve(out, 1, 2)
 #' gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
 ## -----------------------------------------------------------------------------
-plot.covdepGE <- function(x, graph_colors = NULL, title_sum = F, ...){
+plot.covdepGE <- function(x, graph_colors = NULL, title_sum = T, ...){
 
   # compatibility checks
   plot_checks(x, graph_colors)
