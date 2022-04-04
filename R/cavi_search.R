@@ -238,6 +238,12 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, ssq_p, ssq_q, sbsq, sbsq_p,
         elbo_theta[j] <- out$elbo
       }
 
+      # remove any of the NaN values
+      na_entries <- is.na(elbo_theta)
+      alpha_theta <- alpha_theta[!na_entries]
+      mu_theta <- mu_theta[!na_entries]
+      elbo_theta <- elbo_theta[!na_entries]
+
       # calculate the weights for each individual
       weights <- exp(elbo_theta - max(elbo_theta)) * hp$ratio
       weights <- weights / sum(weights)
