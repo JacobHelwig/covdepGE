@@ -86,7 +86,7 @@ p_sbsq <- function(t, lo_pi, dat){
 }
 
 # list for storing the results of each of the trials
-n_trials <- 2
+n_trials <- 10
 set.seed(1)
 
 # spin up parallel backend
@@ -97,7 +97,7 @@ tot_cores <- detectCores() - 10
 trial_cores <- 6
 
 # how many parallel executions can be run in parallel?
-outer_cores <- floor(tot_cores / trial_cores)
+(outer_cores <- floor(tot_cores / trial_cores))
 
 registerDoParallel(outer_cores)
 
@@ -151,7 +151,7 @@ res <- foreach(trial_ind = 1:n_trials,
                    pi_hat <- non0 / p
 
                    # find an upper bound for the grid of pi
-                   pi_upper <- min(0.9, 2 * pi_hat)
+                   pi_upper <- min(0.5, 2 * pi_hat)
 
                    # find the sum of the variances for each of the columns of X_mat
                    s2_sum <- sum(apply(X_j, 2, var))
@@ -191,17 +191,23 @@ res <- foreach(trial_ind = 1:n_trials,
                                        ssq = ssq_hp, ssq_p = ssq_p_mat,
                                        sbsq = sbsq_hp, sbsq_p = sbsq_p_mat,
                                        pip = pip_hp, pip_p = pip_p_mat,
-                                       grid_search = F, parallel = T, stop_cluster = F)
+                                       grid_search = F, parallel = T, stop_cluster = F, warnings = F)
 
                  # perform inference with flat priors
-                 out_unif_prior <- covdepGE(X, Z, nssq = nssq, nsbsq = nsbsq, npip = npip,
-                                            var_lower = var_lower, ssq_upper_mult = ssq_upper_mult,
-                                            grid_search = F, parallel = T, stop_cluster = F)
+                 out_unif_prior <- covdepGE(X, Z,
+                                            ssq = ssq_hp,
+                                            sbsq = sbsq_hp,
+                                            pip = pip_hp,
+                                            grid_search = F, parallel = T,
+                                            stop_cluster = F, warnings = F)
 
                  # perform inference with grid search
-                 out_grid <- covdepGE(X, Z, nssq = nssq, nsbsq = nsbsq, npip = npip,
-                                      var_lower = var_lower, ssq_upper_mult = ssq_upper_mult,
-                                      grid_search = T, parallel = T, stop_cluster = F)
+                 out_grid <- covdepGE(X, Z,
+                                      ssq = ssq_hp,
+                                      sbsq = sbsq_hp,
+                                      pip = pip_hp,
+                                      grid_search = T, parallel = T,
+                                      stop_cluster = F, warnings = F)
 
                  # return each of the resulting models and the data
                  list(data = dat, models = list(
@@ -210,5 +216,5 @@ res <- foreach(trial_ind = 1:n_trials,
                }
 
 # save res
-save(res, file = "impt_samp_models.Rda")
+save(res, file = "impt_samp_models_elbo_sum.Rda")
 Sys.time() - start

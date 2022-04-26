@@ -1,5 +1,5 @@
 ---
-title: "Importance Sampling Experiment"
+title: "Importance Sampling Experiment 2"
 date: "4/3/2022"
 output: pdf_document
 header-includes:
@@ -11,9 +11,13 @@ toc: T
 
 ## Executive Summary
 
-In this experiment, I compare a fully Bayesian model averaging approach to grid search. I find the performance of the model averaging approach to be significantly inferior to the grid search. Specifically, the model averaging results in the independence graph (a precision matrix of 0's) far too often.
+### Note
 
-Next steps will be to consider weightings calculated via the total ELBO across all $n$ weighted regressions, rather than individual specific sets of weights.
+This document differs from `imp_samp_exp_sum.pdf` in that the model averaging here is weighted differently. As briefly mentioned in the section titled "Fully Bayesian Approach", the importance weights are calculated using the sum of the ELBO across the individuals for each variable fixed as the response. This apparently helps with the issue observed in the case when the weights were calculated as specific to the individual, which led to the independence graph (precision matrix with all zero's) being estimated for many of the individuals.
+
+### Summary
+
+In this experiment, I compare a fully Bayesian model averaging approach to grid search. I find that the results for the fully Bayesian model have a similar sensitivity to grid search, however, have significantly lower specificity.
 
 ## Experiment Overview
 
@@ -46,6 +50,7 @@ sd_lo <- abs(log_odds((0.5 * p - 1) / p))
 # plot the prior on PIP
 ggplot() + geom_function(fun = function(x) dnorm(log_odds(x), mu_lo, sd_lo))
 ```
+
 Next, the prior on $\sigma^2_\beta$ was induced by the prior proportion of variance explained. First, a uniform(0, 1) prior is placed on the prior proportion of variance explained, $\hat{r}$, which is defined by:
 
 \begin{equation}
@@ -104,7 +109,13 @@ Let $w(\theta_i) = p(y|X, \theta_i)$. Then:
 \end{equation}
 \end{proposition}
 
-The approximation of $p(y|X, \theta_i)$ is made using $\exp(\textit{ELBO}_j^l(\theta_i))$, where $\textit{ELBO}_j^l(\theta_i)$ is the log-lower bound of the marginal likelihood $p(y|X,\theta_i)$ in the extraneous-covariate-weighted regression of $y$ on $X$ with respect to individual $l$.
+The approximation of $p(y|X, \theta_i)$ is made using $\exp(\textit{ELBO}_j(\theta_i))$, where $\textit{ELBO}_j(\theta_i)$ is defined as:
+
+\begin{equation}
+  \textit{ELBO}_j(\theta_i) = \sum_{l = 1}^n \textit{ELBO}^l_j(\theta_i)
+\end{equation}
+
+And $\textit{ELBO}_j^l(\theta_i)$ is the log-lower bound of the marginal likelihood $p(y|X,\theta_i)$ in the extraneous-covariate-weighted regression of $y$ on $X$ with respect to individual $l$.
 
 ## Grid generation
 
@@ -146,28 +157,39 @@ Then, the final grid is created by taking the cartesian product between each of 
 
 ## Results
 
-Detailed trial results are given below. It is readily apparent that a major shortcoming of the model averaging approach is that the sensitivity is too low. That is, `prior` and `unif_prior` produce graphs with no edges. 
+Detailed trial results are given below. Although the issue with independence graphs has been resolved, there is now an issue of too many false positives for both of the model averaging approaches.
 
-It is unclear why this is occuring. A potential explanation is some mistake in the code. However, this seems unlikely, since the average ELBO for each of the models is displayed. This is calculated by summing the weighted average of the ELBO across the individuals. If there were some mistake made in the calculation of the weights, then the average ELBO would presumably be different than the ELBO for grid search - however, the ELBO of the averaged models is relatively close to that of the grid search.
-
-## Potential Next Steps
-
-Next steps could be to calculate weights at the level of the variable fixed as the response instead of the individual level. Then, the weights would be calculated the same as before, except instead of approximating $p(y|X, \theta_i)$ by $\exp(\textit{ELBO}_j^l(\theta_i))$, $p(y|X, \theta_i)$ could be approximated by $\exp(\textit{ELBO}_j(\theta_i))$, where:
-
-\begin{equation}
-  \textit{ELBO}_j(\theta_i) = \sum_{l = 1}^n \textit{ELBO}^l_j(\theta_i)
-\end{equation}
-
-A potential issue with this is that it is unclear whether proposition 1 would still hold. 
+Another potential issue is that it is unclear whether proposition 1 will still hold, since I am now approximating the marginal log-likelihood with the total ELBO across all individuals, instead of calculating weights to be individual-specific. 
 
 ## Detailed Results
 
+I first visualize the true graphs:
+
 ```{r, echo = F}
 library(covdepGE)
-load("impt_samp_models.Rda")
-#load("impt_samp_models_pipt2.Rda")
+library(ggplot2)
+load("impt_samp_models_elbo_sum.Rda")
+
+# get the graphs
+gr <- unique(lapply(res[[1]]$data$true_precision, function(
+  mat) ((mat - diag(diag(mat))) != 0) * 1))
+titles <- paste("Individuals", c("1,...,60", "61,...,120", "121,...,180"))
+lapply(1:3, function(gr_ind) gg_adjMat(gr[[gr_ind]]) + ggtitle(titles[gr_ind]))
+```
+Next, I visualize the distribution of the weights in all trials. Since there are 1,000 hyperparameters, 10 trials, and 5 variables, there are 50,000 total weights in this histogram.
+
+```{r, echo = F}
 names(res) <- paste0("trial", 1:length(res))
 mods <- lapply(res, `[[`, "models")
+weights <- lapply(1:length(mods), function(trial_ind) (mods[[paste0("trial", trial_ind)]]$prior$hyperparameters$weight))
+sorted_weights <- Reduce("+", lapply(unlist(weights, F), sort)) / (length(mods) * 5)
+ggplot() + geom_histogram(aes(unlist(weights))) + 
+  scale_y_continuous(trans = "log", breaks = c(3, 5, 10, 100, 60000)) + xlab("Weights")
+```
+
+Now, the graphs for each of the trials:
+
+```{r, echo = F}
 for (j in 1:length(mods)){
   cat(rep("-", 80), "\nTRIAL ", j, "\n\nprior\n")
   print(mods[[j]]$prior)
@@ -180,5 +202,8 @@ for (j in 1:length(mods)){
   print(plot(mods[[j]]$grid, title_sum = T))
 }
 
-plot(mods[[2]]$prior)
+ind <- 2
+plot(mods[[ind]]$prior)
+plot(mods[[ind]]$unif_prior)
+plot(mods[[ind]]$grid)
 ```
