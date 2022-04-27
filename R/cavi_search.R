@@ -88,10 +88,9 @@
 ## individual in the final model. Column j corresponds to the regression with
 ## the j-th variable fixed as the response
 ## -----------------------------------------------------------------------------
-cavi_search <- function(X, Z, D, y, alpha, mu, ssq, ssq_p, ssq_q, sbsq, sbsq_p,
-                        sbsq_q, pip, pip_p, pip_q, nssq, nsbsq, npip,
-                        ssq_upper_mult, var_lower, grid_search, elbo_tol,
-                        alpha_tol, max_iter, warnings, resp_index, CS, R){
+cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip,
+                        ssq_upper_mult, var_lower, elbo_tol, alpha_tol,
+                        max_iter, warnings, resp_index, CS, R){
 
   # get the dimensions of the data and hyperparameter candidates
   n <- nrow(X)
@@ -141,11 +140,6 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, ssq_p, ssq_q, sbsq, sbsq_p,
     # create the grid
     hp <- expand.grid(pip = pip, ssq = ssq, sbsq = sbsq)
 
-    # take the importance density and prior density to be uniform; then, the ratio
-    # of the prior to the importance density for each hyperparameter setting is
-    # one
-    hp$ratio <- 1
-
   }else{
 
     # otherwise, the user has supplied the hyperparameters; take the resp_index
@@ -153,122 +147,44 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, ssq_p, ssq_q, sbsq, sbsq_p,
     hp <- data.frame(pip = pip[ , resp_index], ssq = ssq[ , resp_index],
                      sbsq = sbsq[ , resp_index])
 
-    # if any of the prior or importance densities have not been specified, take
-    # them to be uniform
-    if (is.null(ssq_p)) ssq_p <- matrix(1, nrow(ssq), p + 1)
-    if (is.null(sbsq_p)) sbsq_p <- matrix(1, nrow(sbsq), p + 1)
-    if (is.null(pip_p)) pip_p <- matrix(1, nrow(pip), p + 1)
-    if (is.null(ssq_q)) ssq_q <- matrix(1, nrow(ssq), p + 1)
-    if (is.null(sbsq_q)) sbsq_q <- matrix(1, nrow(sbsq), p + 1)
-    if (is.null(pip_q)) pip_q <- matrix(1, nrow(pip), p + 1)
-
-    # calculate the joint prior and joint importance densities for each of the
-    # hyperparameter settings
-    hp_prior <- ssq_p[ , resp_index] * sbsq_p[ , resp_index] * pip_p[ , resp_index]
-    hp_impt <- ssq_q[ , resp_index] * sbsq_q[ , resp_index] * pip_q[ , resp_index]
-
-    # calculate the ratio of the joint prior density to the joint importance
-    # density for each of the hyperparamter settings
-    hp$ratio <- hp_prior / hp_impt
   }
 
   # perform CAVI for each of the hyperparameter settings
-  if (grid_search){
+  # use grid search to select hyperparameters
+  if (R){
+    out_grid <- grid_search_R(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip,
+                              elbo_tol, alpha_tol, max_iter, T)
+  }else{
+    out_grid <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip,
+                              elbo_tol, alpha_tol, max_iter, T)
+  }
 
-    # use grid search to select hyperparameters
-    if (R){
-      out <- grid_search_R(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip, elbo_tol,
-                           alpha_tol, max_iter, grid_search)
-    }else{
-      out <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip, elbo_tol,
-                           alpha_tol, max_iter, grid_search)
-    }
+  # add the ELBO for each of the grid points to the hyperparameter grid
+  hp$elbo <- out_grid$elbo_vec
 
-    # use the best hyperparameters from the grid search to perform a proper
-    # CAVI until max_iter is reached or alpha converges
-    if (R){
-      out <- cavi_R(y, D, X, out$mu, out$alpha, out$ssq, out$sbsq, out$pip,
-                    elbo_tol, alpha_tol, max_iter, F)
-    }else{
-      out <- cavi_c(y, D, X, out$mu, out$alpha, out$ssq, out$sbsq, out$pip,
-                    elbo_tol, alpha_tol, max_iter, F)
-    }
+  # use the best hyperparameters from the grid search to perform a proper
+  # CAVI until max_iter is reached or alpha converges
+  if (R){
+    out <- cavi_R(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
+                  out_grid$sbsq, out_grid$pip, elbo_tol, alpha_tol, max_iter, F)
+  }else{
+    out <- cavi_c(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
+                  out_grid$sbsq, out_grid$pip, elbo_tol, alpha_tol, max_iter, F)
+  }
 
-    alpha <- out$alpha
-    mu <- out$mu
+  # save CAVI details
+  cavi_details <- list(ELBO = out$elbo,
+                       iterations = out$converged_iter + out_grid$iterations,
+                       converged = out$converged_iter < max_iter)
 
-    # save CAVI details
-    cavi_details <- list(ELBO = out$elbo, iterations = out$converged_iter,
-                         converged = out$converged_iter < max_iter)
+  # save hyperparameter details
+  hyp <- list(ssq = out_grid$ssq, sbsq = out_grid$sbsq, pip = out_grid$pip,
+              grid = hp, grid_sz = nrow(hp))
 
-    # save hyperparameter details
-    hyp <- list(ssq = out$ssq, sbsq = out$sbsq, pip = out$pip, pip_cands = pip,
-                ssq_cands = ssq, sbsq_cands = sbsq, grid_sz = nrow(hp))
+  # save progress of alpha and elbo
+  prog <- list(alpha = out$alpha_prog, elbo = out$elbo_prog)
 
-    # save progress of alpha and elbo
-    prog <- list(alpha = out$alpha_prog, elbo = out$elbo_prog)
-
-    }else{
-
-      # apply importance sampling to average over hyperparameters
-
-      # create lists/ vector for storing the alpha matrices and mu matrices/
-      # elbo
-      alpha_theta <- mu_theta <- vector("list", nrow(hp))
-      elbo_theta <- rep(NA, nrow(hp))
-
-      # iterate over each of the hyperparameter settings
-      for (j in 1:nrow(hp)){
-
-        # fix hyperparameter setting
-        hp_j <- hp[j , c("ssq", "sbsq", "pip")]
-
-        # perform CAVI for the hyperparameter setting
-        if (R){
-          out <- cavi_R(y, D, X, mu, alpha, hp_j$ssq, hp_j$sbsq, hp_j$pip,
-                        elbo_tol, alpha_tol, max_iter, F)
-        } else{
-          out <- cavi_c(y, D, X, mu, alpha, hp_j$ssq, hp_j$sbsq, hp_j$pip,
-                        elbo_tol, alpha_tol, max_iter, F)
-        }
-
-        # save the alpha and mu matrices and elbo
-        alpha_theta[[j]] <- out$alpha
-        mu_theta[[j]] <- out$mu
-        elbo_theta[j] <- out$elbo
-      }
-
-      # calculate the weights for each individual
-      weights <- exp(elbo_theta - max(elbo_theta)) * hp$ratio
-      weights <- weights / sum(weights)
-
-      # calculate the weighted average of the alpha and mu matrices and elbo
-      alpha_theta <- lapply(1:nrow(hp), function(theta_ind) weights[theta_ind] *
-                              alpha_theta[[theta_ind]])
-      mu_theta <- lapply(1:nrow(hp), function(theta_ind) weights[theta_ind] *
-                           mu_theta[[theta_ind]])
-      elbo_theta_w <- weights * elbo_theta
-
-      # sum across the alpha and mu matrices to obtain the final alpha and
-      # mu matrices
-      alpha <- Reduce("+", alpha_theta)
-      mu <- Reduce("+", mu_theta)
-
-      # sum across the ELBO to obtain the final ELBO
-      elbo <- sum(elbo_theta_w)
-
-      # save CAVI details
-      cavi_details <- list(ELBO = elbo, converged = T)
-
-      # save hyperparameter details
-      hyp <- list(grid_sz = nrow(hp), weights = weights, elbo = elbo_theta,
-                  hyperparameter_grid = hp)
-
-      # save progress of alpha and elbo
-      prog <- NA
-    }
-
-  return(list(alpha_matrix = alpha, mu_matrix = mu,
+  return(list(alpha_matrix = out$alpha, mu_matrix = out$mu,
               cavi_details = cavi_details, hyperparameters = hyp,
               progress = prog))
 }

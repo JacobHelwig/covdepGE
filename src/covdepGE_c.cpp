@@ -300,8 +300,8 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
   return(Rcpp::List::create(
       Rcpp::Named("mu") = mu, Rcpp::Named("alpha") = alpha,
       Rcpp::Named("ssq_var") = ssq_var, Rcpp::Named("elbo") = ELBO,
-      Rcpp::Named("converged_iter") = converged_iter, Rcpp::Named("ssq") = ssq,
-      Rcpp::Named("sbsq") = sbsq, Rcpp::Named("elbo_prog") = elbo_prog,
+      Rcpp::Named("converged_iter") = converged_iter,
+      Rcpp::Named("elbo_prog") = elbo_prog,
       Rcpp::Named("alpha_prog") = alpha_prog));
 }
 
@@ -348,8 +348,8 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
   // the current best ELBO
   arma::mat mu_best;
   arma::mat alpha_best;
-  double ssq_best;
-  double sbsq_best;
+  double ssq_best = -1;
+  double sbsq_best = -1;
   double pip_best = -1;
 
   // storage for best iterations

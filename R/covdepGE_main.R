@@ -205,15 +205,14 @@
 #' 2. Dasgupta S., Pati D., Srivastava A., *A Two-Step Geometric Framework For
 #' Density Modeling*, Statistica Sinica, 2020
 ## -----------------------------------------------------------------------------
-covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, ssq_p = NULL,
-                     ssq_q = NULL, sbsq = NULL, sbsq_p = NULL, sbsq_q = NULL,
-                     pip = NULL, pip_p = NULL, pip_q = NULL, nssq = 5, nsbsq = 5,
-                     npip = 5, ssq_upper_mult = 4, var_lower = 1e-3,
-                     grid_search = T, tau = 0.1, kde = T, norm = 2, scale = T,
-                     elbo_tol = 1e-1, alpha_tol = 1e-5, max_iter = 100,
-                     edge_threshold = 0.5, sym_method = "mean", parallel = F,
-                     num_workers = NULL, stop_cluster = T, prog_bar = T,
-                     warnings = T, CS = F, R = F){
+covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, sbsq = NULL,
+                     pip = NULL, nssq = 5, nsbsq = 5, npip = 5,
+                     ssq_upper_mult = 4, var_lower = 1e-3, tau = 0.1, kde = T,
+                     norm = 2, center_data = T, scale_Z = T, elbo_tol = 1e-1,
+                     alpha_tol = 1e-5, max_iter = 100, edge_threshold = 0.5,
+                     sym_method = "mean", parallel = F, num_workers = NULL,
+                     stop_cluster = T, prog_bar = T, warnings = T, CS = F,
+                     R = F){
 
   start_time <- Sys.time()
 
@@ -228,20 +227,16 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, ssq_p = NULL,
   # get sample size and number of parameters
   n <- nrow(data); p <- ncol(data) - 1
 
-  # if the hyperparameters, importance densities, or prior densities are
-  # m-vectors, change to m x p matrix
+  # if the hyperparameters are m-vectors, change to m x p matrix
   if (is.vector(ssq)) ssq <- matrix(ssq, length(ssq), p + 1)
   if (is.vector(sbsq)) sbsq <- matrix(sbsq, length(sbsq), p + 1)
   if (is.vector(pip)) pip <- matrix(pip, length(pip), p + 1)
-  if (is.vector(ssq_p)) ssq_p <- matrix(ssq_p, length(ssq_p), p + 1)
-  if (is.vector(sbsq_p)) sbsq_p <- matrix(sbsq_p, length(sbsq_p), p + 1)
-  if (is.vector(pip_p)) pip_p <- matrix(pip_p, length(pip_p), p + 1)
-  if (is.vector(ssq_q)) ssq_q <- matrix(ssq_q, length(ssq_q), p + 1)
-  if (is.vector(sbsq_q)) sbsq_q <- matrix(sbsq_q, length(sbsq_q), p + 1)
-  if (is.vector(pip_q)) pip_q <- matrix(pip_q, length(pip_q), p + 1)
 
   # if the covariates should be centered and scaled, do so ([ , ] for attributes)
-  if (scale) Z <- matrix(scale(Z)[ , ], n)
+  if (scale_Z) Z <- matrix(scale(Z)[ , ], n)
+
+  # if the data should be centered, do so
+  if (center_data) data <- matrix(scale(data, T, F)[ , ], n)
 
   # get weights
   D <- get_weights(Z, norm, kde, tau)
@@ -300,10 +295,9 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, ssq_p = NULL,
             X <- data[, -resp_index]
 
             # perform the grid search and final CAVI; save the results to res
-            cavi_search(X, Z, D, y, alpha, mu, ssq, ssq_p, ssq_q, sbsq, sbsq_p,
-                        sbsq_q, pip, pip_p, pip_q, nssq, nsbsq, npip,
-                        ssq_upper_mult, var_lower, grid_search, elbo_tol,
-                        alpha_tol, max_iter, warnings, resp_index, CS, R)
+            cavi_search(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip,
+                        ssq_upper_mult, var_lower, elbo_tol, alpha_tol, max_iter,
+                        warnings, resp_index, CS, R)
             }
           )
       },
@@ -335,12 +329,10 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, ssq_p = NULL,
       X <- data[, -resp_index]
 
       # perform the grid search and final CAVI; save the results to res
-      res[[resp_index]] <- cavi_search(X, Z, D, y, alpha, mu, ssq, ssq_p, ssq_q,
-                                       sbsq, sbsq_p, sbsq_q, pip, pip_p, pip_q,
+      res[[resp_index]] <- cavi_search(X, Z, D, y, alpha, mu, ssq, sbsq, pip,
                                        nssq, nsbsq, npip, ssq_upper_mult,
-                                       var_lower, grid_search, elbo_tol,
-                                       alpha_tol, max_iter, warnings, resp_index,
-                                       CS, R)
+                                       var_lower, elbo_tol, alpha_tol, max_iter,
+                                       warnings, resp_index, CS, R)
 
       # update the progress bar
       if (prog_bar) utils::setTxtProgressBar(pb, resp_index)
@@ -362,21 +354,6 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, ssq_p = NULL,
   # gather progress of ELBO and alpha
   progress <- lapply(res, `[[`, "progress")
   names(progress) <- names(hp)
-
-  # organize the hyperparameters into matrices
-  ssq <- sapply(hp, `[[`, "ssq")
-  ssq_cands <- sapply(hp, `[[`, "ssq_cands")
-  sbsq <- sapply(hp, `[[`, "sbsq")
-  sbsq_cands <- sapply(hp, `[[`, "sbsq_cands")
-  pip <- sapply(hp, `[[`, "pip")
-  pip_cands <- sapply(hp, `[[`, "pip_cands")
-  weights <- lapply(hp, `[[`, "weights")
-  elbo_theta <- lapply(hp, `[[`, "elbo")
-  hyper_grid <- lapply(hp, `[[`, "hyperparameter_grid")
-  hyperparameters <- list(ssq = ssq, sbsq = sbsq, pip = pip, ssq_cands = ssq_cands,
-                          sbsq_cands = sbsq_cands, pip_cands = pip_cands,
-                          weight = weights, elbo = elbo_theta,
-                          hyperparameter_grid = hyper_grid)
 
   # find the number of final CAVIs that converged
   converged <- sapply(cavi_details, `[[`, "converged")
@@ -464,9 +441,10 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, ssq_p = NULL,
                         converged = sum(converged), grid_size = grid_sz)
 
   # create a named vector to return the function arguments
-  args <- c(kde = kde, norm = norm, scale = scale, elbo_tol = elbo_tol,
-            alpha_tol = alpha_tol, edge_threshold = edge_threshold,
-            sym_method = sym_method, parallel = parallel)
+  args <- c(kde = kde, norm = norm, center_data = center_data, scale_Z = scale_Z,
+            elbo_tol = elbo_tol, alpha_tol = alpha_tol,
+            edge_threshold = edge_threshold, sym_method = sym_method,
+            parallel = parallel)
 
   # record the elapsed time and add it to the model details
   model_details[["elapsed"]] <- Sys.time() - start_time
@@ -474,7 +452,7 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, ssq_p = NULL,
   # define the list of return values
   ret <- list(graphs = graphs, inclusion_probs = incl_probs,
               alpha_matrices = incl_probs_asym, unique_graphs = unique_graphs,
-              mu_matrices = mu_matrices, hyperparameters = hyperparameters,
+              mu_matrices = mu_matrices, hyperparameters = hp,
               CAVI_details = cavi_details, model_details = model_details,
               weights = D, bandwidths = bandwidths, arguments = args,
               progress = progress)
