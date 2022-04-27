@@ -90,7 +90,7 @@
 ## -----------------------------------------------------------------------------
 cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip,
                         ssq_upper_mult, var_lower, elbo_tol, alpha_tol,
-                        max_iter, warnings, resp_index, CS, R){
+                        max_iter, warnings, resp_index, CS, R, grid_search){
 
   # get the dimensions of the data and hyperparameter candidates
   n <- nrow(X)
@@ -115,27 +115,57 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
   # if the hyperparameter grid has not been fully supplied, create it
   if (any(is.null(c(ssq, sbsq, pip)))){
 
-    # find the upper bound for the grid of ssq
-    ssq_upper <- ssq_upper_mult * var(y)
+    # if either sbsq or pip has not been supplied, then use LASSO to estimate
+    # the proportion of non-zero coefficients
+    if (any(is.null(c(sbsq, pip)))){
+      lasso <- glmnet::cv.glmnet(X, y)
+      non0 <- sum(coef(lasso, s = "lambda.min")[-1] != 0)
+      non0 <- max(non0, 1)
+      pi_hat <- non0 / p
+    }
 
-    # find the lasso estimate to the proportion of non-zero coefficients
-    lasso <- glmnet::cv.glmnet(X, y)
-    non0 <- sum(coef(lasso, s = "lambda.min")[-1] != 0)
-    non0 <- max(non0, 1)
-    pi_hat <- non0 / p
+    # if ssq has not been supplied, create the grid; otherwise, find the unique
+    # values of the supplied ssq
+    if (is.null(ssq)){
 
-    # find the sum of the variances for each of the columns of X_mat
-    s2_sum <- sum(apply(X, 2, var))
+      # find the upper bound for the grid of ssq
+      ssq_upper <- ssq_upper_mult * var(y)
 
-    # find the upper bound for the grid of sbsq
-    sbsq_upper <- 25 / (pi_hat * s2_sum)
+      # create the grid candidates for ssq
+      ssq <- exp(seq(log(var_lower), log(ssq_upper), length.out = nssq))
 
-    # create the grid candidates for ssq and sbsq
-    ssq <- exp(seq(log(var_lower), log(ssq_upper), length.out = nssq))
-    sbsq <- exp(seq(log(var_lower), log(sbsq_upper), length.out = nsbsq))
+    }else{
+      ssq <- unique(ssq[ , resp_index])
+    }
 
-    # create posterior inclusion probability grid
-    pip <- exp(seq(log(0.01), log(min(0.9, 2 * pi_hat)), length.out = npip))
+    # if sbsq has not been supplied, create the grid; otherwise, find the unique
+    # values of the supplied sbsq
+    if (is.null(sbsq)){
+
+      # find the sum of the variances for each of the columns of X_mat
+      s2_sum <- sum(apply(X, 2, var))
+
+      # find the upper bound for the grid of sbsq
+      sbsq_upper <- 25 / (pi_hat * s2_sum)
+
+      # create the grid candidates for ssq and sbsq
+      sbsq <- exp(seq(log(var_lower), log(sbsq_upper), length.out = nsbsq))
+
+    }else{
+      sbsq <- unique(sbsq[ , resp_index])
+    }
+
+    # if pip has not been supplied, create the grid; otherwise, find the unique
+    # values of the supplied pip
+    if (is.null(pip)){
+
+      # create posterior inclusion probability grid
+      pip <- exp(seq(log(0.01), log(min(0.9, 2 * max(pi_hat, 0.05))), length.out = npip))
+
+
+    }else{
+      pip <- unique(pip[ , resp_index])
+    }
 
     # create the grid
     hp <- expand.grid(pip = pip, ssq = ssq, sbsq = sbsq)
@@ -149,40 +179,144 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
 
   }
 
-  # perform CAVI for each of the hyperparameter settings
-  # use grid search to select hyperparameters
-  if (R){
-    out_grid <- grid_search_R(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip,
-                              elbo_tol, alpha_tol, max_iter, T)
+  # perform grid search to select the best hyperparameters
+  if (grid_search){
+
+    # perform CAVI for each of the hyperparameter settings
+    # use grid search to select hyperparameters
+    if (R){
+      out_grid <- grid_search_R(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip,
+                                elbo_tol, alpha_tol, max_iter, T)
+    }else{
+      out_grid <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip,
+                                elbo_tol, alpha_tol, max_iter, T)
+    }
+
+    # add the ELBO for each of the grid points to the hyperparameter grid
+    hp$elbo <- out_grid$elbo_vec
+
+    # use the best hyperparameters from the grid search to perform a proper
+    # CAVI until max_iter is reached or alpha converges
+    if (R){
+      out <- cavi_R(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
+                    out_grid$sbsq, out_grid$pip, elbo_tol, alpha_tol, max_iter, F)
+    }else{
+      out <- cavi_c(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
+                    out_grid$sbsq, out_grid$pip, elbo_tol, alpha_tol, max_iter, F)
+    }
+
+    # save CAVI details
+    cavi_details <- list(ELBO = out$elbo,
+                         iterations = out$converged_iter + out_grid$iterations,
+                         converged = out$converged_iter < max_iter)
+
+    # save hyperparameter details
+    hyp <- list(ssq = out_grid$ssq, sbsq = out_grid$sbsq, pip = out_grid$pip,
+                grid = hp, grid_sz = nrow(hp))
+
+    # save progress of alpha and elbo
+    prog <- list(alpha = out$alpha_prog, elbo = out$elbo_prog)
+
   }else{
-    out_grid <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip,
-                              elbo_tol, alpha_tol, max_iter, T)
+
+    # otherwise, use the model averaging scheme
+
+    # re-define the hyperparameters
+    pip <- unique(hp$pip)
+    ssq <- unique(hp$ssq)
+    sbsq <- unique(hp$ssq)
+    hp <- expand.grid(ssq = ssq, sbsq = sbsq)
+
+    # create lists for storing the alpha matrices, mu matrices and elbos
+    elbo_theta <- alpha_theta <- mu_theta <- vector("list", length(pip))
+
+    # data.frame for storing the final hyperparameters
+    hyp <- data.frame(ssq = NA, sbsq = NA, pip = pip, elbo = NA)
+
+    # iterate over each of the pip candidates
+    for (j in 1:length(pip)){
+
+      # fix the j-th value of the pip
+      pip_j <- pip[j]
+
+      # grid search over the ssq and sbsq grid
+      out_grid <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq,
+                                rep(pip_j, nrow(hp)), elbo_tol, alpha_tol,
+                                max_iter, T)
+
+      # use the best hyperparameters from the grid search to perform a proper
+      # CAVI until max_iter is reached or alpha converges
+      out <- cavi_c(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
+                    out_grid$sbsq, pip_j, elbo_tol, alpha_tol, max_iter, F)
+
+      # save the final hyperparameters and elbo
+      hyp[j, c("ssq", "sbsq", "elbo")] <- c(out_grid$ssq, out_grid$sbsq, out$elbo)
+
+      # save the alpha and mu matrices
+      alpha_theta[[j]] <- out$alpha
+      mu_theta[[j]] <- out$mu
+
+      # calculate the elbo for each individual under the current hyperparameter
+      # setting and save
+      elbo_l <- rep(NA, n)
+      for (l in 1:n){
+        elbo_l[l] <- ELBO_calculator_c(y, D[ , l], X, t(out$ssq_var[l, ]),
+                                       t(out$mu[l, ]), t(out$alpha[l, ]),
+                                       out_grid$ssq, out_grid$sbsq, pip_j)
+      }
+
+      # save the ELBO
+      elbo_theta[[j]] <- elbo_l
+    }
+
+    # vector for saving the average elbo for each individual
+    elbo_avg <- rep(NA, n)
+
+    # data.frame for saving weights
+    weights <- data.frame(matrix(NA, n, length(pip)))
+    colnames(weights) <- pip
+
+    # calculate the weights for each individual
+    for (l in 1:n){
+
+      # retrieve the elbo for the l-th individual for each hyperparameter
+      # setting
+      elbo_l <- sapply(elbo_theta, `[`, l)
+
+      # subtract the maximum value from each and exponentiate to get the lower
+      # bound for the likelihood
+      lik_l <- exp(elbo_l - max(elbo_l))
+
+      # normalize the weights
+      weight <- lik_l / sum(lik_l)
+
+      # save the weights
+      weights[l, ] <- weight
+
+      # calculate the average elbo for this individual
+      elbo_avg[l] <- sum(elbo_l * weight)
+
+      # multiply the l-th row of each of the alpha and mu matrices and elbo
+      # by the corresponding weight; also, weight the elbo
+      for (k in 1:length(alpha_theta)){
+        alpha_theta[[k]][l, ] <- weight[k] * alpha_theta[[k]][l, ]
+        mu_theta[[k]][l, ] <- weight[k] * mu_theta[[k]][l, ]
+      }
+    }
+
+    # sum across the alpha and mu matrices to obtain the final alpha and
+    # mu matrices
+    alpha <- Reduce("+", alpha_theta)
+    mu <- Reduce("+", mu_theta)
+
+    # sum across the ELBO to obtain the final ELBO
+    elbo <- sum(elbo_avg)
+
+    return(list(alpha_matrix = alpha, mu_matrix = mu,
+                cavi_details = list(converged = T, ELBO = elbo),
+                hyperparameters = list(hyperparameters = hyp, weights = weights),
+                progress = list()))
   }
-
-  # add the ELBO for each of the grid points to the hyperparameter grid
-  hp$elbo <- out_grid$elbo_vec
-
-  # use the best hyperparameters from the grid search to perform a proper
-  # CAVI until max_iter is reached or alpha converges
-  if (R){
-    out <- cavi_R(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
-                  out_grid$sbsq, out_grid$pip, elbo_tol, alpha_tol, max_iter, F)
-  }else{
-    out <- cavi_c(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
-                  out_grid$sbsq, out_grid$pip, elbo_tol, alpha_tol, max_iter, F)
-  }
-
-  # save CAVI details
-  cavi_details <- list(ELBO = out$elbo,
-                       iterations = out$converged_iter + out_grid$iterations,
-                       converged = out$converged_iter < max_iter)
-
-  # save hyperparameter details
-  hyp <- list(ssq = out_grid$ssq, sbsq = out_grid$sbsq, pip = out_grid$pip,
-              grid = hp, grid_sz = nrow(hp))
-
-  # save progress of alpha and elbo
-  prog <- list(alpha = out$alpha_prog, elbo = out$elbo_prog)
 
   return(list(alpha_matrix = out$alpha, mu_matrix = out$mu,
               cavi_details = cavi_details, hyperparameters = hyp,
