@@ -71,9 +71,10 @@ generate_continuous <- function(n1 = 60, n2 = 60, n3 = 60, p = 4){
 set.seed(1)
 
 # create the hyperparameter grid
-pip <- c(1e-5, 1e-4, 1e-3, 0.01, 0.025, seq(0.05, 0.95, 0.1), 0.99, 0.999, 0.9999, 0.99999)
+pip <- c(1e-5, 1e-4, 1e-3, 0.01, 0.025, seq(0.05, 0.40, 0.05))
 sbsq <- ssq <- c(1e-05, 1e-04, 0.001, 0.01, 0.025, seq(0.05, 1, 0.05), seq(1, 3, 0.5), 5, 10)
 hp_grid <- expand.grid(ssq = ssq, sbsq = sbsq, pip = pip)
+hp_grid <- hp_grid[sample(nrow(hp_grid), 100), ]
 
 # spin up parallel backend
 # find the available number of cores
@@ -93,16 +94,21 @@ res <- foreach(trial_ind = 1:n_trials, .packages = "covdepGE") %dorng%{
                  Z <- dat$covts
 
                  # fit both models
-                 out <- tryCatch(covdepGE(X, Z, ssq = hp_grid$ssq,
-                                          sbsq = hp_grid$sbsq, pip = hp_grid$pip, prog_bar = F),
+                 out_grid <- tryCatch(covdepGE(X, Z, ssq = hp_grid$ssq,
+                                          sbsq = hp_grid$sbsq, pip = hp_grid$pip,
+                                          prog_bar = F),
                                  error = function(msg) msg)
+                 out_impt <- tryCatch(covdepGE(X, Z, ssq = hp_grid$ssq,
+                                               sbsq = hp_grid$sbsq, pip = hp_grid$pip,
+                                               grid_search = F, prog_bar = F),
+                                      error = function(msg) msg)
                  cat(trial_ind, "...")
 
                  # return each of the resulting models and the data
-                 list(data = dat, out = out)
+                 list(data = dat, out_grid = out_grid, out_impt = out_impt)
                }
 
 # save res
-save(res, file = "opt_pi2_5var_corelbo.Rda")
+save(res, file = "importance_sampling3.Rda")
 Sys.time() - start
 stopImplicitCluster()
