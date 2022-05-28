@@ -28,25 +28,25 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
                           const arma::colvec& mu, const arma::colvec& alpha,
                           double ssq, double sbsq, double pip) {
 
-  // square of: y minus X matrix-multiplied with element-wise product of mu and
-  // alpha
-  arma::colvec y_Xmualpha_sq = arma::pow(y - (X * (mu % alpha)), 2);
-
   // square of mu vector
   arma::colvec mu_sq = arma::pow(mu, 2);
 
-  // calculate each of the terms that sum to ELBO
-  double t1 = -sum(D % y_Xmualpha_sq) / (2 * ssq);
-  double t2 = (-sum(D % (arma::pow(X, 2) * (alpha % (mu_sq + ssq_var) -
-               arma::pow(alpha, 2) % mu_sq))) /(2 * ssq));
-  double t3 = sum(alpha % (1 + arma::log(ssq_var))) / 2;
-  double t4 = (-sum(alpha % arma::log((alpha + 0.000001) / pip) +
-               (1 - alpha) % log((1 - alpha + 0.000001) / (1 - pip))));
-  double t5 = (-sum(alpha % ((mu_sq + ssq_var) / (2 * ssq * sbsq) +
-               log(ssq * sbsq) / 2)));
-  double t6 = X.n_rows / 2 * log(1 / (2 * M_PI * ssq));
+  // calculate the expected value of the log-prior under q
+  double eqpr = sum(-alpha / 2 * log(ssq * sbsq) - alpha % (ssq_var + mu_sq) /
+                    (2 * ssq * sbsq) + alpha * log(pip) + (1 - alpha) * log(1 - pip));
 
-  return(t1 + t2 + t3 + t4 + t5 + t6);
+  // calculate the expected value of the log-likelihood under q
+  double eqlik = -sum(
+    D % (arma::pow(y - (X * (mu % alpha)), 2) + arma::pow(X, 2) *
+      (alpha % (mu_sq + ssq_var) - arma::pow(alpha, 2) % mu_sq))) /
+      (2 * ssq) - X.n_rows / 2 * log(2 * M_PI * ssq);
+
+  // calculate the expected value of log q under q
+  double eqq = sum(-alpha / 2 % log(ssq_var) - alpha / 2 + alpha % log(alpha +
+                   0.000001) + (1 - alpha) % log(1 - alpha + 0.000001));
+
+  // calculate elbo and return
+  return(eqpr + eqlik - eqq);
 }
 
 // -----------------------------------------------------------------------------

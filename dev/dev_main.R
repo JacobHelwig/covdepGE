@@ -3,7 +3,7 @@ rm(list = ls())
 source("generate_data.R")
 
 R_code <- T # true if R code instead of C++ should be used
-package <- T # true if the package version is desired
+package <- !T # true if the package version is desired
 discrete_data <- !T # true if discrete example is desired
 parallel  <- T # if package == T, should the code be run in parallel?
 
