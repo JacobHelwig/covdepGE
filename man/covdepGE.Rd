@@ -7,42 +7,50 @@
 \title{covdepGE: Covariate Dependent Graph Estimation}
 \usage{
 covdepGE(
-  data_mat,
+  data,
   Z,
-  tau = 0.1,
-  kde = T,
   alpha = 0.2,
   mu = 0,
-  sigmasq_vec = NULL,
-  update_sigmasq = NULL,
-  sigmabetasq_vec = NULL,
-  update_sigmabetasq = NULL,
-  n_param = 9,
-  pi_vec = NULL,
+  ssq = NULL,
+  sbsq = NULL,
+  pip = NULL,
+  nssq = 5,
+  nsbsq = 5,
+  npip = 5,
+  ssq_upper_mult = 4,
+  var_lower = 0.001,
+  tau = 0.1,
+  kde = T,
   norm = 2,
-  scale = T,
-  tolerance = 1e-12,
+  center_data = T,
+  scale_Z = T,
+  elbo_tol = 0.1,
+  alpha_tol = 1e-05,
   max_iter = 100,
   edge_threshold = 0.5,
   sym_method = "mean",
   parallel = F,
   num_workers = NULL,
   stop_cluster = T,
+  prog_bar = T,
   warnings = T,
   CS = F,
   R = F,
-  bound_ssq = T,
-  ssq_bound_mult = 2,
-  bound_sbsq = T,
-  sbsq_bound_mult = 5
+  grid_search = T
 )
 
 \method{print}{covdepGE}(x, ...)
 }
 \arguments{
-\item{data_mat}{\eqn{n} x \eqn{(p + 1)} matrix; data}
-
 \item{Z}{\eqn{n} x \eqn{p'} matrix; extraneous covariates}
+
+\item{alpha}{numeric in \eqn{(0, 1)}; global initialization value for the
+variational parameters \code{alpha_matrices} (approximates probabilities of
+inclusion). \code{0.2} by default}
+
+\item{mu}{numeric; global initialization value for the variational parameters
+\code{mu_matrices} (approximates posterior mean of regression coefficients). \code{0}
+by default}
 
 \item{tau}{positive numeric OR numeric vector of length \eqn{n} with positive
 entries; bandwidth parameter. Greater values allow for more information to be
@@ -53,41 +61,8 @@ specification. If \code{kde = T}, this argument is ignored. \code{0.1} by defaul
 (2) to calculate individual-specific bandwidths in place of global bandwidth
 parameter \code{tau}. \code{T} by default}
 
-\item{alpha}{numeric in \eqn{(0, 1)}; global initialization value for the
-variational parameters \code{alpha_matrices} (approximates probabilities of
-inclusion). \code{0.2} by default}
-
-\item{mu}{numeric; global initialization value for the variational parameters
-\code{mu_matrices} (approximates posterior mean of regression coefficients). \code{0}
-by default}
-
-\item{sigmasq_vec}{numeric vector of length \code{n_param} with positive
-entries; candidate values of \code{sigmasq}, the error term variance. \code{0.5} by
-default}
-
-\item{sigmabetasq_vec}{numeric vector of length \code{n_param} with positive
-entries; candidate values of \code{sigmabeta_sq}, the slab variance. \code{NULL} by
-default}
-
-\item{n_param}{positive integer; if \code{sigmabetasq_vec} is \code{NULL}, \code{n_param} is
-the number of candidate \code{sigmabeta_sq} that will be auto-generated as:
-
-\code{sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_param))}
-
-\code{8} by default}
-
-\item{pi_vec}{numeric vector of length \code{n_param} with entries in \eqn{(0, 1)};
-candidate values of \code{pi}. \code{0.1} by default}
-
 \item{norm}{numeric in \eqn{[1, Inf]}; norm to use when calculating weights.
 \code{Inf} results in infinity norm. \code{2} by default}
-
-\item{scale}{logical; if \code{T}, center and scale extraneous covariates to mean
-0, standard deviation 1 prior to calculating the weights. \code{T} by default}
-
-\item{tolerance}{positive numeric; end CAVI when the Frobenius norm of the
-iteration-to-iteration change in the alpha matrix are within tolerance.
-\code{1e-12} by default}
 
 \item{max_iter}{positive integer; if the tolerance criteria has not been met
 by \code{max_iter_grid} iterations, end CAVI. \code{100} by default}
@@ -133,6 +108,33 @@ to Carbonetto-Stephens. \code{F} by default}
 \item{x}{object of class covdepGE; the return of the covdepGE function}
 
 \item{...}{additional arguments will be ignored}
+
+\item{data_mat}{\eqn{n} x \eqn{(p + 1)} matrix; data}
+
+\item{sigmasq_vec}{numeric vector of length \code{n_param} with positive
+entries; candidate values of \code{sigmasq}, the error term variance. \code{0.5} by
+default}
+
+\item{sigmabetasq_vec}{numeric vector of length \code{n_param} with positive
+entries; candidate values of \code{sigmabeta_sq}, the slab variance. \code{NULL} by
+default}
+
+\item{n_param}{positive integer; if \code{sigmabetasq_vec} is \code{NULL}, \code{n_param} is
+the number of candidate \code{sigmabeta_sq} that will be auto-generated as:
+
+\code{sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_param))}
+
+\code{8} by default}
+
+\item{pi_vec}{numeric vector of length \code{n_param} with entries in \eqn{(0, 1)};
+candidate values of \code{pi}. \code{0.1} by default}
+
+\item{scale}{logical; if \code{T}, center and scale extraneous covariates to mean
+0, standard deviation 1 prior to calculating the weights. \code{T} by default}
+
+\item{tolerance}{positive numeric; end CAVI when the Frobenius norm of the
+iteration-to-iteration change in the alpha matrix are within tolerance.
+\code{1e-12} by default}
 }
 \value{
 Returns \code{list} with the following values:

@@ -68,19 +68,20 @@ generate_continuous <- function(n1 = 60, n2 = 60, n3 = 60, p = 4){
   return(list(data = data_mat, covts = Z, true_precision = prec_mats))
 }
 
-# how many trials?
-n_trials <- 100
 set.seed(1)
 
 # create the hyperparameter grid
-pip <- c(1e-5, 1e-4, 1e-3, 0.01, 0.025, seq(0.05, 0.95, 0.05), 0.99, 0.999, 0.9999, 0.99999)
-sbsq <- c(1e-5, 1e-4, 1e-3, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 1)
-ssq <- c(0.01, 0.05, 0.1, 0.15, 0.25, 0.5, 0.75, 1, 1.5, 2, 2.5, 3)
+pip <- c(1e-5, 1e-4, 1e-3, 0.01, 0.025, seq(0.05, 0.95, 0.1), 0.99, 0.999, 0.9999, 0.99999)
+sbsq <- ssq <- c(1e-05, 1e-04, 0.001, 0.01, 0.025, seq(0.05, 1, 0.05), seq(1, 3, 0.5), 5, 10)
 hp_grid <- expand.grid(ssq = ssq, sbsq = sbsq, pip = pip)
 
 # spin up parallel backend
 # find the available number of cores
 (cores <- detectCores() - 5)
+
+# how many trials?
+n_trials <- 100
+
 
 registerDoParallel(cores)
 
@@ -102,6 +103,6 @@ res <- foreach(trial_ind = 1:n_trials, .packages = "covdepGE") %dorng%{
                }
 
 # save res
-save(res, file = "opt_pi2_5var.Rda")
+save(res, file = "opt_pi2_5var_corelbo.Rda")
 Sys.time() - start
 stopImplicitCluster()

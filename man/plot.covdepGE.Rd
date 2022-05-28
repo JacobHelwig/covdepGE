@@ -4,7 +4,7 @@
 \alias{plot.covdepGE}
 \title{plot.covdepGE}
 \usage{
-\method{plot}{covdepGE}(x, graph_colors = NULL, title_sum = F, ...)
+\method{plot}{covdepGE}(x, graph_colors = NULL, title_sum = T, ...)
 }
 \arguments{
 \item{x}{object of class covdepGE; return of \code{covdepGE} function}

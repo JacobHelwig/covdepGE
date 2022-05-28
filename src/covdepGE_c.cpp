@@ -44,7 +44,7 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
                (1 - alpha) % log((1 - alpha + 0.000001) / (1 - pip))));
   double t5 = (-sum(alpha % ((mu_sq + ssq_var) / (2 * ssq * sbsq) +
                log(ssq * sbsq) / 2)));
-  double t6 = 0.5 * log(1 / (2 *  + M_PI * ssq));
+  double t6 = X.n_rows / 2 * log(1 / (2 * M_PI * ssq));
 
   return(t1 + t2 + t3 + t4 + t5 + t6);
 }

@@ -17,25 +17,45 @@
 ## Returns: double; ELBO for the l-th individual and j-th column fixed as the
 ## response
 ## -----------------------------------------------------------------------------
+#eqpr <- sum(-alpha / 2 * log(ssq * sbsq) - alpha * (ssq_var + mu^2) / (2 * ssq * sbsq) + alpha * log(pip) + (1 - alpha) * log(1 - pip))
+#eqlik <- -sum(D * (y^2 -2 * y * rowSums(X * matrix(mu * alpha, nrow(X), ncol(X), T)) + rowSums(X * matrix(mu * alpha, nrow(X), ncol(X), T))^2 + rowSums(X^2 * matrix(alpha * (mu^2 + ssq_var) - alpha^2 * mu^2, nrow(X), ncol(X), T)))) / (2 * ssq) - 0.5 * log(2 * pi * ssq)
+#eqq <- sum(-alpha / 2 * log(ssq_var) - alpha / 2 + alpha * log(alpha) + (1 - alpha) * log(1 - alpha))
+#eqpr + eqlik - eqq
+# varbvs:
+# eqpr <- sum(-alpha / 2 * log(sigma * sa) - (alpha * (s + mu^2)) / (2 * sa * sigma) + alpha * log(p1) + (1 - alpha) * log(1 - p1))
+# eqlik <- sum((y - rowSums(X * matrix(alpha * mu, n, p, T)))^2) / (-2 * sigma) + sum(d * (alpha * (s + mu^2) - alpha^2 * mu^2)) / (-2 * sigma) - n / 2 * log(2 * pi * sigma)
+# eqq <- sum(-alpha / 2 * log(s) - alpha / 2 + alpha * log(alpha) + (1 - alpha) * log(1 - alpha))
 ELBO_calculator_R <- function(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip) {
 
-  # square of: y minus X matrix-multiplied with element-wise product of mu and
-  # alpha
-  y_Xmualpha_sq <- (y - X %*% (mu * alpha))^2
+  # # square of: y minus X matrix-multiplied with element-wise product of mu and
+  # # alpha
+  # y_Xmualpha_sq <- (y - X %*% (mu * alpha))^2
+  #
+  # # square of mu vector
+  # mu_sq <- mu^2
+  #
+  # # calculate each of the terms that sum to ELBO
+  # t1 <- -sum(D * y_Xmualpha_sq) / (2 * ssq)
+  # t2 <- -sum(D * ((X^2) %*% (alpha * (mu_sq + ssq_var) - alpha^2 * mu_sq))) / (2 * ssq)
+  # t3 <- sum(alpha * (1 + log(ssq_var))) / 2
+  # t4 <- -sum(alpha * log((alpha + 0.000001) / pip) + (1 - alpha) * log(
+  #   (1 - alpha + 0.000001) / (1 - pip)))
+  # t5 <- -sum(alpha * ((mu_sq + ssq_var) / (2 * ssq * sbsq) + log(ssq * sbsq) / 2))
+  # t6 <- 0.5 * log(1 / (2 * pi * ssq))
+  #
+  # return(t1 + t2 + t3 + t4 + t5 + t6)
 
-  # square of mu vector
-  mu_sq <- mu^2
+  # my derivations
+  # eqpr <- sum(-alpha / 2 * log(2 * pi * ssq * sbsq) - alpha * (ssq_var + mu^2) / (2 * ssq * sbsq) + alpha * log(pip) + (1 - alpha) * log(1 - pip))
+  # eqlik <- -sum(D * (y^2 -2 * y * rowSums(X * matrix(mu * alpha, nrow(X), ncol(X), T)) + rowSums(X * matrix(mu * alpha, nrow(X), ncol(X), T))^2 + rowSums(X^2 * matrix(alpha^2 * ssq_var, nrow(X), ncol(X), T)))) / (2 * ssq) - nrow(X) / 2 * log(2 * pi * ssq) + 0.5 * sum(log(D))
+  # eqq <- sum(-alpha / 2 * log(2 * pi * ssq_var) - alpha / 2 + alpha * log(alpha) + (1 - alpha) * log(1 - ifelse(alpha == 1, 0.99999, alpha)))
 
-  # calculate each of the terms that sum to ELBO
-  t1 <- -sum(D * y_Xmualpha_sq) / (2 * ssq)
-  t2 <- -sum(D * ((X^2) %*% (alpha * (mu_sq + ssq_var) - alpha^2 * mu_sq))) / (2 * ssq)
-  t3 <- sum(alpha * (1 + log(ssq_var))) / 2
-  t4 <- -sum(alpha * log((alpha + 0.000001) / pip) + (1 - alpha) * log(
-    (1 - alpha + 0.000001) / (1 - pip)))
-  t5 <- -sum(alpha * ((mu_sq + ssq_var) / (2 * ssq * sbsq) + log(ssq * sbsq) / 2))
-  t6 <- 0.5 * log(1 / (2 * + pi * ssq))
+  # just with the n corrected
+  eqpr <- sum(-alpha / 2 * log(ssq * sbsq) - alpha * (ssq_var + mu^2) / (2 * ssq * sbsq) + alpha * log(pip) + (1 - alpha) * log(1 - pip))
+  eqlik <- -sum(D * (y^2 -2 * y * rowSums(X * matrix(mu * alpha, nrow(X), ncol(X), T)) + rowSums(X * matrix(mu * alpha, nrow(X), ncol(X), T))^2 + rowSums(X^2 * matrix(alpha * (mu^2 + ssq_var) - alpha^2 * mu^2, nrow(X), ncol(X), T)))) / (2 * ssq) - nrow(X) / 2 * log(2 * pi * ssq)
+  eqq <- sum(-alpha / 2 * log(ssq_var) - alpha / 2 + alpha * log(alpha + 0.000001) + (1 - alpha) * log(1 - alpha + 0.000001))
 
-  return(t1 + t2 + t3 + t4 + t5 + t6)
+  return(eqpr + eqlik - eqq)
 }
 
 ## -----------------------------------------------------------------------------

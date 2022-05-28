@@ -292,7 +292,7 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, sbsq = NULL,
             y <- data[, resp_index]
 
             # Set the remaining p variables as predictors
-            X <- data[, -resp_index]
+            X <- data[, -resp_index, drop = F]
 
             # perform the grid search and final CAVI; save the results to res
             cavi_search(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip,
@@ -326,7 +326,7 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, ssq = NULL, sbsq = NULL,
       y <- data[, resp_index]
 
       # Set the remaining p variables as predictors
-      X <- data[, -resp_index]
+      X <- data[, -resp_index, drop = F]
 
       # perform the grid search and final CAVI; save the results to res
       res[[resp_index]] <- cavi_search(X, Z, D, y, alpha, mu, ssq, sbsq, pip,

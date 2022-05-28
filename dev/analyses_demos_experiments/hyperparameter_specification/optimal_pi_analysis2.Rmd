@@ -19,16 +19,29 @@ library(ggplot2)
 library(ggpubr)
 library(covdepGE)
 
-#load("opt_pi2_5var.Rda")
-load("opt_pi2_5var2.Rda")
+
+load("opt_pi2_5var_corelbo.Rda")
+
+# find counts of total number of edges
+tot_edges <- sapply(lapply(lapply(lapply(lapply(
+  res, `[[`, "out"), "[[", "unique_graphs"), lapply, `[[`, "graph"), sapply, sum), sum)
+
+# find counts on graph with max number of edges
+max_edges <- sapply(lapply(lapply(lapply(
+  lapply(res, `[[`, "out"), "[[", "unique_graphs"), lapply, `[[`, "graph"), sapply, sum), max)
+
+plot(res[[order(max_edges, tot_edges, decreasing = T)[1]]]$out)
+
+plot(res[[which.max(tot_edges)]]$out)
+
 # optimal pi analysis
 
 # get all the models
 mods <- lapply(res, `[[`, "out")
 
 # recover the marginal hyperparameter grids
-marg_grids <- apply(res[[1]]$out$hyperparameters$`Variable 1`$grid[ , 1:3], 2, 
-                    unique)
+marg_grids <- lapply(res[[1]]$out$hyperparameters$`Variable 1`$grid[ , 1:3], unique)
+
 ```
 
 In this experiment, I applied the grid search algorithm in 100 trials. I generated the grid from the cartesian product of the following marginal grids:
@@ -143,7 +156,8 @@ sbsq_opt <- lapply(hyp, lapply, `[[`, "sbsq")
 sbsq_vec <- unlist(sbsq_opt)
 sbsq_df <- cbind.data.frame(variable = names(sbsq_vec), sbsq = factor(sbsq_vec, levels = marg_grids$sbsq))
 ggplot(sbsq_df, aes(sbsq, fill = variable)) + geom_bar(color = "black") + scale_x_discrete(drop = F) + 
-  ggtitle("Distribution of Optimal Sigmabeta_sq")
+  ggtitle("Distribution of Optimal Sigmabeta_sq") +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
 
 # get the optimal ssq for each of the trials by variable
 ssq_opt <- lapply(hyp, lapply, `[[`, "ssq")
@@ -152,7 +166,8 @@ ssq_opt <- lapply(hyp, lapply, `[[`, "ssq")
 ssq_vec <- unlist(ssq_opt)
 ssq_df <- cbind.data.frame(variable = names(ssq_vec), ssq = factor(ssq_vec, levels = marg_grids$ssq))
 ggplot(ssq_df, aes(ssq, fill = variable)) + geom_bar(color = "black") + scale_x_discrete(drop = F)+ 
-  ggtitle("Distribution of Optimal Sigma_sq")
+  ggtitle("Distribution of Optimal Sigma_sq") +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
 ```
 
 ## Optimal Sigmabeta_sq as a function of Pi
@@ -191,7 +206,7 @@ lapply(var_names, function(var_name) ggplot() +
 In this section, I present the same analyses as above for a dataset with $p =20$.
 
 ```{r, echo = F}
-load("opt_pi2__20var.Rda")
+load("opt_pi2_20var_corelbo.Rda")
 # optimal pi analysis
 
 # get all the models
@@ -200,6 +215,7 @@ mods <- lapply(res, `[[`, "out")
 # recover the marginal hyperparameter grids
 marg_grids <- apply(res[[1]]$out$hyperparameters$`Variable 1`$grid[ , 1:3], 2, 
                     unique)
+marg_grids <- as.data.frame(marg_grids)
 ```
 
 The marginal grids are:
