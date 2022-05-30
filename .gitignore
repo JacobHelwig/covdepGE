@@ -1,1 +1,10 @@
 .Rproj.user
+*.Rda
+*.zip
+*.aux
+*.knit.md
+*.log
+*.out
+*.tex
+*.toc
+*.tex.bak
