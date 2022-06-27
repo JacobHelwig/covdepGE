@@ -497,20 +497,20 @@ plot.covdepGE <- function(x, graph_colors = NULL, title_sum = T, ...){
 
   # if no colors have been provided, set to default
   if(is.null(graph_colors)){
-    graph_colors <- rep("#500000", length(x$unique_graphs))
+    graph_colors <- rep("#500000", length(x$graphs$unique_graphs))
   }
 
   # create the titles for the plots
-  titles <- paste("Graph", 1:length(x$unique_graphs))
+  titles <- paste("Graph", 1:length(x$graphs$unique_graphs))
 
   # check if the title should include the individual's summaries
   if(title_sum){
-    indv_sum <- sapply(x$unique_graphs, `[[`, "individuals_summary")
+    indv_sum <- sapply(x$graphs$unique_graphs, `[[`, "individuals_summary")
     titles <- paste0(titles, ", Individuals ", indv_sum)
   }
 
   # get the unique graphs
-  unique_graphs <- lapply(x$unique_graphs, `[[`,"graph")
+  unique_graphs <- lapply(x$graphs$unique_graphs, `[[`,"graph")
 
   # create a visualization for each graph and store it in a list
   graph_viz <- lapply(1:length(unique_graphs), function(gr_idx) gg_adjMat(

@@ -88,11 +88,11 @@
 ## individual in the final model. Column j corresponds to the regression with
 ## the j-th variable fixed as the response
 ## -----------------------------------------------------------------------------
-cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip,
-                        ssq_upper_mult, var_lower, elbo_tol, alpha_tol,
-                        max_iter, warnings, resp_index, CS, R, grid_search){
+cavi_search <- function(X, Z, D, y, alpha, mu, hp_method, ssq, sbsq, pip, nssq,
+                        nsbsq, npip, ssq_upper_mult, ssq_lower, sbsq_lower,
+                        pip_lower, elbo_tol, alpha_tol, max_iter, resp_index){
 
-  # get the dimensions of the data and hyperparameter candidates
+  # get the dimensions of the data
   n <- nrow(X)
   p <- ncol(X)
 
@@ -103,15 +103,6 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
   alpha <- matrix(alpha, n, p)
   mu <- matrix(mu, n, p)
 
-  # get hyperparameter values from varbvs
-  if (CS){
-    set.seed(resp_index)
-    idmod <- varbvs::varbvs(X, y, Z = Z[ , 1], verbose = FALSE)
-    probs <- 1 / (1 + exp(-idmod$logodds)) # need to convert to log base 10
-    ssq <- matrix(mean(idmod$sigma), nrow(sbsq), p + 1)
-    pip <- matrix(mean(probs), nrow(sbsq), p + 1)
-  }
-
   # if the hyperparameter grid has not been fully supplied, create it
   if (any(is.null(c(ssq, sbsq, pip)))){
 
@@ -119,9 +110,14 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
     # the proportion of non-zero coefficients
     if (any(is.null(c(sbsq, pip)))){
       lasso <- glmnet::cv.glmnet(X, y)
-      non0 <- sum(coef(lasso, s = "lambda.min")[-1] != 0)
-      non0 <- max(non0, 1)
-      pi_hat <- non0 / p
+
+      # find the number of non-zero coefficients estimated by LASSO
+      # ensure that non0 is an integer in (0, p)
+      non0 <- sum(coef(lasso, s = "lambda.1se")[-1] != 0)
+      non0 <- min(max(non0, 1), p - 1)
+
+      # an upper bound for pi is the proportion of non-zero coefficients
+      pi_upper <- non0 / p
     }
 
     # if ssq has not been supplied, create the grid; otherwise, find the unique
@@ -132,10 +128,10 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
       ssq_upper <- ssq_upper_mult * var(y)
 
       # create the grid candidates for ssq
-      ssq <- exp(seq(log(var_lower), log(ssq_upper), length.out = nssq))
+      ssq <- exp(seq(log(ssq_lower), log(ssq_upper), length.out = nssq))
 
     }else{
-      ssq <- unique(ssq[ , resp_index])
+      ssq <- unique(ssq)
     }
 
     # if sbsq has not been supplied, create the grid; otherwise, find the unique
@@ -146,13 +142,13 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
       s2_sum <- sum(apply(X, 2, var))
 
       # find the upper bound for the grid of sbsq
-      sbsq_upper <- 25 / (pi_hat * s2_sum)
+      sbsq_upper <- 25 / (pi_upper * s2_sum)
 
-      # create the grid candidates for ssq and sbsq
-      sbsq <- exp(seq(log(var_lower), log(sbsq_upper), length.out = nsbsq))
+      # create the grid candidates for sbsq
+      sbsq <- exp(seq(log(sbsq_lower), log(sbsq_upper), length.out = nsbsq))
 
     }else{
-      sbsq <- unique(sbsq[ , resp_index])
+      sbsq <- unique(sbsq)
     }
 
     # if pip has not been supplied, create the grid; otherwise, find the unique
@@ -160,77 +156,109 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
     if (is.null(pip)){
 
       # create posterior inclusion probability grid
-      pip <- exp(seq(log(0.01), log(min(0.9, 2 * max(pi_hat, 0.05))), length.out = npip))
-
+      pip <- exp(seq(log(pip_lower), log(pi_upper), length.out = npip))
 
     }else{
-      pip <- unique(pip[ , resp_index])
+      pip <- unique(pip)
     }
 
     # create the grid
-    hp <- expand.grid(pip = pip, ssq = ssq, sbsq = sbsq)
-
-  }else{
-
-    # otherwise, the user has supplied the hyperparameters; take the resp_index
-    # column of each as the current hyperparameters
-    hp <- data.frame(pip = pip[ , resp_index], ssq = ssq[ , resp_index],
-                     sbsq = sbsq[ , resp_index])
+    hp <- expand.grid(pip = pip, ssq = ssq, sbsq = sbsq, elbo = NA)
 
   }
 
-  # perform grid search to select the best hyperparameters
-  if (!(grid_search %in% c("model_average", "hybrid"))){
+  if (hp_method == "grid_search"){
+
+    # perform grid search to select the best hyperparameters
 
     # perform CAVI for each of the hyperparameter settings
-    # use grid search to select hyperparameters
     out_grid <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip,
-                              elbo_tol, alpha_tol, max_iter, T)
+                              elbo_tol, alpha_tol, max_iter)
 
     # add the ELBO for each of the grid points to the hyperparameter grid
     hp$elbo <- out_grid$elbo_vec
 
-    # use the best hyperparameters from the grid search to perform a proper
-    # CAVI until max_iter is reached or alpha converges
+    # use the best hyperparameters from the grid search to perform CAVI until
+    # max_iter is reached or alpha converges (no early stopping for ELBO)
     out <- cavi_c(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
-                  out_grid$sbsq, out_grid$pip, elbo_tol, alpha_tol, max_iter, F)
-
-
-    # save CAVI details
-    cavi_details <- list(ELBO = out$elbo,
-                         iterations = out$converged_iter + out_grid$iterations,
-                         converged = out$converged_iter < max_iter)
+                  out_grid$sbsq, out_grid$pip, -1, alpha_tol, max_iter)
 
     # save hyperparameter details
-    hyp <- list(ssq = out_grid$ssq, sbsq = out_grid$sbsq, pip = out_grid$pip,
-                grid = hp, grid_sz = nrow(hp))
+    final <- c(ssq = out_grid$ssq, sbsq = out_grid$sbsq, pip = out_grid$pip)
+    hp <- list(grid = hp, grid_sz = nrow(hp), final = final)
 
-    # save progress of alpha and elbo
-    prog <- list(alpha = out$alpha_prog, elbo = out$elbo_prog)
+    # save final variational parameters and elbo
+    alpha  <- out$alpha
+    mu <- out$mu
+    ssq_var <- out$ssq_var
+    elbo <- out$elbo
 
-    return(list(alpha_matrix = out$alpha, mu_matrix = out$mu,
-                cavi_details = cavi_details, hyperparameters = hyp,
-                progress = prog))
+  }else{
 
-  }else if(grid_search == "model_average"){
+    # otherwise, hp_method is model_average or hybrid
 
-    # apply importance sampling to average over hyperparameters
+    # if hybrid, re-define the grid so that it is the cartesian product between
+    # the variance hyperparameters
+    if (hp_method == "hybrid"){
+      pip <- unique(hp$pip)
+      ssq <- unique(hp$ssq)
+      sbsq <- unique(hp$ssq)
+      hp <- expand.grid(ssq = ssq, sbsq = sbsq)
 
-    # create lists for storing the alpha matrices, mu matrices and elbos
-    elbo_theta <- alpha_theta <- mu_theta <- vector("list", nrow(hp))
+      # data.frame for storing final hyperparameters from grid search
+      hyp <- data.frame(ssq = NA, sbsq = NA, pip = pip, elbo = NA)
+    }
 
-    # iterate over each of the hyperparameter settings
-    for (j in 1:nrow(hp)){
+    # get number of parameters to average over; if hybrid, only averaging over
+    # pi; otherwise, average over entire grid
+    n_hp <- ifelse(hp_method == "hybrid", length(pip), nrow(hp))
 
-      # fix hyperparameter setting
-      hp_j <- hp[j, ]
+    # create lists for storing the variational parameters and elbos for each
+    # hyperparameter setting
+    elbo_theta <- alpha_theta <- mu_theta <- ssqv_theta <- vector("list", n_hp)
 
-      out <- cavi_c(y, D, X, mu, alpha, hp_j$ssq, hp_j$sbsq, hp_j$pip, elbo_tol,
-                    alpha_tol, max_iter, F)
+    # iterate over each of the pi if hybrid
+    # iterate over each of the hyperparameter settings otherwise
+    for (j in 1:n_hp){
 
-      # save the alpha and mu matrices
+      # hybrid CAVI
+      if (hp_method == "hybrid"){
+
+        # fix the j-th value of the pip; repeat for each entry in the
+        # hyperparameter grid
+        pip_j <- rep(pip[j], nrow(hp))
+
+        # grid search over the ssq and sbsq grid
+        out_grid <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, pip_j,
+                                  elbo_tol, alpha_tol, max_iter)
+
+        # use the best hyperparameters from the grid search to perform CAVI until
+        # max_iter is reached or alpha converges (no early stopping for ELBO)
+        out <- cavi_c(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
+                      out_grid$sbsq, pip[j], -1, alpha_tol, max_iter)
+
+        # save the final hyperparameters and elbo
+        hyp[j, c("ssq", "sbsq", "elbo")] <- c(out_grid$ssq, out_grid$sbsq, out$elbo)
+
+        # fix the final hyperparameter setting
+        hp_j <- data.frame(ssq = out_grid$ssq, sbsq = out_grid$sbsq, pip = pip[j])
+
+      }else{
+
+        # otherwise, model averaging CAVI
+
+        # fix hyperparameter setting
+        hp_j <- hp[j, ]
+
+        # perform CAVI for the hyperparameter setting
+        out <- cavi_c(y, D, X, mu, alpha, hp_j$ssq, hp_j$sbsq, hp_j$pip, elbo_tol,
+                      alpha_tol, max_iter)
+      }
+
+      # save the variational parameters
       alpha_theta[[j]] <- out$alpha
       mu_theta[[j]] <- out$mu
+      ssqv_theta[[j]] <- out$ssq_var
 
       # calculate the elbo for each individual under the current hyperparameter
       # setting and save
@@ -241,16 +269,18 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
                                        hp_j$ssq, hp_j$sbsq, hp_j$pip)
       }
 
-      # save the ELBO
+      # save the ELBO for all individuals
       elbo_theta[[j]] <- elbo_l
+
+      # average the ELBO across the individuals to get the average elbo for the
+      # hyperparameter setting
+      hp$elbo[j] <- sum(elbo_l)
     }
+
+    # calculate weights for averaging and average
 
     # vector for saving the average elbo for each individual
     elbo_avg <- rep(NA, n)
-
-    # matrix for saving importance weights
-    weights <- NA
-    if (p < 10) weights <- matrix(NA, n, nrow(hp))
 
     # calculate the weights for each individual
     for (l in 1:n){
@@ -260,138 +290,42 @@ cavi_search <- function(X, Z, D, y, alpha, mu, ssq, sbsq, pip, nssq, nsbsq, npip
       elbo_l <- sapply(elbo_theta, `[`, l)
 
       # subtract the maximum value from each and exponentiate to get the lower
-      # bound for the likelihood
+      # bound for the likelihood (subtracting max for numerical stability)
       lik_l <- exp(elbo_l - max(elbo_l))
 
       # normalize the weights
       weight <- lik_l / sum(lik_l)
 
-      # save the weights
-      if (p < 10) weights[l, ] <- weight
-
       # calculate the average elbo for this individual
       elbo_avg[l] <- sum(elbo_l * weight)
 
-      # multiply the l-th row of each of the alpha and mu matrices by the
-      # corresponding weight
+      # multiply the l-th row of each of the variational parameter matrices by
+      # the corresponding weight
       for (k in 1:length(alpha_theta)){
         alpha_theta[[k]][l, ] <- weight[k] * alpha_theta[[k]][l, ]
         mu_theta[[k]][l, ] <- weight[k] * mu_theta[[k]][l, ]
+        ssqv_theta[[k]][l, ] <- weight[k] * ssqv_theta[[k]][l, ]
       }
     }
 
-    # sum across the alpha and mu matrices to obtain the final alpha and
-    # mu matrices
+    # sum across the weighted variational parameter matrices to obtain the final
+    # variational parameter matrices
     alpha <- Reduce("+", alpha_theta)
     mu <- Reduce("+", mu_theta)
+    ssq_var <- Reduce("+", ssqv_theta)
 
     # sum across the ELBO to obtain the final ELBO
     elbo <- sum(elbo_avg)
 
-    return(list(alpha_matrix = alpha, mu_matrix = mu,
-                cavi_details = list(converged = T, ELBO = elbo),
-                hyperparameters = list(hyperparameters = hp, weights = weights),
-                progress = list()))
-  }else{
+    # save hyperparameter details
+    hp <- list(grid = hp, grid_sz = nrow(hp), final = "<NA> if hp_method == 'model_average'")
 
-    # apply hybrid method
-
-    # re-define the hyperparameters so that the grid is cartesian product between
-    # the variance hyperparameters
-    pip <- unique(hp$pip)
-    ssq <- unique(hp$ssq)
-    sbsq <- unique(hp$ssq)
-    hp <- expand.grid(ssq = ssq, sbsq = sbsq)
-
-    # create lists for storing the alpha matrices, mu matrices and elbos
-    elbo_theta <- alpha_theta <- mu_theta <- vector("list", length(pip))
-
-    # data.frame for storing the final hyperparameters
-    hyp <- data.frame(ssq = NA, sbsq = NA, pip = pip, elbo = NA)
-
-    # iterate over each of the pip
-    for (j in 1:length(pip)){
-
-      # fix the j-th value of the pip; repeat for each entry in the hyperparameter
-      # grid
-      pip_j <- rep(pip[j], nrow(hp))
-
-      # grid search over the ssq and sbsq grid
-      out_grid <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, pip_j,
-                                elbo_tol, alpha_tol, max_iter, T)
-
-      # use the best hyperparameters from the grid search to perform a proper
-      # CAVI until max_iter is reached or alpha converges
-      out <- cavi_c(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
-                    out_grid$sbsq, pip[j], elbo_tol, alpha_tol, max_iter, F)
-
-      # save the final hyperparameters and elbo
-      hyp[j, c("ssq", "sbsq", "elbo")] <- c(out_grid$ssq, out_grid$sbsq, out$elbo)
-
-      # save the alpha and mu matrices
-      alpha_theta[[j]] <- out$alpha
-      mu_theta[[j]] <- out$mu
-
-      # calculate the elbo for each individual under the current hyperparameter
-      # setting and save
-      elbo_l <- rep(NA, n)
-      for (l in 1:n){
-        elbo_l[l] <- ELBO_calculator_c(y, D[ , l], X, t(out$ssq_var[l, ]),
-                                       t(out$mu[l, ]), t(out$alpha[l, ]),
-                                       out_grid$ssq, out_grid$sbsq, pip[j])
-      }
-
-      # save the ELBO
-      elbo_theta[[j]] <- elbo_l
-    }
-
-    # vector for saving the average elbo for each individual
-    elbo_avg <- rep(NA, n)
-
-    # matrix for saving importance weights
-    weights <- NA
-    if (p < 10) weights <- matrix(NA, n, length(pip))
-
-    # calculate the weights for each individual
-    for (l in 1:n){
-
-      # retrieve the elbo for the l-th individual for each hyperparameter
-      # setting
-      elbo_l <- sapply(elbo_theta, `[`, l)
-
-      # subtract the maximum value from each and exponentiate to get the lower
-      # bound for the likelihood
-      lik_l <- exp(elbo_l - max(elbo_l))
-
-      # normalize the weights
-      weight <- lik_l / sum(lik_l)
-
-      # save the weights
-      if (p < 10) weights[l, ] <- weight
-
-      # calculate the average elbo for this individual
-      elbo_avg[l] <- sum(elbo_l * weight)
-
-      # multiply the l-th row of each of the alpha and mu matrices by the
-      # corresponding weight
-      for (k in 1:length(alpha_theta)){
-        alpha_theta[[k]][l, ] <- weight[k] * alpha_theta[[k]][l, ]
-        mu_theta[[k]][l, ] <- weight[k] * mu_theta[[k]][l, ]
-      }
-    }
-
-    # sum across the alpha and mu matrices to obtain the final alpha and
-    # mu matrices
-    alpha <- Reduce("+", alpha_theta)
-    mu <- Reduce("+", mu_theta)
-
-    # sum across the ELBO to obtain the final ELBO
-    elbo <- sum(elbo_avg)
-
-    return(list(alpha_matrix = alpha, mu_matrix = mu,
-                cavi_details = list(converged = T, ELBO = elbo),
-                hyperparameters = list(hyperparameters = hyp, weights = weights),
-                progress = list()))
-
+    # if hybrid, add the final hyperparameters chosen by grid search to
+    # the hyperparameter details
+    if(hp_method == "hybrid") hp$final <- hyp
   }
+
+  # return the final variational parameters, hyperparameter details, and elbo
+  return(list(alpha_matrix = alpha, mu_matrix = mu, ssqv_matrix = ssq_var,
+              hyperparameters = hp, elbo = elbo))
 }

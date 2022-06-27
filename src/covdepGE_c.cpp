@@ -212,8 +212,7 @@ void alpha_update_c(const arma::mat& ssq_var, const arma::mat& mu,
 Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
                   const arma::mat& X, const arma::mat& mu0,
                   const arma::mat& alpha0, double ssq, double sbsq, double pip,
-                  double elbo_tol, double alpha_tol, int max_iter,
-                  bool grid_search) {
+                  double elbo_tol, double alpha_tol, int max_iter) {
 
   // matrices and vectors for updated variational parameters and hyperparameters
   arma::mat mu = mu0;
@@ -223,9 +222,6 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
   arma::mat alpha_last;
   arma::mat change_alpha;
 
-  // integer for tracking the iteration at which convergence is reached
-  int converged_iter = max_iter;
-
   // variational variance of regression coefficients update
   arma::mat ssq_var = ssq / ((arma::pow(X, 2).t() * D).t() + 1 / sbsq);
 
@@ -234,11 +230,12 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
   arma::mat alpha3 = arma::log(arma::sqrt(ssq_var / (ssq * sbsq)));
   arma::mat alpha2_denom = 2 * ssq_var;
 
-  // if this CAVI is part of a grid search, define last_elbo and cur_elbo
-  double cur_elbo = 0;
-  double last_elbo = 0;
-  if (grid_search){
-    last_elbo = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
+  // define last_elbo and cur_elbo for monitoring ELBO progress
+  double cur_elbo;
+  double last_elbo;
+  if (elbo_tol >= 0){
+    double cur_elbo = 0;
+    double last_elbo = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
   }
 
   // vectors for storing ELBO and frobenius norm of change in alpha matrix
@@ -258,51 +255,37 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
     alpha_update_c(ssq_var, mu, alpha, alpha1, alpha2_denom, alpha3, ssq, sbsq,
                    pip);
 
-    // if grid search is being performed, check for convergence of ELBO
-    if (grid_search){
+    // check for convergence of ELBO
+    if (elbo_tol >= 0){
       cur_elbo = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
-      if ((cur_elbo - last_elbo < elbo_tol) | std::isnan(cur_elbo)){
-        converged_iter = k;
+
+      // if new elbo is within the tolerance or has increased, end updates
+      if ((cur_elbo - last_elbo < elbo_tol)){
         break;
       }
+
+      // otherwise, the last_elbo becomes the current elbo
       last_elbo = cur_elbo;
     }
 
-    // calculate change in alpha
+    // calculate element-wise change in alpha
     change_alpha = alpha - alpha_last;
 
-    // record progress of alpha and elbo
-    elbo_prog(k) = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
-    alpha_prog(k) = sqrt(arma::accu(arma::pow(change_alpha, 2)));
-
-    // if the square root of the sum of squared changes in alpha is within the
-    // tolerance, break from the for loop
-
-    // add a condition here: if any of the entries of alpha are NaN, break and set alpha
-    // as the last alpha
-
+    // if the Frobenius norm of the change in alpha is within the tolerance,
+    // end updates
     if (sqrt(arma::accu(arma::pow(change_alpha, 2))) < alpha_tol){
-      converged_iter = k;
       break;
     }
   }
 
   // calculate ELBO across n individuals
-  double ELBO;
-  if (grid_search){
-    ELBO = cur_elbo;
-  }else{
-    ELBO = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
-  }
+  double ELBO = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
 
   // return final mu matrix, alpha matrix, the final ELBO, the number of
   // iterations to converge, and the fitted variance hyperparameters
   return(Rcpp::List::create(
       Rcpp::Named("mu") = mu, Rcpp::Named("alpha") = alpha,
-      Rcpp::Named("ssq_var") = ssq_var, Rcpp::Named("elbo") = ELBO,
-      Rcpp::Named("converged_iter") = converged_iter,
-      Rcpp::Named("elbo_prog") = elbo_prog,
-      Rcpp::Named("alpha_prog") = alpha_prog));
+      Rcpp::Named("ssq_var") = ssq_var, Rcpp::Named("elbo") = ELBO));
 }
 
 // -----------------------------------------------------------------------------
@@ -334,8 +317,7 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
                          const arma::mat& X, const arma::mat& mu,
                          const arma::mat& alpha, const arma::colvec& ssq,
                          const arma::colvec& sbsq, const arma::colvec& pip,
-                         double elbo_tol, double alpha_tol, int max_iter,
-                         bool grid_search){
+                         double elbo_tol, double alpha_tol, int max_iter){
 
   // get number of grid points
   int n_param = pip.n_elem;
@@ -348,12 +330,10 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
   // the current best ELBO
   arma::mat mu_best;
   arma::mat alpha_best;
+  arma::mat ssqv_best;
   double ssq_best = -1;
   double sbsq_best = -1;
   double pip_best = -1;
-
-  // storage for best iterations
-  int iterations_best = -1;
 
   // instantiate a list to store the result of cavi_c
   Rcpp::List out;
@@ -364,9 +344,9 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
   // perform CAVI for each grid point
   for (int j = 0; j < n_param; j++){
 
-    // run CAVI
+    // run CAVI; store elbo
     out = cavi_c(y, D, X, mu, alpha, ssq(j), sbsq(j), pip(j), elbo_tol,
-                 alpha_tol, max_iter, grid_search);
+                 alpha_tol, max_iter);
     elbo_new = as<double>(out["elbo"]);
     elbo_store(j) = elbo_new;
 
@@ -377,17 +357,16 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
       elbo_best = as<double>(out["elbo"]);
       mu_best = as<arma::mat>(out["mu"]);
       alpha_best = as<arma::mat>(out["alpha"]);
+      ssqv_best = as<arma::mat>(out["ssq_var"]);
       ssq_best = ssq(j);
       sbsq_best = sbsq(j);
       pip_best = pip(j);
-      iterations_best = as<int>(out["converged_iter"]);
     }
   }
 
   return(Rcpp::List::create(
       Rcpp::Named("elbo") = elbo_best, Rcpp::Named("mu") = mu_best,
-      Rcpp::Named("alpha") = alpha_best, Rcpp::Named("ssq") = ssq_best,
-      Rcpp::Named("sbsq") = sbsq_best, Rcpp::Named("pip") = pip_best,
-      Rcpp::Named("iterations") = iterations_best,
-      Rcpp::Named("elbo_vec") = elbo_store));
+      Rcpp::Named("alpha") = alpha_best, Rcpp::Named("ssq_var") = ssqv_best,
+      Rcpp::Named("ssq") = ssq_best, Rcpp::Named("sbsq") = sbsq_best,
+      Rcpp::Named("pip") = pip_best, Rcpp::Named("elbo_vec") = elbo_store));
 }

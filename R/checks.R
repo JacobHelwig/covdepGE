@@ -50,10 +50,11 @@
 ##
 ## warnings: logical; if T, convergence and grid warnings will be displayed
 ## -----------------------------------------------------------------------------
-covdepGE_checks <- function(data_mat, Z, tau, kde, alpha, mu, sigmasq_vec,
-                            sigmabetasq_vec, n_param, pi_vec, norm, scale,
-                            tolerance, max_iter, edge_threshold, sym_method,
-                            parallel, num_workers, stop_cluster, warnings){
+covdepGE_checks <- function(data, Z, alpha, mu, hp_method, ssq, sbsq, pip, nssq,
+                            nsbsq, npip, ssq_upper_mult, var_lower, tau, kde,
+                            norm, center_data, scale_Z, elbo_tol, alpha_tol,
+                            max_iter, edge_threshold, sym_method, parallel,
+                            num_workers, prog_bar){
 
   # ensure vector input for parameters that are expected to be vectors
   args_vector <- list(tau = tau, sigmasq_vec = sigmasq_vec,
