@@ -1,0 +1,319 @@
+---
+title: "Grid search versus Model Averaging versus Hybrid"
+output: pdf_document
+toc: true
+---
+
+```{r, echo = F}
+knitr::opts_chunk$set(echo = F)
+```
+
+# Experiment Summary
+
+Here, I compare the results across 100 trials of 3 methods of hyperparameter specification; grid search, model averaging, and hybrid. Hybrid averages across the value of the $\pi$ grid while grid searching for $\sigma^2$ and $\sigma^2_\beta$.
+
+There are two experiements; I use a smaller $\pi$ grid for the first which is nested inside the larger $\pi$ grid for the second. In each, I present the sensitivity and specificity for each of the three methods. Additionally, I present the relative sensitivity and specificity for model averaging and hybrid. These are defined as:
+
+\[\text{rel. sens., hybrid} = \frac{\text{grid sens. - hybrid sens.}}{\text{grid sens.}}\quad\quad\text{rel. sens.,  averaging} = \frac{\text{grid sens. - averaging sens.}}{\text{grid sens.}}\]
+
+\[\text{rel. spec., hybrid} = \frac{\text{hybrid spec. - grid spec.}}{\text{grid spec.}}\quad\quad\text{rel. spec.,  averaging} = \frac{\text{averaging spec. - grid spec.}}{\text{grid spec.}}\]
+
+# Small grid
+
+## Marginal grids
+
+The small grid was defined as the Cartesian product of the following marginal grids: 
+
+```{r}
+# load them all
+load("small_grid5.Rda")
+load("small_avg5.Rda")
+load("small_hyb5.Rda")
+
+# get the marginal grids
+grid <- small_grid[[1]]$hyperparameters$`Variable 1`$grid[1:3]
+apply(grid, 2, unique)
+```
+
+## Specificity
+
+```{r}
+# get the true graphs
+
+# function for generating the data and the covariates
+generate_continuous <- function(n1 = 60, n2 = 60, n3 = 60, p = 4){
+
+  # create covariate for individuals in each of the three intervals
+
+  # define the dimensions of the data
+  n <- sum(n1, n2, n3)
+
+  # define the limits of the intervals
+  limits1 <- c(-3, -1)
+  limits2 <- c(-1, 1)
+  limits3 <- c(1, 3)
+
+  # define the covariate values within each interval
+  z1 <- runif(n1, limits1[1], limits1[2])
+  z2 <- runif(n2, limits2[1], limits2[2])
+  z3 <- runif(n3, limits3[1], limits3[2])
+  Z <- matrix(sort(c(z1, z2, z3)), n, 1)
+
+  # create precision matrices
+
+  # the shared part of the structure for all three intervals is a 2 on the
+  # diagonal and a 1 in the (2, 3) position
+  common_str <- diag(p + 1)
+  common_str[2, 3] <- 1
+
+  # define constants for the structure of interval 2
+  beta1 <- diff(limits2)^-1
+  beta0 <- -limits2[1] * beta1
+
+  # interval 2 has two different linear functions of Z in the (1, 2) position
+  # and (1, 3) positions; define structures for each of these components
+  int2_str12 <- int2_str13 <- matrix(0, p + 1, p + 1)
+  int2_str12[1, 2] <- int2_str13[1, 3] <- 1
+
+  # define the precision matrices for each of the individuals in interval 2
+  int2_prec <- lapply(z2, function(z) common_str +
+                        ((1 - beta0 - beta1*z)*int2_str12) +
+                        ((beta0 + beta1*z)*int2_str13))
+
+  # interval 1 has a 1 in the (1, 2) and interval 3 has a 1 in the (1, 3) position;
+  # define structures for each of these components
+  int1_str12 <- int3_str13 <- matrix(0, p + 1, p + 1)
+  int1_str12[1, 2] <- int3_str13[1, 3] <- 1
+
+  # define the precision matrices for each of the individuals in interval 1 and interval 3
+  int1_prec <- rep(list(common_str + int1_str12), n1)
+  int3_prec <- rep(list(common_str + int3_str13), n3)
+
+  # put all of the precision matrices into one list
+  prec_mats <- c(int1_prec, int2_prec, int3_prec)
+
+  # symmetrize the precision matrices
+  prec_mats <- lapply(prec_mats, function(mat) t(mat) + mat)
+
+  # invert the precision matrices to get the covariance matrices
+  cov_mats <- lapply(prec_mats, solve)
+
+  # generate the data using the covariance matrices
+  data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
+
+  return(list(data = data_mat, covts = Z, true_precision = prec_mats))
+}
+
+# function to get the number of true 1 or 0
+true01 <- function(pred_graphs, true_graphs, true = 0){
+  sum(sapply(1:length(pred_graphs), function(k) sum(
+    pred_graphs[[k]] == true_graphs[[k]] & true_graphs[[k]] == true)))
+}
+
+# function that takes a list of models and returns the number of true 1 or 0 for each
+true01_mods <- function(mods, true_graphs, true = 0){
+  sapply(1:length(mods), function(j) true01(mods[[j]]$graphs, true_graphs, true))
+}
+
+cont <- generate_continuous()$true_precision
+true_prec <- lapply(cont, function(prec) ((prec - diag(diag(prec))) != 0) * 1)
+
+# true 1/0
+true0 <- sum(sapply(true_prec, `==`, 0))
+true1 <- sum(sapply(true_prec, `==`, 1))
+```
+
+### Grid search
+
+```{r}
+# find sensitivity/ specificity for each of the methods
+
+# grid small - specificity
+spec_small_grid <- true01_mods(small_grid, true_prec) / true0
+summary(spec_small_grid)
+```
+
+### Model averaging
+
+```{r}
+# average small - specificity
+spec_small_avg <- true01_mods(small_avg, true_prec) / true0
+summary(spec_small_avg)
+```
+
+### Hybrid
+
+```{r}
+# hybrid small - specificity
+spec_small_hyb <- true01_mods(small_hyb, true_prec) / true0
+summary(spec_small_hyb)
+```
+
+## Sensitivity
+
+### Grid search
+
+```{r}
+# grid small - sensitivity
+sens_small_grid <- true01_mods(small_grid, true_prec, 1) / true1
+summary(sens_small_grid)
+```
+
+### Model averaging
+
+```{r}
+# average small - sensitivity
+sens_small_avg <- true01_mods(small_avg, true_prec, 1) / true1
+summary(sens_small_avg)
+```
+
+### Hybrid
+
+```{r}
+# hybrid small - sensitivity
+sens_small_hyb <- true01_mods(small_hyb, true_prec, 1) / true1
+summary(sens_small_hyb)
+```
+
+## Relative specificity difference
+
+### Model averaging
+
+```{r}
+# find relative difference in sensivity and specificity with grid as the baseline
+
+# average small - specificity
+rel_spec_small_avg <- (spec_small_avg - spec_small_grid) / spec_small_grid
+summary(rel_spec_small_avg)
+```
+
+### Hybrid
+
+```{r}
+# hybrid small - specificity
+rel_spec_small_hyb <- (spec_small_hyb - spec_small_grid) / spec_small_grid
+summary(rel_spec_small_hyb)
+```
+
+## Relative sensitivity difference 
+
+### Model averaging
+
+```{r}
+# average small - sensitivity
+rel_sens_small_avg <- (sens_small_grid - sens_small_avg) / sens_small_grid
+summary(rel_sens_small_avg)
+```
+
+### Hybrid
+
+```{r}
+# hybrid small - sensitivity
+rel_sens_small_hyb <- (sens_small_grid - sens_small_hyb) / sens_small_grid
+summary(rel_sens_small_hyb)
+```
+
+# Large
+
+## Marginal grids
+
+The large grid was defined as the Cartesian product of the following marginal grids: 
+
+```{r}
+# load them all
+load("large_grid5.Rda")
+load("large_avg5.Rda")
+load("large_hyb5.Rda")
+
+# get the marginal grids
+grid <- large_grid[[1]]$hyperparameters$`Variable 1`$grid[1:3]
+apply(grid, 2, unique)
+```
+
+## Specificity
+
+### Grid search
+
+```{r}
+# grid large - specificity
+spec_large_grid <- true01_mods(large_grid, true_prec) / true0
+summary(spec_large_grid)
+```
+
+### Model averaging
+
+```{r}
+# average large - specificity
+spec_large_avg <- true01_mods(large_avg, true_prec) / true0
+summary(spec_large_avg)
+```
+
+### Hybrid
+
+```{r}
+# hybrid large - specificity
+spec_large_hyb <- true01_mods(large_hyb, true_prec) / true0
+summary(spec_large_hyb)
+```
+
+## Sensitivity
+
+### Grid search
+
+```{r}
+# grid large - sensitivity
+sens_large_grid <- true01_mods(large_grid, true_prec, 1) / true1
+summary(sens_large_grid)
+```
+
+### Model averaging
+
+```{r}
+# average large - sensitivity
+sens_large_avg <- true01_mods(large_avg, true_prec, 1) / true1
+summary(sens_large_avg)
+```
+
+### Hybrid
+
+```{r}
+# hybrid large - sensitivity
+sens_large_hyb <- true01_mods(large_hyb, true_prec, 1) / true1
+summary(sens_large_hyb)
+```
+
+## Relative specificity difference
+
+### Model averaging
+
+```{r}
+# average large - specificity
+rel_spec_large_avg <- (spec_large_avg - spec_large_grid) / spec_large_grid
+summary(rel_spec_large_avg)
+```
+
+### Hybrid
+
+```{r}
+# hybrid large - specificity
+rel_spec_large_hyb <- (spec_large_hyb - spec_large_grid) / spec_large_grid
+summary(rel_spec_large_hyb)
+```
+
+## Relative sensitivity difference
+
+### Model averaging
+
+```{r}
+# average large - sensitivity
+rel_sens_large_avg <- (sens_large_grid - sens_large_avg) / sens_large_grid
+summary(rel_sens_large_avg)
+```
+
+### Hybrid
+
+```{r}
+# hybrid large - sensitivity
+rel_sens_large_hyb <- (sens_large_grid - sens_large_hyb) / sens_large_grid
+summary(rel_sens_large_hyb)
+```

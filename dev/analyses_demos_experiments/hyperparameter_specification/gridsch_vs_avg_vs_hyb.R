@@ -79,7 +79,7 @@ hp_grid_sm <- expand.grid(ssq = ssq, sbsq = sbsq, pip = pip[1:11])
 
 # subsample for debugging
 inds <- sample(nrow(hp_grid_sm), 10)
-hp_grid_sm <- hp_grid_sm[inds, ]
+hp_grid_sm <- hp_grid_lg <- hp_grid_sm[inds, ]
 
 # create a list with each of the grids and a list for storing models from each
 # method at each trial
@@ -125,18 +125,13 @@ res <- foreach(trial_ind = 1:n_trials, .packages = "covdepGE") %dorng%{
     }
   }
 
-  # fit both models
-  out <- tryCatch(covdepGE(X, Z, ssq = hp_grid$ssq,
-                           sbsq = hp_grid$sbsq, pip = hp_grid$pip, prog_bar = F),
-                  error = function(msg) msg)
-
   cat("...", trial_ind)
 
   # return each of the resulting models and the data
-  list(data = dat, out = out)
+  list(data = dat, method_list)
 }
 
 # save res
-save(res, file = "opt_pi2_20var_corelbo.Rda")
+save(res, file = "gridsch_vs_avg_vs_hyb.Rda")
 Sys.time() - start
 stopImplicitCluster()
