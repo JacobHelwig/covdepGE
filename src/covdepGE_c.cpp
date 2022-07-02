@@ -68,25 +68,27 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
 // elbo_tot: double; ELBO for the l-th individual with j-th column fixed as the
 // response
 // -----------------------------------------------------------------------------
-arma::colvec ELBO_c (const arma::colvec& y, const arma::mat& D, const arma::mat& X,
-               const arma::mat& ssq_var, const arma::mat& mu,
-               const arma::mat& alpha, double ssq, double sbsq, double pip){
+double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
+                     const arma::mat& X, const arma::mat& ssq_var,
+                     const arma::mat& mu, const arma::mat& alpha, double ssq,
+                     double sbsq, double pip){
 
   // get sample size
   int n = X.n_rows;
 
-  // instantiate variable to store the ELBO for each individual
-  arma::colvec elbo(n);
+  // instantiate variable to store the total ELBO
+  double elbo_tot = 0;
 
   // loop over all individuals
   for (int l = 0; l < n; l++){
 
-    // calculate and store the ELBO for l-th individual
-    elbo(l) = ELBO_calculator_c(y, D.col(l), X, ssq_var.row(l).t(),
-         mu.row(l).t(), alpha.row(l).t(), ssq, sbsq, pip);
+    // calculate the ELBO for l-th individual and add it to the total ELBO
+    elbo_tot += ELBO_calculator_c(y, D.col(l), X, ssq_var.row(l).t(),
+                                  mu.row(l).t(), alpha.row(l).t(), ssq, sbsq,
+                                  pip);
   }
 
-  return elbo;
+  return elbo_tot;
 }
 
 // -----------------------------------------------------------------------------
@@ -231,12 +233,14 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
   // define last_elbo and cur_elbo for monitoring ELBO progress
   double cur_elbo;
   double last_elbo;
-
-  // elbo_tol less than 0 indicates that elbo should not be monitored during CAVI
   if (elbo_tol >= 0){
-    cur_elbo = 0;
-    last_elbo = sum(ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip));
+    double cur_elbo = 0;
+    double last_elbo = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
   }
+
+  // vectors for storing ELBO and frobenius norm of change in alpha matrix
+  arma::colvec elbo_prog(max_iter);
+  arma::colvec alpha_prog(max_iter);
 
   // CAVI loop (optimize variational parameters)
   for (int k = 0; k < max_iter; k++){
@@ -253,7 +257,7 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
 
     // check for convergence of ELBO
     if (elbo_tol >= 0){
-      cur_elbo = sum(ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip));
+      cur_elbo = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
 
       // if new elbo is within the tolerance or has increased, end updates
       if ((cur_elbo - last_elbo < elbo_tol)){
@@ -275,9 +279,10 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
   }
 
   // calculate ELBO across n individuals
-  arma::colvec ELBO = ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
+  double ELBO = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
 
-  // return final variational parameters and ELBO
+  // return final mu matrix, alpha matrix, the final ELBO, the number of
+  // iterations to converge, and the fitted variance hyperparameters
   return(Rcpp::List::create(
       Rcpp::Named("mu") = mu, Rcpp::Named("alpha") = alpha,
       Rcpp::Named("ssq_var") = ssq_var, Rcpp::Named("elbo") = ELBO));
@@ -317,28 +322,51 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
   // get number of grid points
   int n_param = pip.n_elem;
 
-  // create storage for the hyperparameters, variational parameters, and ELBO
-  Rcpp::List elbo_list(n_param);
-  Rcpp::List mu_list(n_param), alpha_list(n_param), ssqv_list(n_param);
+  // storage for the best ELBO and new elbo
+  double elbo_best = -1;
+  double elbo_new;
+
+  // storage for the hyperparameters and variational parameters corresponding to
+  // the current best ELBO
+  arma::mat mu_best;
+  arma::mat alpha_best;
+  arma::mat ssqv_best;
+  double ssq_best = -1;
+  double sbsq_best = -1;
+  double pip_best = -1;
 
   // instantiate a list to store the result of cavi_c
   Rcpp::List out;
 
+  // vector to store ELBOs
+  arma::colvec elbo_store(n_param);
+
   // perform CAVI for each grid point
   for (int j = 0; j < n_param; j++){
 
-    // run CAVI
+    // run CAVI; store elbo
     out = cavi_c(y, D, X, mu, alpha, ssq(j), sbsq(j), pip(j), elbo_tol,
                  alpha_tol, max_iter);
+    elbo_new = as<double>(out["elbo"]);
+    elbo_store(j) = elbo_new;
 
-    // store the final ELBO and variational parameters
-    elbo_list(j) = as<arma::colvec>(out["elbo"]);
-    mu_list(j) = as<arma::mat>(out["mu"]);
-    alpha_list(j) = as<arma::mat>(out["alpha"]);
-    ssqv_list(j) = as<arma::mat>(out["ssq_var"]);
+    // if the new ELBO is greater than the current best, update the best ELBO and
+    // parameters and whether or not the model converged
+    if (elbo_best <  elbo_new or j == 0){
+
+      elbo_best = as<double>(out["elbo"]);
+      mu_best = as<arma::mat>(out["mu"]);
+      alpha_best = as<arma::mat>(out["alpha"]);
+      ssqv_best = as<arma::mat>(out["ssq_var"]);
+      ssq_best = ssq(j);
+      sbsq_best = sbsq(j);
+      pip_best = pip(j);
+    }
   }
 
   return(Rcpp::List::create(
-      Rcpp::Named("elbo") = elbo_list, Rcpp::Named("mu") = mu_list,
-      Rcpp::Named("alpha") = alpha_list, Rcpp::Named("ssq_var") = ssqv_list));
+      Rcpp::Named("elbo") = elbo_best, Rcpp::Named("mu") = mu_best,
+      Rcpp::Named("alpha") = alpha_best, Rcpp::Named("ssq_var") = ssqv_best,
+      Rcpp::Named("ssq") = ssq_best, Rcpp::Named("sbsq") = sbsq_best,
+      Rcpp::Named("pip") = pip_best, Rcpp::Named("elbo_vec") = elbo_store));
 }
