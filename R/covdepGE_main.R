@@ -207,9 +207,9 @@
 ## -----------------------------------------------------------------------------
 covdepGE <- function(data, Z, alpha = 0.2, mu = 0, hp_method = "hybrid",
                      ssq = NULL, sbsq = NULL, pip = NULL, nssq = 5, nsbsq = 5,
-                     npip = 5, ssq_upper_mult = 4, ssq_lower = 1e-3,
-                     sbsq_lower = 1e-5, pip_lower = 1e-5, tau = 0.1,
-                     kde = T, norm = 2, center_data = T, scale_Z = T,
+                     npip = 5, ssq_upper_mult = 1, ssq_lower = 1e-5,
+                     snr_upper = 5, sbsq_lower = 1e-5, pip_lower = 1e-5,
+                     tau = 0.1, kde = T, norm = 2, center_data = T, scale_Z = T,
                      elbo_tol = NULL, alpha_tol = 1e-5, max_iter = 100,
                      edge_threshold = 0.5, sym_method = "mean", parallel = F,
                      num_workers = NULL, prog_bar = T){
@@ -308,8 +308,9 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, hp_method = "hybrid",
 
             # perform the grid search and final CAVI; save the results to res
             cavi_search(X, Z, D, y, alpha, mu, hp_method, ssq, sbsq, pip, nssq,
-                        nsbsq, npip, ssq_upper_mult, ssq_lower, sbsq_lower,
-                        pip_lower, elbo_tol, alpha_tol, max_iter, resp_index)
+                        nsbsq, npip, ssq_upper_mult, ssq_lower, snr_upper,
+                        sbsq_lower, pip_lower, elbo_tol, alpha_tol, max_iter,
+                        resp_index)
             }
           )
       },
@@ -343,9 +344,9 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, hp_method = "hybrid",
       # perform the grid search and final CAVI; save the results to res
       res[[resp_index]] <- cavi_search(X, Z, D, y, alpha, mu, hp_method, ssq,
                                        sbsq, pip, nssq, nsbsq, npip,
-                                       ssq_upper_mult, ssq_lower, sbsq_lower,
-                                       pip_lower, elbo_tol, alpha_tol, max_iter,
-                                       resp_index)
+                                       ssq_upper_mult, ssq_lower, snr_upper,
+                                       sbsq_lower, pip_lower, elbo_tol,
+                                       alpha_tol, max_iter, resp_index)
 
       # update the progress bar
       if (prog_bar) utils::setTxtProgressBar(pb, resp_index)
