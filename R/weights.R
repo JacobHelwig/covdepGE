@@ -119,13 +119,13 @@ get_bandwidths <- function(X){
 ##
 ## bandwidths: vector of length n; individual-specific bandwidths
 ## -----------------------------------------------------------------------------
-get_weights <- function(Z, norm, kde, tau){
+get_weights <- function(Z, norm, tau){
 
   # get n
   n <- nrow(Z)
 
-  # if kde, get individual-specific bandwidths
-  if (kde){
+  # if tau is null, use kde to get individual-specific bandwidths
+  if (is.null(tau)){
     tau <- get_bandwidths(Z)
   }else if (length(tau) == 1){
     tau <- rep(tau, n)
@@ -163,14 +163,8 @@ get_weights <- function(Z, norm, kde, tau){
       # given the norm, find the weight of j with respect to i
       D[j, i] <- stats::dnorm(diff_norm, 0, tau_i)
 
-      # if kde = F, then the weight matrix is symmetric up until scaling
-      if (!kde){
-        D[i, j] <- D[j, i]
-      }else{
-
-        # otherwise, find the weight of i with respect to j
-        D[i, j] <- stats::dnorm(diff_norm, 0, tau[j])
-      }
+      # find the weight of i with respect to j
+      D[i, j] <- stats::dnorm(diff_norm, 0, tau[j])
     }
   }
 

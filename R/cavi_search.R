@@ -88,10 +88,9 @@
 ## individual in the final model. Column j corresponds to the regression with
 ## the j-th variable fixed as the response
 ## -----------------------------------------------------------------------------
-cavi_search <- function(X, Z, D, y, alpha, mu, hp_method, ssq, sbsq, pip, nssq,
-                        nsbsq, npip, ssq_upper_mult, ssq_lower, snr_upper,
-                        sbsq_lower, pip_lower, elbo_tol, alpha_tol, max_iter,
-                        resp_index){
+cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
+                        npip, ssq_upper_mult, ssq_lower, snr_upper, sbsq_lower,
+                        pip_lower, elbo_tol, alpha_tol, max_iter, resp_index){
 
   # get the dimensions of the data
   n <- nrow(X)
@@ -101,8 +100,8 @@ cavi_search <- function(X, Z, D, y, alpha, mu, hp_method, ssq, sbsq, pip, nssq,
   # the variational approximation to the j-th parameter in a regression with
   # the resp_index predictor fixed as the response with weightings taken with
   # respect to the l-th individual
-  alpha <- matrix(alpha, n, p)
-  mu <- matrix(mu, n, p)
+  alpha <- matrix(0.1, n, p)
+  mu <- matrix(0, n, p)
 
   # if the hyperparameter grid has not been fully supplied, create it
   if (any(is.null(c(ssq, sbsq, pip)))){
@@ -129,7 +128,7 @@ cavi_search <- function(X, Z, D, y, alpha, mu, hp_method, ssq, sbsq, pip, nssq,
       ssq_upper <- ssq_upper_mult * var(y)
 
       # create the grid candidates for ssq
-      #ssq <- exp(seq(log(ssq_lower), log(ssq_upper), length.out = nssq))
+      # ssq <- exp(seq(log(ssq_lower), log(ssq_upper), length.out = nssq))
       ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)
 
     }else{
@@ -159,8 +158,8 @@ cavi_search <- function(X, Z, D, y, alpha, mu, hp_method, ssq, sbsq, pip, nssq,
     if (is.null(pip)){
 
       # create posterior inclusion probability grid
-      # pip <- exp(seq(log(pip_lower), log(pi_upper), length.out = npip))
-      pip <- seq(pip_lower, pi_upper, length.out = npip)
+      pip <- exp(seq(log(pip_lower), log(pi_upper), length.out = npip))
+      # pip <- seq(pip_lower, pi_upper, length.out = npip)
 
     }else{
       pip <- unique(pip)
@@ -206,7 +205,7 @@ cavi_search <- function(X, Z, D, y, alpha, mu, hp_method, ssq, sbsq, pip, nssq,
     if (hp_method == "hybrid"){
       pip <- unique(hp$pip)
       ssq <- unique(hp$ssq)
-      sbsq <- unique(hp$ssq)
+      sbsq <- unique(hp$sbsq)
       hp <- expand.grid(ssq = ssq, sbsq = sbsq)
 
       # data.frame for storing final hyperparameters from grid search

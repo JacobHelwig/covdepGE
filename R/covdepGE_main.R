@@ -205,14 +205,13 @@
 #' 2. Dasgupta S., Pati D., Srivastava A., *A Two-Step Geometric Framework For
 #' Density Modeling*, Statistica Sinica, 2020
 ## -----------------------------------------------------------------------------
-covdepGE <- function(data, Z, alpha = 0.2, mu = 0, hp_method = "hybrid",
-                     ssq = NULL, sbsq = NULL, pip = NULL, nssq = 5, nsbsq = 5,
-                     npip = 5, ssq_upper_mult = 1, ssq_lower = 1e-5,
-                     snr_upper = 5, sbsq_lower = 1e-5, pip_lower = 1e-5,
-                     tau = 0.1, kde = T, norm = 2, center_data = T, scale_Z = T,
-                     elbo_tol = NULL, alpha_tol = 1e-5, max_iter = 100,
-                     edge_threshold = 0.5, sym_method = "mean", parallel = F,
-                     num_workers = NULL, prog_bar = T){
+covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
+                     pip = NULL, nssq = 5, nsbsq = 5, npip = 5, ssq_mult = 1.5,
+                     ssq_lower = 1e-5, snr_upper = 2, sbsq_lower = 1e-5,
+                     pip_lower = 1e-5, tau = NULL, norm = 2, center_data = T,
+                     scale_Z = T, elbo_tol = 1e-5, alpha_tol = 1e-5,
+                     max_iter = 100, edge_threshold = 0.5, sym_method = "mean",
+                     parallel = F, num_workers = NULL, prog_bar = T){
 
   start_time <- Sys.time()
 
@@ -235,25 +234,12 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, hp_method = "hybrid",
   if (center_data) data <- matrix(scale(data, T, F)[ , ], n)
 
   # get weights
-  D <- get_weights(Z, norm, kde, tau)
+  D <- get_weights(Z, norm, tau)
   bandwidths <- D$bandwidths
   D <- D$D
 
   # list for the weights and bandwidths
   weights = list(weights = D, bandwidths = bandwidths)
-
-  # if elbo_tol has not been specified, define it
-  if (is.null(elbo_tol)){
-
-    # model averaging by default will only stop if ELBO increases
-    if (hp_method == "model_average"){
-      elbo_tol <- 0
-    }else{
-
-      # the other two methods will use elbo_tol
-      elbo_tol <- 1e-2
-    }
-  }
 
   # main loop over the predictors
 
@@ -307,10 +293,9 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, hp_method = "hybrid",
             X <- data[, -resp_index, drop = F]
 
             # perform the grid search and final CAVI; save the results to res
-            cavi_search(X, Z, D, y, alpha, mu, hp_method, ssq, sbsq, pip, nssq,
-                        nsbsq, npip, ssq_upper_mult, ssq_lower, snr_upper,
-                        sbsq_lower, pip_lower, elbo_tol, alpha_tol, max_iter,
-                        resp_index)
+            cavi_search(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
+                        npip, ssq_mult, ssq_lower, snr_upper, sbsq_lower,
+                        pip_lower, elbo_tol, alpha_tol, max_iter, resp_index)
             }
           )
       },
@@ -342,11 +327,11 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, hp_method = "hybrid",
       X <- data[, -resp_index, drop = F]
 
       # perform the grid search and final CAVI; save the results to res
-      res[[resp_index]] <- cavi_search(X, Z, D, y, alpha, mu, hp_method, ssq,
-                                       sbsq, pip, nssq, nsbsq, npip,
-                                       ssq_upper_mult, ssq_lower, snr_upper,
-                                       sbsq_lower, pip_lower, elbo_tol,
-                                       alpha_tol, max_iter, resp_index)
+      res[[resp_index]] <- cavi_search(X, Z, D, y, hp_method, ssq, sbsq, pip,
+                                       nssq, nsbsq, npip, ssq_mult, ssq_lower,
+                                       snr_upper, sbsq_lower, pip_lower,
+                                       elbo_tol, alpha_tol, max_iter,
+                                       resp_index)
 
       # update the progress bar
       if (prog_bar) utils::setTxtProgressBar(pb, resp_index)
@@ -452,15 +437,15 @@ covdepGE <- function(data, Z, alpha = 0.2, mu = 0, hp_method = "hybrid",
                 inclusion_probs_asym = incl_probs_asym)
 
   # create a list to return the scalar function arguments
-  args <- list(alpha = alpha, mu = mu, hp_method = hp_method, nssq = nssq,
-               nsbsq = nsbsq, npip = npip, ssq_upper_mult = ssq_upper_mult,
-               ssq_lower = ssq_lower, sbsq_lower = sbsq_lower,
-               pip_lower = pip_lower, tau = tau, kde = kde, norm = norm,
-               center_data = center_data, scale_Z = scale_Z,
-               elbo_tol = elbo_tol, alpha_tol = alpha_tol, max_iter = max_iter,
-               edge_threshold = edge_threshold, sym_method = sym_method,
-               parallel = parallel, num_workers = num_workers,
-               prog_bar = prog_bar)
+  args <- NULL
+  # args <- list(hp_method = hp_method, nssq = nssq, nsbsq = nsbsq, npip = npip, ssq_upper_mult = ssq_upper_mult,
+  #              ssq_lower = ssq_lower, sbsq_lower = sbsq_lower,
+  #              pip_lower = pip_lower, tau = tau, kde = kde, norm = norm,
+  #              center_data = center_data, scale_Z = scale_Z,
+  #              elbo_tol = elbo_tol, alpha_tol = alpha_tol, max_iter = max_iter,
+  #              edge_threshold = edge_threshold, sym_method = sym_method,
+  #              parallel = parallel, num_workers = num_workers,
+  #              prog_bar = prog_bar)
 
   # create a list for model details
   model_details <- list(elapsed = NA, n = n, p = p, ELBO = total_elbo,
