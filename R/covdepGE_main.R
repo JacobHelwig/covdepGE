@@ -2,201 +2,224 @@
 #' @title covdepGE: Covariate Dependent Graph Estimation
 #' @aliases covdepGE-method
 #' @export
-## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
 #' @description Model the conditional dependence structure of data as a function
 #' of extraneous covariates as described in (1).
 ## -----------------------------ARGUMENTS---------------------------------------
-#' @param data_mat \eqn{n} x \eqn{(p + 1)} matrix; data
+#' @param data `n x p numeric matrix`; data
 #'
-#' @param Z \eqn{n} x \eqn{p'} matrix; extraneous covariates
+#' @param Z `n x q numeric matrix`; extraneous covariates
 #'
-#' @param tau positive numeric OR numeric vector of length \eqn{n} with positive
-#' entries; bandwidth parameter. Greater values allow for more information to be
-#' shared between individuals. Allows for global or individual-specific
-#' specification. If `kde = T`, this argument is ignored. `0.1` by default
+#' @param hp_method `character` in `c("grid_search", "model_average", "hybrid")`;
+#' the hyperparameter grid will be generated as the Cartesian product of `ssq`,
+#' `sbsq`, and `pip`.
 #'
-#' @param kde logical; if `T`, use 2-step KDE methodology as described in
-#' (2) to calculate individual-specific bandwidths in place of global bandwidth
-#' parameter `tau`. `T` by default
+#' If `"grid_search"`, then the point in the hyperparameter
+#' grid that maximizes the ELBO across all individuals for a given variable will
+#' be selected.
 #'
-#' @param alpha numeric in \eqn{(0, 1)}; global initialization value for the
-#' variational parameters `alpha_matrices` (approximates probabilities of
-#' inclusion). `0.2` by default
+#' If `"model_average`, then all posterior quantities will be a convex
+#' combination across each point in the hyperparameter grid, where the
+#' weightings are both individual and variable specific. Unnormalized weights
+#' are calculated using the exponentiated ELBO
 #'
-#' @param mu numeric; global initialization value for the variational parameters
-#' `mu_matrices` (approximates posterior mean of regression coefficients). `0`
+#' If `"hybrid"`, then `pip` will be averaged over as with `"model_average"`,
+#' while a single point in the grid defined by the Cartesian product of `ssq`
+#' and `sbsq` will be selected for each variable and point in `pip`. `"hybrid"`
 #' by default
 #'
-#' @param sigmasq_vec numeric vector of length `n_param` with positive
-#' entries; candidate values of `sigmasq`, the error term variance. `0.5` by
+#' @param ssq `NULL` OR `numeric vector` with positive entries; candidate values
+#' of the hyperparameter `sigma^2` (prior residual variance). If `NULL`, `ssq`
+#' will be generated as:
+#'
+#' `ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)`
+#'
+#' `NULL` by default
+#'
+#' @param sbsq `NULL` OR `numeric vector` with positive entries; candidate values
+#' of the hyperparameter `sigma^2_beta` (prior slab variance). If `NULL`, `sbsq`
+#' will be generated as:
+#'
+#' `sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)`
+#'
+#' `NULL` by default
+#'
+#' @param pip `NULL` OR `numeric vector` with entries in `(0, 1)`; candidate
+#' values of the hyperparameter `pi` (prior inclusion probability). If `NULL`,
+#' `pip` will be generated as:
+#'
+#' `pip <- exp(seq(log(pip_lower), log(pi_upper), length.out = npip))`
+#'
+#' `NULL` by default
+#'
+#' @param nssq  positive integer; number of points in `ssq` if `ssq` is `NULL`.
+#' `5` by default.
+#'
+#' @param nsbsq positive integer; number of points in `sbsq` if `sbsq` is
+#' `NULL`. `5` by default.
+#'
+#' @param npip positive integer; number of points in `pip` if `pip` is `NULL`.
+#' `5` by default.
+#'
+#' @param ssq_mult positive `numeric`; if `ssq` is `NULL`, then for each variable
+#' `y` fixed as the response:
+#'
+#' `ssq_upper <- ssq_upper_mult * var(y)`
+#'
+#' Then, `ssq_upper` will be the greatest value in `ssq` for variable `y`. `1.5`
+#' by default
+#'
+#' @param ssq_lower positive `numeric`; if `ssq` is `NULL`, then `ssq_lower` will
+#' be the least value in `ssq`. `1e-5` by default
+#'
+#' @param snr_upper positive `numeric`; if `sbsq` is `NULL`, then for each
+#' variable `y` fixed as the response:
+#'
+#' `s2_sum <- sum(apply(X, 2, var))`
+#'
+#' `sbsq_upper <- snr_upper / (pi_upper * s2_sum)`
+#'
+#' Then, `sbsq_upper` will be the greatest value in `sbsq` for variable `y`.
+#' `25` by default
+#'
+#' @param sbsq_lower positive `numeric`; if `sbsq` is `NULL`, then `sbsq_lower`
+#' will be the least value in `sbsq`. `1e-5` by default
+#'
+#' @param pip_lower `numeric` in `(0, 1)`; if `pip` is `NULL`, then
+#' `pip_lower` will be the least value in `pip`. `1e-5` by default
+#'
+#' @param tau `NULL` OR positive `numeric` OR `numeric vector` of length `n`
+#' with positive entries; bandwidth parameter. Greater values allow for more
+#' information to be shared between individuals. Allows for global or
+#' individual-specific specification. If `NULL`, use 2-step KDE methodology as
+#' described in (2) to calculate individual-specific bandwidths. `NULL` by
 #' default
 #'
-#' @param sigmabetasq_vec numeric vector of length `n_param` with positive
-#' entries; candidate values of `sigmabeta_sq`, the slab variance. `NULL` by
-#' default
-#'
-#' @param n_param positive integer; if `sigmabetasq_vec` is `NULL`, `n_param` is
-#' the number of candidate `sigmabeta_sq` that will be auto-generated as:
-#'
-#' `sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_param))`
-#'
-#' `8` by default
-#'
-#' @param pi_vec numeric vector of length `n_param` with entries in \eqn{(0, 1)};
-#' candidate values of `pi`. `0.1` by default
-#'
-#' @param norm numeric in \eqn{[1, Inf]}; norm to use when calculating weights.
+#' @param norm `numeric` in `[1, Inf]`; norm to use when calculating weights.
 #' `Inf` results in infinity norm. `2` by default
 #'
-#' @param scale logical; if `T`, center and scale extraneous covariates to mean
-#' 0, standard deviation 1 prior to calculating the weights. `T` by default
+#' @param center_data `logical`; if `T`, center `data` column-wise to mean `0`.
+#' `T` by default
 #'
-#' @param tolerance positive numeric; end CAVI when the Frobenius norm of the
-#' iteration-to-iteration change in the alpha matrix are within tolerance.
-#' `1e-12` by default
+#' @param scale_Z `logical`; if `T`, center and scale `Z` column-wise to mean `0`,
+#' standard deviation 1 prior to calculating the weights. `T` by default
 #'
-#' @param max_iter positive integer; if the tolerance criteria has not been met
+#' @param elbo_tol non-negative `numeric`; end CAVI when the current ELBO minus
+#' the previous ELBO is less than `elbo_tol`. `1e-5` by default
+#'
+#' @param alpha_tol positive `numeric`; end CAVI when the Frobenius norm of the
+#' change in the alpha `matrix` is within `alpha_tol`. `1e-5` by default
+#'
+#' @param max_iter positive integer; if a tolerance criteria has not been met
 #' by `max_iter_grid` iterations, end CAVI. `100` by default
 #'
-#' @param edge_threshold numeric in \eqn{(0, 1)}; when post-processing the
-#' inclusion probabilities, an edge will be added to the graph if the
-#' \eqn{(i, j)} edge has probability of inclusion greater than `edge_threshold`.
-#' `0.5` by default
+#' @param edge_threshold `numeric` in `(0, 1)`; a graph for each individual
+#' will be constructed by including an edge between variable `i` and
+#' variable `j` if, and only if, the `(i,j)` entry of the symmetrized
+#' posterior inclusion probability `matrix` corresponding to the individual is
+#' greater than `edge_threshold`. `0.5` by default
 #'
-#' @param sym_method character in \{`"mean"`, `"max"`, `"min"`\}; to symmetrize
-#' the alpha matrices, the \eqn{i,j = j,i} entry is
-#' `sym_method`\eqn{((i,j entry), (j,i entry))}. `"mean"` by default
+#' @param sym_method `character` in \{`"mean"`, `"max"`, `"min"`\`; to symmetrize
+#' the posterior inclusion probability `matrix` for each individual, the
+#' `(i,j)` and `(j,i)` entries will be post-processed as
+#' `sym_method``((i,j entry), (j,i entry))`. `"mean"` by default
 #'
-#' @param parallel logical; if `T`, grid search and CAVI for each variable will
-#' be performed in parallel using `foreach`. Parallel backend may be registered
-#' prior to making a call to `covdepGE`. If no active parallel backend can be
-#' detected, then parallel backend will be automatically registered using
-#' `doParallel::registerDoParallel(num_workers)`
+#' @param parallel `logical`; if `T`, hyperparameter selection and CAVI for each
+#' of the `p` variables will be performed in parallel using `foreach`.
+#' Parallel backend may be registered prior to making a call to `covdepGE`. If
+#' no active parallel backend can be detected, then parallel backend will be
+#' automatically registered using `doParallel::registerDoParallel(num_workers)`
 #'
-#' @param num_workers integer in \eqn{{1, 2,...,`parallel::detectCores()`}};
-#' argument to `doParallel::registerDoParallel` if `parallel = T` and no
-#' parallel backend is detected. `NULL` by default, which results in
-#' `num_workers = floor(parallel::detectCores() / 2)`
+#' @param num_workers `NULL` OR positive integer less than or equal to
+#' `parallel::detectCores()`; argument to `doParallel::registerDoParallel` if
+#' `parallel = T` and no parallel backend is detected. If `NULL`, then:
 #'
-#' @param stop_cluster logical; if `T`, run `doParallel::stopImplicitCluster()`
-#' after parallel exectution of CAVI for all variables has completed. This will
-#' stop the cluster created implicitly by
-#' `doParallel::registerDoParallel(num_workers)` and will shut down the unused
-#' workers. Setting `F` is useful when making multiple calls to `covdepGE` with
-#' `parallel = T`, as it avoids the overhead of creating a new cluster. `T` by
-#' default
+#' `num_workers <- floor(parallel::detectCores() / 2)`
 #'
-#' @param warnings logical; if `T`, convergence and grid warnings will be
-#' displayed. Convergence warnings occur when the tolerance exit condition has
-#' not been met by `max_iter_grid` or `max_iter_final` iterations. Grid warnings
-#' occur when, for either `sigmabetasq_vec` or `pi_vec`, the grid is longer than
-#' 2 candidates, and the final CAVI selects a candidate value on the grid
-#' boundary. `T` by default
+#' `NULL` by default
 #'
-#' @param CS logical; if `T`, `pi_vec` and `sigma_sq` will be selected according
-#' to Carbonetto-Stephens. `F` by default
+#' @param prog_bar `logical`; if `T`, then a progress bar will be displayed
+#' denoting the number of remaining variables to fix as the response and perform
+#' CAVI. If `parallel`, no progress bar will be displayed. `T` by default
+#'
 ## -----------------------------RETURNS-----------------------------------------
 #' @return Returns `list` with the following values:
+#'=
 #'
-#' 1. `graphs`: `list` of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices; the
-#' \eqn{l}-th matrix is the adjacency matrix for the \eqn{l}-th individual
-#' (obtained from `inclusion_probs` according to `edge_threshold`)
+#' 1. `graphs`: `list` with the following values:
 #'
-#' 2. `inclusion_probs`: list of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices;
-#' the \eqn{l}-th matrix is a symmetric matrix of inclusion probabilities for
-#' the \eqn{l}-th individual (obtained by symmetrizing the `alpha_matrices`
-#' according to `sym_method`)
+#' - `graphs`: `list` of `n p x p numeric` matrices; the
+#' `l`-th `matrix` is the adjacency `matrix` for the `l`-th individual
 #'
-#' 3. `alpha_matrices`: list of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices;
-#' the \eqn{l}-th matrix is an asymmetric matrix of inclusion probabilities for
-#' the \eqn{l}-th individual
+#' - `unique_graphs`: `list`; the `l`-th element is a `list` containing the
+#' `l`-th unique graph and the individual(s) corresponding to this graph
 #'
-#' 4. `unique_graphs`: list of \eqn{g} lists; \eqn{g} is the number of
-#' unique graphs. The \eqn{v}-th list has 3 values:
-#' - `graph`: \eqn{(p + 1)} x \eqn{(p + 1)} matrix; the adjacency matrix for the
-#'  \eqn{v}-th graph
-#' - `individuals`: vector with entries in \eqn{{1,...,n}}; the individual
-#' indices corresponding to the \eqn{v}-th graph
-#' - `individuals_summary`: character; summarizes the individual indices in
-#' `individuals`
+#' - `inclusion_probs_sym`: `list` of `n p x p numeric`
+#' matrices; the `l`-th `matrix` is the symmetrized posterior inclusion
+#' probability `matrix` for the `l`-th individual
 #'
-#' 5. `CAVI_details`: list of \eqn{(p + 1)} lists; the \eqn{j}-th list
-#' corresponds to the \eqn{j}-th variable and contains the following values:
-#'  - `sigmasq`, `sigmabeta_sq`, `pi`: numerics; the values of the
-#'  hyperparameters that maximized the ELBO for the j-th variable
-#'  - `ELBO`: numeric; the maximum value of ELBO for the final CAVI
-#'  - `converged_iter`: numeric; the number of iterations to attain convergence
-#'  for the final CAVI
-#'  - `hyperparameters`: `n_param` x 4 matrix; each of the hyperparameter grid
-##  points with the resulting ELBO
+#' - `inclusion_probs_asym`: `list` of `n p x p numeric`
+#' matrices; the `l`-th `matrix` is the posterior inclusion probability `matrix`
+#' for the `l`-th individual prior to symmetrization
 #'
-#' 6. `model_details`: list with the following values:
-#'  - `elapsed`: timediff; the amount of time to fit the model
-#'  - `n`: integer; sample size
-#'  - `p`: integer; the number of variables in the data minus one
-#'  - `ELBO`: numeric; the total ELBO summed across the \eqn{p + 1} final models
-#'  - `num_unique`: integer; the number of unique conditional dependence
-#'  structures identified
-#'  - `final_DNC`: integer; the number of variables for which the final CAVI did
-#'  not attain convergence within `max_iter_final` iterations
-#'  - `num_candidates`: integer; the number of grid points in the grid search
 #'
-#' 7. `weights`: \eqn{n} x \eqn{n} matrix; the \eqn{i, j} entry is the weighting
-#' of the \eqn{i}-th individual with respect to the \eqn{j}-th individual using
-#' the \eqn{j}-th individual's bandwidth
+#' 2. `variational_params`: `list` with the following values:
 #'
-#' 8. `bandwidths`: vector of length \eqn{n}; individual-specific bandwidths
+#' - `alpha`: `list` of `p n x (p - 1) numeric` matrices; the
+#' `(i, j)` entry of the `k`-th `matrix` is the variational approximation
+#' to the posterior inclusion probability of the `j`-th variable in a
+#' weighted regression with variable `k` fixed as the response, where the
+#' weights are taken with respect to individual `i`
 #'
-#' 9. `arguments`: vector; argument values passed to the current call to
-#' `covdepGE`
+#' - `mu`: `list` of `p n x (p - 1) numeric` matrices; the
+#' `(i, j)` entry of the `k`-th `matrix` is the variational approximation
+#' to the posterior slab mean for the `j`-th variable in a weighted
+#' regression with variable `k` fixed as the response, where the weights are
+#' taken with respect to individual `i`
+#'
+#' - `ssq_var`: `list` of `p n x (p - 1) numeric` matrices; the
+#' `(i, j)` entry of the `k`-th `matrix` is the variational approximation
+#' to the posterior slab variance for the `j`-th variable in a weighted
+#' regression with variable `k` fixed as the response, where the weights are
+#' taken with respect to individual `i`
+#'
+#'
+#' 3. `hyperparameters`: `list` of `p` lists; the `j`-th `list` has the
+#' following values for variable `j` fixed as the response:
+#'
+#' - `grid`: `matrix` of candidate hyperparameter values and corresponding ELBO
+#'
+#' - `final`: the final hyperparameters chosen by grid search
+#'
+#' 4. `model_details`: `list` with the following values:
+#'
+#' - `elapsed`: amount of time to fit the model
+#'
+#' - `n`: number of individuals
+#'
+#' - `p`: number of variables
+#'
+#' - `ELBO`: ELBO summed across all individuals and variables. If
+#' `hp_method` is `"model_average"` or `"hybrid"`, this ELBO is averaged across
+#' the hyperparameter grid using the model averaging weights
+#'
+#' - `num_unique`: number of unique graphs
+#'
+#' - `grid_size`: number of points in the hyperparameter grid
+#'
+#' - `args`: `list` containing all passed arguments of `length` 1
+#'
+#'
+#' 5. `weights`: `list` with the following values:
+#'
+#' - `weights`: `n x n numeric matrix`. The `(i, j)` entry is the weight of the
+#' `i`-th individual with respect to the `j`-th individual using the `j`-th
+#' individual's bandwidth
+#'
+#' - `bandwidths`: `numeric vector` of length `n`. The `i`-th entry is the
+#' bandwidth for the `i`-th individual
 ## -----------------------------EXAMPLES----------------------------------------
 #' @examples
-#' set.seed(1)
-#' n <- 100
-#' p <- 4
-#'
-#' # generate the extraneous covariate
-#' Z_neg <- sort(runif(n / 2) * -1)
-#' Z_pos <- sort(runif(n / 2))
-#' Z <- c(Z_neg, Z_pos)
-#' summary(Z)
-#'
-#' # create true covariance structure for 2 groups: positive Z and negative Z
-#' true_graph_pos <- true_graph_neg <- matrix(0, p + 1, p + 1)
-#' true_graph_pos[1, 2] <- true_graph_pos[2, 1] <- 1
-#' true_graph_neg[1, 3] <- true_graph_neg[3, 1] <- 1
-#'
-#' # visualize the true covariance structures
-#' (gg_adjMat(true_graph_neg) +
-#'     ggplot2::ggtitle("True graph for individuals with negative Z"))
-#' (gg_adjMat(true_graph_pos, color1 = "steelblue") +
-#'     ggplot2::ggtitle("True graph for individuals with positive Z"))
-#'
-#' # generate the covariance matrices as a function of Z
-#' sigma_mats_neg <- lapply(Z_neg, function(z) z * true_graph_neg + diag(p + 1))
-#' sigma_mats_pos <- lapply(Z_pos, function(z) z * true_graph_pos + diag(p + 1))
-#' sigma_mats <- c(sigma_mats_neg, sigma_mats_pos)
-#'
-#' # generate the data using the covariance matrices
-#' data_mat <- t(sapply(sigma_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
-#'
-#' # visualize the sample correlation
-#' gg_adjMat(abs(cor(data_mat[1:(n / 2), ])) - diag(p + 1))
-#' gg_adjMat(abs(cor(data_mat[(n / 2 + 1):n, ])) - diag(p + 1),
-#'           color1 = "dodgerblue")
-#'
-#' # estimate the covariance structure
-#' out <- covdepGE(data_mat, Z)
-#'
-#' # analyze results
-#' gg_adjMat(out, 1)
-#' gg_adjMat(out, 50, color1 = "tomato")
-#' gg_adjMat(out, 54, color1 = "steelblue")
-#' gg_adjMat(out, 100, color1 = "dodgerblue")
-#'
-#' gg_inclusionCurve(out, 1, 2)
-#' gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
 ## -----------------------------REFERENCES--------------------------------------
 #' @references
 #' 1. Dasgupta S., Ghosh P., Pati D., Mallick B., *An approximate Bayesian
@@ -207,7 +230,7 @@
 ## -----------------------------------------------------------------------------
 covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
                      pip = NULL, nssq = 5, nsbsq = 5, npip = 5, ssq_mult = 1.5,
-                     ssq_lower = 1e-5, snr_upper = 2, sbsq_lower = 1e-5,
+                     ssq_lower = 1e-5, snr_upper = 25, sbsq_lower = 1e-5,
                      pip_lower = 1e-5, tau = NULL, norm = 2, center_data = T,
                      scale_Z = T, elbo_tol = 1e-5, alpha_tol = 1e-5,
                      max_iter = 100, edge_threshold = 0.5, sym_method = "mean",
@@ -215,17 +238,13 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
 
   start_time <- Sys.time()
 
-  # run compatibility checks
-  # covdepGE_checks(data, Z, tau, kde, alpha, mu, ssq, sbsq, pi_vec, norm, scale, tolerance, max_iter, edge_threshold,
-  #                 sym_method, parallel, num_workers, stop_cluster, warnings)
-
   # ensure that data_mat and Z are matrices
   data <- as.matrix(data)
   Z <- as.matrix(Z)
 
   # get sample size and number of parameters
   n <- nrow(data)
-  p <- ncol(data) - 1
+  p <- ncol(data)
 
   # if the covariates should be centered and scaled, do so ([ , ] for attributes)
   if (scale_Z) Z <- matrix(scale(Z)[ , ], n)
@@ -238,7 +257,7 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
   bandwidths <- D$bandwidths
   D <- D$D
 
-  # list for the weights and bandwidths
+  # `list` for the weights and bandwidths
   weights = list(weights = D, bandwidths = bandwidths)
 
   # main loop over the predictors
@@ -261,8 +280,7 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
       warning = function(msg) F)
 
     if (registered){
-      if (warnings) message(paste("Detected", foreach::getDoParWorkers(),
-                                  "workers"))
+      message(paste("Detected", foreach::getDoParWorkers(), "workers"))
     }else{
 
       # otherwise, register parallel backend
@@ -283,7 +301,7 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
     res <- tryCatch(
       {
         foreach::`%dopar%`(
-          foreach::foreach(resp_index = 1:(p + 1), .packages = "covdepGE"),
+          foreach::foreach(resp_index = 1:(p), .packages = "covdepGE"),
           {
 
             # Set variable number `resp_index` as the response
@@ -313,12 +331,12 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
     # otherwise, CAVI will be executed sequentially
 
     # instantiate the progress bar
-    if (prog_bar) pb <- utils::txtProgressBar(0, p + 1, style = 3)
+    if (prog_bar) pb <- utils::txtProgressBar(0, p, style = 3)
 
-    # list to store each of the results from cavi_search
-    res <- vector("list", p + 1)
+    # `list` to store each of the results from cavi_search
+    res <- vector("list", p)
 
-    for (resp_index in 1:(p + 1)) {
+    for (resp_index in 1:(p)) {
 
       # Set variable number `resp_index` as the response
       y <- data[, resp_index]
@@ -351,27 +369,28 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
 
   # name elements of these lists by variable
   names(hp) <- names(alpha_matrices) <- names(mu_matrices) <- names(
-    ssqv_matrices) <- paste0("variable", 1:(p + 1))
+    ssqv_matrices) <- paste0("variable", 1:(p))
 
-  # list for the variational parameters
+  # `list` for the variational parameters
   var_mats <- list(alpha = alpha_matrices, mu = mu_matrices,
                    ssq_var = ssqv_matrices)
 
   # calculate the total ELBO
   total_elbo <- sum(elbo)
 
-  # get the grid size
-  grid_sz <- hp[[1]]$grid_sz
+  # get the grid size; if hp_method is "hybrid", include the number of pip
+  grid_sz <- nrow(hp[[1]]$grid) * ifelse(hp_method == "hybrid",
+                                         nrow(hp[[1]]$final), 1)
 
   # Graph post-processing
-  # transform p + 1 n by n matrices to n p + 1 by p + 1 matrices using
-  # alpha_matrices
+
+  # transform p n by n matrices to n p by p matrices using alpha_matrices
   # the j, k entry in the l-th matrix is the probability of inclusion of an edge
   # between the j, k variables for the l-th individual
-  incl_probs <- replicate(n, matrix(0, p + 1, p + 1), simplify = F)
+  incl_probs <- replicate(n, matrix(0, p, p), simplify = F)
 
   # iterate over the p matrices
-  for (j in 1:(p + 1)){
+  for (j in 1:p){
 
     # fix the j-th alpha matrix
     alpha_mat_j <- alpha_matrices[[j]]
@@ -423,7 +442,7 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
       idx_seq) ifelse(length(idx_seq) > 2, paste0(min(idx_seq), ",...,", max(
         idx_seq)), paste0(idx_seq, collapse = ","))), collapse = ","))
 
-  # create a nested list where the j-th inner list has three values; the j-th
+  # create a nested `list` where the j-th inner `list` has three values; the j-th
   # unique graph, the individuals corresponding to that graph, and a summary of
   # the individuals corresponding to that graph
   unique_graphs <- lapply(1:length(unique_graphs), function(gr_idx)
@@ -431,23 +450,22 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
          individuals_summary = indv_graphs_sum[[gr_idx]]))
   names(unique_graphs) <- paste0("graph", 1:length(unique_graphs))
 
-  # create a list for graphs and inclusion probabilties
+  # create a `list` for graphs and inclusion probabilties
   graphs = list(graphs = graphs, unique_graphs = unique_graphs,
                 inclusion_probs_sym = incl_probs,
                 inclusion_probs_asym = incl_probs_asym)
 
-  # create a list to return the scalar function arguments
-  args <- NULL
-  # args <- list(hp_method = hp_method, nssq = nssq, nsbsq = nsbsq, npip = npip, ssq_upper_mult = ssq_upper_mult,
-  #              ssq_lower = ssq_lower, sbsq_lower = sbsq_lower,
-  #              pip_lower = pip_lower, tau = tau, kde = kde, norm = norm,
-  #              center_data = center_data, scale_Z = scale_Z,
-  #              elbo_tol = elbo_tol, alpha_tol = alpha_tol, max_iter = max_iter,
-  #              edge_threshold = edge_threshold, sym_method = sym_method,
-  #              parallel = parallel, num_workers = num_workers,
-  #              prog_bar = prog_bar)
+  # create a `list` to return the scalar function arguments
+  args <- list(hp_method = hp_method, nssq = nssq, nsbsq = nsbsq, npip = npip,
+               ssq_mult = ssq_mult, ssq_lower = ssq_lower,
+               snr_upper = snr_upper, sbsq_lower = sbsq_lower,
+               pip_lower = pip_lower, norm = norm, center_data = center_data,
+               scale_Z = scale_Z, elbo_tol = elbo_tol, alpha_tol = alpha_tol,
+               max_iter = max_iter, edge_threshold = edge_threshold,
+               sym_method = sym_method, parallel = parallel,
+               num_workers = num_workers, prog_bar = prog_bar)
 
-  # create a list for model details
+  # create a `list` for model details
   model_details <- list(elapsed = NA, n = n, p = p, ELBO = total_elbo,
                         num_unique = length(unique_graphs), grid_size = grid_sz,
                         args = args)
@@ -455,7 +473,7 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
   # record the elapsed time and add it to the model details
   model_details[["elapsed"]] <- Sys.time() - start_time
 
-  # define the list of return values
+  # define the `list` of return values
   ret <- list(graphs = graphs, variational_params = var_mats,
               hyperparameters = hp, model_details = model_details,
               weights = weights)
@@ -471,9 +489,10 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
 #' @export
 #' @rdname covdepGE
 ## -----------------------------DESCRIPTION-------------------------------------
-## S3 method for printing an object of class `covdepGE`
+#' S3 method for printing an object of class `covdepGE`
 ## -----------------------------ARGUMENTS---------------------------------------
-#' @param x object of class covdepGE; the return of the covdepGE function
+#' @param x object of class `covdepGE`; the return of the `covdepGE` function
+#'
 #' @param ... additional arguments will be ignored
 ## -----------------------------------------------------------------------------
 print.covdepGE <- function(x, ...){
@@ -485,13 +504,12 @@ print.covdepGE <- function(x, ...){
   with(x$model_details,
        {
          # print ELBO and number of unique graphs
-         elbo_str <- paste0("Model ELBO: ", round(ELBO, 2))
+         elbo_str <- paste0("ELBO: ", round(ELBO, 2))
          cat(sprintf(paste0("%-s%", spc - nchar(elbo_str), "s"), elbo_str,
-                     paste0("Unique conditional dependence structures: ",
-                            num_unique, "\n")))
+                     paste0("# Unique Graphs: ", num_unique, "\n")))
 
          # print data dimensions and the grid size
-         data_dim <- paste0("n: ", n, ", variables: ", p + 1)
+         data_dim <- paste0("n: ", n, ", variables: ", p)
          cat(sprintf(paste0("%-s%", spc - nchar(data_dim), "s"), data_dim,
                      paste0("Hyperparameter grid size: ", grid_size,
                             " points\n")))

@@ -2,59 +2,69 @@
 ## -----------------------------covdepGE_checks---------------------------------
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
-## function to check compatiibility of arguments of covdepGE
+## Ensure valid input to covdepGE
 ## -----------------------------ARGUMENTS---------------------------------------
-## data_mat: n x (p + 1) matrix; data
+##  data: n x p numeric matrix; data
 ##
-## Z: n x p' matrix; extraneous covariates
+##  Z: n x q numeric matrix; extraneous covariates
 ##
-## tau: positive numeric OR vector of length n with positive entries
+##  hp_method: character in c("grid_search", "model_average", "hybrid")
 ##
-## kde: logical; if T, use 2-step KDE methodology
+##  ssq: NULL OR numeric vector with positive entries; candidate values of ssq
 ##
-## alpha: numeric in (0, 1); global initialization value
+##  sbsq: NULL OR numeric vector with positive entries; candidate values of sbsq
 ##
-## mu: numeric; global initialization value
+##  pip: NULL OR numeric vector with entries in (0, 1); candidate values of pip
 ##
-## sigmasq_vec: positive numeric; candidate error term variances
+##  nssq:  positive integer; number of points in ssq if ssq is NULL
 ##
-## sigmabetasq_vec: vector with positive entries; candidate slab variances
+##  nsbsq: positive integer; number of points in sbsq if sbsq is NULL
 ##
-## var_min: postive numeric; lower bound of sigmabetasq_vec
+##  npip: positive integer; number of points in pip if pip is NULL
 ##
-## var_max: postive numeric; upper bound of sigmabetasq_vec
+##  ssq_mult: positive numeric; if ssq is NULL, use to get upper bound for ssq
 ##
-## n_param: postive integer; length of hyperparameter grid
+##  ssq_lower: positive numeric; ssq_lower will be lower bound for ssq
 ##
-## pi_vec: vector with entries in (0, 1); candidate values of pi
+##  snr_upper: positive numeric; use to get upper bound for sbsq
 ##
-## norm: numeric in [1, Inf]; norm to use when calculating weights
+##  sbsq_lower: positive numeric; if sbsq is NULL, least value in sbsq
 ##
-## scale: logical; if T, center and scale extraneous covariates
+##  pip_lower: numeric in (0, 1); if pip is NULL, least value in pip
 ##
-## tolerance: positive numeric; end CAVI when change in alpha < tolerance
+##  tau: NULL OR positive numeric OR numeric vector of length n with pos entries
 ##
-## max_iter_grid: positive integer; end CAVI on grid if iterations > max_iter_grid
+##  norm: numeric in [1, Inf]; norm to use when calculating weights
 ##
-## max_iter_final: positive integer; end final CAVI if iterations > max_iter_final
+##  center_data: logical; if T, center data column-wise to mean 0.
 ##
-## edge_threshold: numeric in (0, 1); probability threshold for edge
+##  scale_Z: logical; if T, center and scale Z column-wise to mean 0, std 1
 ##
-## sym_method: character in {"mean", "max", "min"}
+##  elbo_tol: non-negative numeric; end CAVI when less than elbo_tol
 ##
-## parallel: logical; if `T`, parallelize CAVI
+##  alpha_tol: positive numeric; end CAVI when within alpha_tol
 ##
-## num_workers: integer in {1, 2,...,parallel::detectCores()}; number of workers
+##  max_iter: positive integer; if a tol criteria has not been met, end CAVI
 ##
-## stop_cluster: logical; if `T`, run `doParallel::stopImplicitCluster()`
+##  edge_threshold: numeric in (0, 1); include edge if greater
 ##
-## warnings: logical; if T, convergence and grid warnings will be displayed
+##  sym_method: character in c("mean", "max", "min"); to sym pip matrix
+##
+##  parallel: logical; if T, perform in parallel
+##
+##  num_workers: NULL OR positive integer leq parallel::detectCores()
+##
+##  prog_bar logical; if T, then a progress bar will be displayed
 ## -----------------------------------------------------------------------------
-covdepGE_checks <- function(data, Z, alpha, mu, hp_method, ssq, sbsq, pip, nssq,
-                            nsbsq, npip, ssq_upper_mult, var_lower, tau, kde,
-                            norm, center_data, scale_Z, elbo_tol, alpha_tol,
-                            max_iter, edge_threshold, sym_method, parallel,
-                            num_workers, prog_bar){
+covdepGE_checks <- function(data, Z, hp_method, ssq, sbsq, pip, nssq, nsbsq,
+                            npip, ssq_mult, ssq_lower, snr_upper, sbsq_lower,
+                            pip_lower, tau, norm, center_data, scale_Z,
+                            elbo_tol, alpha_tol, max_iter, edge_threshold,
+                            sym_method, parallel, num_workers, prog_bar){
+
+
+  #data = data, Z = Z, hp_method = hp_method, ssq = ssq, sbsq = sbsq, pip = pip, nssq = nssq, nsbsq = nsbsq, npip = npip, ssq_mult = ssq_mult, ssq_lower = ssq_lower, snr_upper = snr_upper, sbsq_lower = sbsq_lower, pip_lower = pip_lower, tau = tau, norm = norm, center_data = center_data, scale_Z = scale_Z, elbo_tol = elbo_tol, alpha_tol = alpha_tol, max_iter = max_iter, edge_threshold = edge_threshold, sym_method = sym_method, parallel = parallel, num_workers = num_workers, prog_bar = prog_bar
+
 
   # ensure vector input for parameters that are expected to be vectors
   args_vector <- list(tau = tau, sigmasq_vec = sigmasq_vec,

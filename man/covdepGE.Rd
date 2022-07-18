@@ -3,248 +3,244 @@
 \name{covdepGE}
 \alias{covdepGE}
 \alias{covdepGE-method}
-\alias{print.covdepGE}
 \title{covdepGE: Covariate Dependent Graph Estimation}
 \usage{
 covdepGE(
   data,
   Z,
-  alpha = 0.2,
-  mu = 0,
+  hp_method = "hybrid",
   ssq = NULL,
   sbsq = NULL,
   pip = NULL,
   nssq = 5,
   nsbsq = 5,
   npip = 5,
-  ssq_upper_mult = 4,
-  var_lower = 0.001,
-  tau = 0.1,
-  kde = T,
+  ssq_mult = 1.5,
+  ssq_lower = 1e-05,
+  snr_upper = 25,
+  sbsq_lower = 1e-05,
+  pip_lower = 1e-05,
+  tau = NULL,
   norm = 2,
   center_data = T,
   scale_Z = T,
-  elbo_tol = 0.1,
+  elbo_tol = 1e-05,
   alpha_tol = 1e-05,
   max_iter = 100,
   edge_threshold = 0.5,
   sym_method = "mean",
   parallel = F,
   num_workers = NULL,
-  stop_cluster = T,
-  prog_bar = T,
-  warnings = T,
-  CS = F,
-  R = F,
-  grid_search = T
+  prog_bar = T
 )
-
-\method{print}{covdepGE}(x, ...)
 }
 \arguments{
-\item{Z}{\eqn{n} x \eqn{p'} matrix; extraneous covariates}
+\item{data}{\verb{n x p numeric matrix}; data}
 
-\item{alpha}{numeric in \eqn{(0, 1)}; global initialization value for the
-variational parameters \code{alpha_matrices} (approximates probabilities of
-inclusion). \code{0.2} by default}
+\item{Z}{\verb{n x q numeric matrix}; extraneous covariates}
 
-\item{mu}{numeric; global initialization value for the variational parameters
-\code{mu_matrices} (approximates posterior mean of regression coefficients). \code{0}
+\item{hp_method}{\code{character} in \code{c("grid_search", "model_average", "hybrid")};
+the hyperparameter grid will be generated as the Cartesian product of \code{ssq},
+\code{sbsq}, and \code{pip}.
+
+If \code{"grid_search"}, then the point in the hyperparameter
+grid that maximizes the ELBO across all individuals for a given variable will
+be selected.
+
+If \verb{"model_average}, then all posterior quantities will be a convex
+combination across each point in the hyperparameter grid, where the
+weightings are both individual and variable specific. Unnormalized weights
+are calculated using the exponentiated ELBO
+
+If \code{"hybrid"}, then \code{pip} will be averaged over as with \code{"model_average"},
+while a single point in the grid defined by the Cartesian product of \code{ssq}
+and \code{sbsq} will be selected for each variable and point in \code{pip}. \code{"hybrid"}
 by default}
 
-\item{tau}{positive numeric OR numeric vector of length \eqn{n} with positive
-entries; bandwidth parameter. Greater values allow for more information to be
-shared between individuals. Allows for global or individual-specific
-specification. If \code{kde = T}, this argument is ignored. \code{0.1} by default}
+\item{ssq}{\code{NULL} OR \verb{numeric vector} with positive entries; candidate values
+of the hyperparameter \code{sigma^2} (prior residual variance). If \code{NULL}, \code{ssq}
+will be generated as:
 
-\item{kde}{logical; if \code{T}, use 2-step KDE methodology as described in
-(2) to calculate individual-specific bandwidths in place of global bandwidth
-parameter \code{tau}. \code{T} by default}
+\code{ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)}
 
-\item{norm}{numeric in \eqn{[1, Inf]}; norm to use when calculating weights.
+\code{NULL} by default}
+
+\item{sbsq}{\code{NULL} OR \verb{numeric vector} with positive entries; candidate values
+of the hyperparameter \verb{sigma^2_beta} (prior slab variance). If \code{NULL}, \code{sbsq}
+will be generated as:
+
+\code{sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)}
+
+\code{NULL} by default}
+
+\item{pip}{\code{NULL} OR \verb{numeric vector} with entries in \verb{(0, 1)}; candidate
+values of the hyperparameter \code{pi} (prior inclusion probability). If \code{NULL},
+\code{pip} will be generated as:
+
+\code{pip <- exp(seq(log(pip_lower), log(pi_upper), length.out = npip))}
+
+\code{NULL} by default}
+
+\item{nssq}{positive integer; number of points in \code{ssq} if \code{ssq} is \code{NULL}.
+\code{5} by default.}
+
+\item{nsbsq}{positive integer; number of points in \code{sbsq} if \code{sbsq} is
+\code{NULL}. \code{5} by default.}
+
+\item{npip}{positive integer; number of points in \code{pip} if \code{pip} is \code{NULL}.
+\code{5} by default.}
+
+\item{ssq_mult}{positive \code{numeric}; if \code{ssq} is \code{NULL}, then for each variable
+\code{y} fixed as the response:
+
+\code{ssq_upper <- ssq_upper_mult * var(y)}
+
+Then, \code{ssq_upper} will be the greatest value in \code{ssq} for variable \code{y}. \code{1.5}
+by default}
+
+\item{ssq_lower}{positive \code{numeric}; if \code{ssq} is \code{NULL}, then \code{ssq_lower} will
+be the least value in \code{ssq}. \code{1e-5} by default}
+
+\item{snr_upper}{positive \code{numeric}; if \code{sbsq} is \code{NULL}, then for each
+variable \code{y} fixed as the response:
+
+\code{s2_sum <- sum(apply(X, 2, var))}
+
+\code{sbsq_upper <- snr_upper / (pi_upper * s2_sum)}
+
+Then, \code{sbsq_upper} will be the greatest value in \code{sbsq} for variable \code{y}.
+\code{25} by default}
+
+\item{sbsq_lower}{positive \code{numeric}; if \code{sbsq} is \code{NULL}, then \code{sbsq_lower}
+will be the least value in \code{sbsq}. \code{1e-5} by default}
+
+\item{pip_lower}{\code{numeric} in \verb{(0, 1)}; if \code{pip} is \code{NULL}, then
+\code{pip_lower} will be the least value in \code{pip}. \code{1e-5} by default}
+
+\item{tau}{\code{NULL} OR positive \code{numeric} OR \verb{numeric vector} of length \code{n}
+with positive entries; bandwidth parameter. Greater values allow for more
+information to be shared between individuals. Allows for global or
+individual-specific specification. If \code{NULL}, use 2-step KDE methodology as
+described in (2) to calculate individual-specific bandwidths. \code{NULL} by
+default}
+
+\item{norm}{\code{numeric} in \verb{[1, Inf]}; norm to use when calculating weights.
 \code{Inf} results in infinity norm. \code{2} by default}
 
-\item{max_iter}{positive integer; if the tolerance criteria has not been met
+\item{center_data}{\code{logical}; if \code{T}, center \code{data} column-wise to mean \code{0}.
+\code{T} by default}
+
+\item{scale_Z}{\code{logical}; if \code{T}, center and scale \code{Z} column-wise to mean \code{0},
+standard deviation 1 prior to calculating the weights. \code{T} by default}
+
+\item{elbo_tol}{non-negative \code{numeric}; end CAVI when the current ELBO minus
+the previous ELBO is less than \code{elbo_tol}. \code{1e-5} by default}
+
+\item{alpha_tol}{positive \code{numeric}; end CAVI when the Frobenius norm of the
+change in the alpha \code{matrix} is within \code{alpha_tol}. \code{1e-5} by default}
+
+\item{max_iter}{positive integer; if a tolerance criteria has not been met
 by \code{max_iter_grid} iterations, end CAVI. \code{100} by default}
 
-\item{edge_threshold}{numeric in \eqn{(0, 1)}; when post-processing the
-inclusion probabilities, an edge will be added to the graph if the
-\eqn{(i, j)} edge has probability of inclusion greater than \code{edge_threshold}.
-\code{0.5} by default}
+\item{edge_threshold}{\code{numeric} in \verb{(0, 1)}; a graph for each individual
+will be constructed by including an edge between variable \code{i} and
+variable \code{j} if, and only if, the \verb{(i,j)} entry of the symmetrized
+posterior inclusion probability \code{matrix} corresponding to the individual is
+greater than \code{edge_threshold}. \code{0.5} by default}
 
-\item{sym_method}{character in \{\code{"mean"}, \code{"max"}, \code{"min"}\}; to symmetrize
-the alpha matrices, the \eqn{i,j = j,i} entry is
-\code{sym_method}\eqn{((i,j entry), (j,i entry))}. \code{"mean"} by default}
+\item{sym_method}{\code{character} in \{\code{"mean"}, \code{"max"}, \code{"min"}\\verb{; to symmetrize the posterior inclusion probability }matrix\verb{for each individual, the}(i,j)\code{and}(j,i)\verb{entries will be post-processed as}sym_method``((i,j entry), (j,i entry))\code{. }"mean"` by default}
 
-\item{parallel}{logical; if \code{T}, grid search and CAVI for each variable will
-be performed in parallel using \code{foreach}. Parallel backend may be registered
-prior to making a call to \code{covdepGE}. If no active parallel backend can be
-detected, then parallel backend will be automatically registered using
-\code{doParallel::registerDoParallel(num_workers)}}
+\item{parallel}{\code{logical}; if \code{T}, hyperparameter selection and CAVI for each
+of the \code{p} variables will be performed in parallel using \code{foreach}.
+Parallel backend may be registered prior to making a call to \code{covdepGE}. If
+no active parallel backend can be detected, then parallel backend will be
+automatically registered using \code{doParallel::registerDoParallel(num_workers)}}
 
-\item{num_workers}{integer in \eqn{{1, 2,...,`parallel::detectCores()`}};
-argument to \code{doParallel::registerDoParallel} if \code{parallel = T} and no
-parallel backend is detected. \code{NULL} by default, which results in
-\code{num_workers = floor(parallel::detectCores() / 2)}}
+\item{num_workers}{\code{NULL} OR positive integer less than or equal to
+\code{parallel::detectCores()}; argument to \code{doParallel::registerDoParallel} if
+\code{parallel = T} and no parallel backend is detected. If \code{NULL}, then:
 
-\item{stop_cluster}{logical; if \code{T}, run \code{doParallel::stopImplicitCluster()}
-after parallel exectution of CAVI for all variables has completed. This will
-stop the cluster created implicitly by
-\code{doParallel::registerDoParallel(num_workers)} and will shut down the unused
-workers. Setting \code{F} is useful when making multiple calls to \code{covdepGE} with
-\code{parallel = T}, as it avoids the overhead of creating a new cluster. \code{T} by
-default}
+\code{num_workers <- floor(parallel::detectCores() / 2)}
 
-\item{warnings}{logical; if \code{T}, convergence and grid warnings will be
-displayed. Convergence warnings occur when the tolerance exit condition has
-not been met by \code{max_iter_grid} or \code{max_iter_final} iterations. Grid warnings
-occur when, for either \code{sigmabetasq_vec} or \code{pi_vec}, the grid is longer than
-2 candidates, and the final CAVI selects a candidate value on the grid
-boundary. \code{T} by default}
+\code{NULL} by default}
 
-\item{CS}{logical; if \code{T}, \code{pi_vec} and \code{sigma_sq} will be selected according
-to Carbonetto-Stephens. \code{F} by default}
-
-\item{x}{object of class covdepGE; the return of the covdepGE function}
-
-\item{...}{additional arguments will be ignored}
-
-\item{data_mat}{\eqn{n} x \eqn{(p + 1)} matrix; data}
-
-\item{sigmasq_vec}{numeric vector of length \code{n_param} with positive
-entries; candidate values of \code{sigmasq}, the error term variance. \code{0.5} by
-default}
-
-\item{sigmabetasq_vec}{numeric vector of length \code{n_param} with positive
-entries; candidate values of \code{sigmabeta_sq}, the slab variance. \code{NULL} by
-default}
-
-\item{n_param}{positive integer; if \code{sigmabetasq_vec} is \code{NULL}, \code{n_param} is
-the number of candidate \code{sigmabeta_sq} that will be auto-generated as:
-
-\code{sigmabetasq_vec <- exp(seq(log(var_max), log(var_min), length = n_param))}
-
-\code{8} by default}
-
-\item{pi_vec}{numeric vector of length \code{n_param} with entries in \eqn{(0, 1)};
-candidate values of \code{pi}. \code{0.1} by default}
-
-\item{scale}{logical; if \code{T}, center and scale extraneous covariates to mean
-0, standard deviation 1 prior to calculating the weights. \code{T} by default}
-
-\item{tolerance}{positive numeric; end CAVI when the Frobenius norm of the
-iteration-to-iteration change in the alpha matrix are within tolerance.
-\code{1e-12} by default}
+\item{prog_bar}{\code{logical}; if \code{T}, then a progress bar will be displayed
+denoting the number of remaining variables to fix as the response and perform
+CAVI. If \code{parallel}, no progress bar will be displayed. \code{T} by default}
 }
 \value{
-Returns \code{list} with the following values:
+Returns list with the following values:
 \enumerate{
-\item \code{graphs}: \code{list} of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices; the
-\eqn{l}-th matrix is the adjacency matrix for the \eqn{l}-th individual
-(obtained from \code{inclusion_probs} according to \code{edge_threshold})
-\item \code{inclusion_probs}: list of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices;
-the \eqn{l}-th matrix is a symmetric matrix of inclusion probabilities for
-the \eqn{l}-th individual (obtained by symmetrizing the \code{alpha_matrices}
-according to \code{sym_method})
-\item \code{alpha_matrices}: list of \eqn{n} \eqn{(p + 1)} x \eqn{(p + 1)} matrices;
-the \eqn{l}-th matrix is an asymmetric matrix of inclusion probabilities for
-the \eqn{l}-th individual
-\item \code{unique_graphs}: list of \eqn{g} lists; \eqn{g} is the number of
-unique graphs. The \eqn{v}-th list has 3 values:
+\item \code{graphs}: \code{list} with the following values:
 }
 \itemize{
-\item \code{graph}: \eqn{(p + 1)} x \eqn{(p + 1)} matrix; the adjacency matrix for the
-\eqn{v}-th graph
-\item \code{individuals}: vector with entries in \eqn{{1,...,n}}; the individual
-indices corresponding to the \eqn{v}-th graph
-\item \code{individuals_summary}: character; summarizes the individual indices in
-\code{individuals}
+\item \code{graphs}: \code{list} of \verb{n p x p numeric} matrices; the
+\code{l}-th \code{matrix} is the adjacency \code{matrix} for the \code{l}-th individual
+\item \code{unique_graphs}: \code{list}; the \code{l}-th element is a \code{list} containing the
+\code{l}-th unique graph and the individual(s) corresponding to this graph
+\item \code{inclusion_probs_sym}: \code{list} of \verb{n p x p numeric}
+matrices; the \code{l}-th \code{matrix} is the symmetrized posterior inclusion
+probability \code{matrix} for the \code{l}-th individual
+\item \code{inclusion_probs_asym}: \code{list} of \verb{n p x p numeric}
+matrices; the \code{l}-th \code{matrix} is the posterior inclusion probability \code{matrix}
+for the \code{l}-th individual prior to symmetrization
 }
 \enumerate{
-\item \code{CAVI_details}: list of \eqn{(p + 1)} lists; the \eqn{j}-th list
-corresponds to the \eqn{j}-th variable and contains the following values:
+\item \code{variational_params}: \code{list} with the following values:
 }
 \itemize{
-\item \code{sigmasq}, \code{sigmabeta_sq}, \code{pi}: numerics; the values of the
-hyperparameters that maximized the ELBO for the j-th variable
-\item \code{ELBO}: numeric; the maximum value of ELBO for the final CAVI
-\item \code{converged_iter}: numeric; the number of iterations to attain convergence
-for the final CAVI
-\item \code{hyperparameters}: \code{n_param} x 4 matrix; each of the hyperparameter grid
+\item \code{alpha}: \code{list} of \verb{p n x (p - 1) numeric} matrices; the
+\verb{(i, j)} entry of the \code{k}-th \code{matrix} is the variational approximation
+to the posterior inclusion probability of the \code{j}-th variable in a
+weighted regression with variable \code{k} fixed as the response, where the
+weights are taken with respect to individual \code{i}
+\item \code{mu}: \code{list} of \verb{p n x (p - 1) numeric} matrices; the
+\verb{(i, j)} entry of the \code{k}-th \code{matrix} is the variational approximation
+to the posterior slab mean for the \code{j}-th variable in a weighted
+regression with variable \code{k} fixed as the response, where the weights are
+taken with respect to individual \code{i}
+\item \code{ssq_var}: \code{list} of \verb{p n x (p - 1) numeric} matrices; the
+\verb{(i, j)} entry of the \code{k}-th \code{matrix} is the variational approximation
+to the posterior slab variance for the \code{j}-th variable in a weighted
+regression with variable \code{k} fixed as the response, where the weights are
+taken with respect to individual \code{i}
 }
 \enumerate{
-\item \code{model_details}: list with the following values:
+\item \code{hyperparameters}: \code{list} of \code{p} lists; the \code{j}-th \code{list} has the
+following values for variable \code{j} fixed as the response:
 }
 \itemize{
-\item \code{elapsed}: timediff; the amount of time to fit the model
-\item \code{n}: integer; sample size
-\item \code{p}: integer; the number of variables in the data minus one
-\item \code{ELBO}: numeric; the total ELBO summed across the \eqn{p + 1} final models
-\item \code{num_unique}: integer; the number of unique conditional dependence
-structures identified
-\item \code{final_DNC}: integer; the number of variables for which the final CAVI did
-not attain convergence within \code{max_iter_final} iterations
-\item \code{num_candidates}: integer; the number of grid points in the grid search
+\item \code{grid}: \code{matrix} of candidate hyperparameter values and corresponding ELBO
+\item \code{final}: the final hyperparameters chosen by grid search
 }
 \enumerate{
-\item \code{weights}: \eqn{n} x \eqn{n} matrix; the \eqn{i, j} entry is the weighting
-of the \eqn{i}-th individual with respect to the \eqn{j}-th individual using
-the \eqn{j}-th individual's bandwidth
-\item \code{bandwidths}: vector of length \eqn{n}; individual-specific bandwidths
-\item \code{arguments}: vector; argument values passed to the current call to
-\code{covdepGE}
+\item \code{model_details}: \code{list} with the following values:
+}
+\itemize{
+\item \code{elapsed}: amount of time to fit the model
+\item \code{n}: number of individuals
+\item \code{p}: number of variables
+\item \code{ELBO}: ELBO summed across all individuals and variables. If
+\code{hp_method} is \code{"model_average"} or \code{"hybrid"}, this ELBO is averaged across
+the hyperparameter grid using the model averaging weights
+\item \code{num_unique}: number of unique graphs
+\item \code{grid_size}: number of points in the hyperparameter grid
+\item \code{args}: \code{list} containing all passed arguments of \code{length} 1
+}
+\enumerate{
+\item \code{weights}: \code{list} with the following values:
+}
+\itemize{
+\item \code{weights}: \verb{n x n numeric matrix}. The \verb{(i, j)} entry is the weight of the
+\code{i}-th individual with respect to the \code{j}-th individual using the \code{j}-th
+individual's bandwidth
+\item \code{bandwidths}: \verb{numeric vector} of length \code{n}. The \code{i}-th entry is the
+bandwidth for the \code{i}-th individual
 }
 }
 \description{
 Model the conditional dependence structure of data as a function
 of extraneous covariates as described in (1).
-}
-\examples{
-set.seed(1)
-n <- 100
-p <- 4
-
-# generate the extraneous covariate
-Z_neg <- sort(runif(n / 2) * -1)
-Z_pos <- sort(runif(n / 2))
-Z <- c(Z_neg, Z_pos)
-summary(Z)
-
-# create true covariance structure for 2 groups: positive Z and negative Z
-true_graph_pos <- true_graph_neg <- matrix(0, p + 1, p + 1)
-true_graph_pos[1, 2] <- true_graph_pos[2, 1] <- 1
-true_graph_neg[1, 3] <- true_graph_neg[3, 1] <- 1
-
-# visualize the true covariance structures
-(gg_adjMat(true_graph_neg) +
-    ggplot2::ggtitle("True graph for individuals with negative Z"))
-(gg_adjMat(true_graph_pos, color1 = "steelblue") +
-    ggplot2::ggtitle("True graph for individuals with positive Z"))
-
-# generate the covariance matrices as a function of Z
-sigma_mats_neg <- lapply(Z_neg, function(z) z * true_graph_neg + diag(p + 1))
-sigma_mats_pos <- lapply(Z_pos, function(z) z * true_graph_pos + diag(p + 1))
-sigma_mats <- c(sigma_mats_neg, sigma_mats_pos)
-
-# generate the data using the covariance matrices
-data_mat <- t(sapply(sigma_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
-
-# visualize the sample correlation
-gg_adjMat(abs(cor(data_mat[1:(n / 2), ])) - diag(p + 1))
-gg_adjMat(abs(cor(data_mat[(n / 2 + 1):n, ])) - diag(p + 1),
-          color1 = "dodgerblue")
-
-# estimate the covariance structure
-out <- covdepGE(data_mat, Z)
-
-# analyze results
-gg_adjMat(out, 1)
-gg_adjMat(out, 50, color1 = "tomato")
-gg_adjMat(out, 54, color1 = "steelblue")
-gg_adjMat(out, 100, color1 = "dodgerblue")
-
-gg_inclusionCurve(out, 1, 2)
-gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
 }
 \references{
 \enumerate{

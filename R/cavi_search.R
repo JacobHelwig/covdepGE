@@ -128,7 +128,6 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
       ssq_upper <- ssq_upper_mult * var(y)
 
       # create the grid candidates for ssq
-      # ssq <- exp(seq(log(ssq_lower), log(ssq_upper), length.out = nssq))
       ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)
 
     }else{
@@ -146,7 +145,6 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
       sbsq_upper <- snr_upper / (pi_upper * s2_sum)
 
       # create the grid candidates for sbsq
-      # sbsq <- exp(seq(log(sbsq_lower), log(sbsq_upper), length.out = nsbsq))
       sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)
 
     }else{
@@ -159,7 +157,6 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
 
       # create posterior inclusion probability grid
       pip <- exp(seq(log(pip_lower), log(pi_upper), length.out = npip))
-      # pip <- seq(pip_lower, pi_upper, length.out = npip)
 
     }else{
       pip <- unique(pip)
@@ -188,7 +185,7 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
 
     # save hyperparameter details
     final <- c(ssq = out_grid$ssq, sbsq = out_grid$sbsq, pip = out_grid$pip)
-    hp <- list(grid = hp, grid_sz = nrow(hp), final = final)
+    hp <- list(grid = hp, final = final)
 
     # save final variational parameters and elbo
     alpha  <- out$alpha
@@ -321,8 +318,7 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
     elbo <- sum(elbo_avg)
 
     # save hyperparameter details
-    grid_sz <- nrow(hp) * ifelse(hp_method == "hybrid", length(pip), 1)
-    hp <- list(grid = hp, grid_sz = grid_sz, final = "<NA> if hp_method == 'model_average'")
+    hp <- list(grid = hp, final = "<NA> if hp_method == 'model_average'")
 
     # if hybrid, add the final hyperparameters chosen by grid search to
     # the hyperparameter details

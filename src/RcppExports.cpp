@@ -31,8 +31,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // cavi_c
-Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X, const arma::mat& mu0, const arma::mat& alpha0, double ssq, double sbsq, double pip, double elbo_tol, double alpha_tol, int max_iter, bool grid_search);
-RcppExport SEXP _covdepGE_cavi_c(SEXP ySEXP, SEXP DSEXP, SEXP XSEXP, SEXP mu0SEXP, SEXP alpha0SEXP, SEXP ssqSEXP, SEXP sbsqSEXP, SEXP pipSEXP, SEXP elbo_tolSEXP, SEXP alpha_tolSEXP, SEXP max_iterSEXP, SEXP grid_searchSEXP) {
+Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X, const arma::mat& mu0, const arma::mat& alpha0, double ssq, double sbsq, double pip, double elbo_tol, double alpha_tol, int max_iter);
+RcppExport SEXP _covdepGE_cavi_c(SEXP ySEXP, SEXP DSEXP, SEXP XSEXP, SEXP mu0SEXP, SEXP alpha0SEXP, SEXP ssqSEXP, SEXP sbsqSEXP, SEXP pipSEXP, SEXP elbo_tolSEXP, SEXP alpha_tolSEXP, SEXP max_iterSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -47,14 +47,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type elbo_tol(elbo_tolSEXP);
     Rcpp::traits::input_parameter< double >::type alpha_tol(alpha_tolSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
-    Rcpp::traits::input_parameter< bool >::type grid_search(grid_searchSEXP);
-    rcpp_result_gen = Rcpp::wrap(cavi_c(y, D, X, mu0, alpha0, ssq, sbsq, pip, elbo_tol, alpha_tol, max_iter, grid_search));
+    rcpp_result_gen = Rcpp::wrap(cavi_c(y, D, X, mu0, alpha0, ssq, sbsq, pip, elbo_tol, alpha_tol, max_iter));
     return rcpp_result_gen;
 END_RCPP
 }
 // grid_search_c
-Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X, const arma::mat& mu, const arma::mat& alpha, const arma::colvec& ssq, const arma::colvec& sbsq, const arma::colvec& pip, double elbo_tol, double alpha_tol, int max_iter, bool grid_search);
-RcppExport SEXP _covdepGE_grid_search_c(SEXP ySEXP, SEXP DSEXP, SEXP XSEXP, SEXP muSEXP, SEXP alphaSEXP, SEXP ssqSEXP, SEXP sbsqSEXP, SEXP pipSEXP, SEXP elbo_tolSEXP, SEXP alpha_tolSEXP, SEXP max_iterSEXP, SEXP grid_searchSEXP) {
+Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D, const arma::mat& X, const arma::mat& mu, const arma::mat& alpha, const arma::colvec& ssq, const arma::colvec& sbsq, const arma::colvec& pip, double elbo_tol, double alpha_tol, int max_iter);
+RcppExport SEXP _covdepGE_grid_search_c(SEXP ySEXP, SEXP DSEXP, SEXP XSEXP, SEXP muSEXP, SEXP alphaSEXP, SEXP ssqSEXP, SEXP sbsqSEXP, SEXP pipSEXP, SEXP elbo_tolSEXP, SEXP alpha_tolSEXP, SEXP max_iterSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -69,16 +68,15 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type elbo_tol(elbo_tolSEXP);
     Rcpp::traits::input_parameter< double >::type alpha_tol(alpha_tolSEXP);
     Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
-    Rcpp::traits::input_parameter< bool >::type grid_search(grid_searchSEXP);
-    rcpp_result_gen = Rcpp::wrap(grid_search_c(y, D, X, mu, alpha, ssq, sbsq, pip, elbo_tol, alpha_tol, max_iter, grid_search));
+    rcpp_result_gen = Rcpp::wrap(grid_search_c(y, D, X, mu, alpha, ssq, sbsq, pip, elbo_tol, alpha_tol, max_iter));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_covdepGE_ELBO_calculator_c", (DL_FUNC) &_covdepGE_ELBO_calculator_c, 9},
-    {"_covdepGE_cavi_c", (DL_FUNC) &_covdepGE_cavi_c, 12},
-    {"_covdepGE_grid_search_c", (DL_FUNC) &_covdepGE_grid_search_c, 12},
+    {"_covdepGE_cavi_c", (DL_FUNC) &_covdepGE_cavi_c, 11},
+    {"_covdepGE_grid_search_c", (DL_FUNC) &_covdepGE_grid_search_c, 11},
     {NULL, NULL, 0}
 };
 
