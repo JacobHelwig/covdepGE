@@ -30,7 +30,7 @@
 #'
 #' @param ssq `NULL` OR `numeric vector` with positive entries; candidate values
 #' of the hyperparameter `sigma^2` (prior residual variance). If `NULL`, `ssq`
-#' will be generated as:
+#' will be generated for each variable `y` fixed as the response as:
 #'
 #' `ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)`
 #'
@@ -38,7 +38,7 @@
 #'
 #' @param sbsq `NULL` OR `numeric vector` with positive entries; candidate values
 #' of the hyperparameter `sigma^2_beta` (prior slab variance). If `NULL`, `sbsq`
-#' will be generated as:
+#' will be generated for each variable `y` fixed as the response as:
 #'
 #' `sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)`
 #'
@@ -46,20 +46,22 @@
 #'
 #' @param pip `NULL` OR `numeric vector` with entries in `(0, 1)`; candidate
 #' values of the hyperparameter `pi` (prior inclusion probability). If `NULL`,
-#' `pip` will be generated as:
+#' `pip` will be generated for each variable `y` fixed as the response as:
 #'
-#' `pip <- exp(seq(log(pip_lower), log(pi_upper), length.out = npip))`
+#' `pip <- seq(pip_lower, pi_upper, length.out = npip)`
+#'
+#' `pi_upper`
 #'
 #' `NULL` by default
 #'
 #' @param nssq  positive integer; number of points in `ssq` if `ssq` is `NULL`.
-#' `5` by default.
+#' `5` by default
 #'
 #' @param nsbsq positive integer; number of points in `sbsq` if `sbsq` is
-#' `NULL`. `5` by default.
+#' `NULL`. `5` by default
 #'
 #' @param npip positive integer; number of points in `pip` if `pip` is `NULL`.
-#' `5` by default.
+#' `5` by default
 #'
 #' @param ssq_mult positive `numeric`; if `ssq` is `NULL`, then for each variable
 #' `y` fixed as the response:
@@ -77,7 +79,7 @@
 #'
 #' `s2_sum <- sum(apply(X, 2, var))`
 #'
-#' `sbsq_upper <- snr_upper / (pi_upper * s2_sum)`
+#' `sbsq_upper <- snr_upper / (pip_upper * s2_sum)`
 #'
 #' Then, `sbsq_upper` will be the greatest value in `sbsq` for variable `y`.
 #' `25` by default
@@ -87,6 +89,21 @@
 #'
 #' @param pip_lower `numeric` in `(0, 1)`; if `pip` is `NULL`, then
 #' `pip_lower` will be the least value in `pip`. `1e-5` by default
+#'
+#' @param pip_upper `NULL` OR  `numeric` in`(0, 1)`; if `pip` is `NULL`, then
+#' `pip_upper` will be the greatest value in `pip`. If `sbsq` is `NULL`,
+#' `pip_upper` will be used to find the greatest value in `sbsq`. If `NULL`,
+#' `pip_upper` will be generated for each variable `y` fixed as the response as:
+#'
+#' `lasso <- glmnet::cv.glmnet(X, y)`
+#'
+#' `non0 <- sum(coef(lasso, s = "lambda.1se")[-1] != 0)`
+#'
+#' `non0 <- min(max(non0, 1), p - 1)`
+#'
+#' `pip_upper <- non0 / p`
+#'
+#' `NULL` by default
 #'
 #' @param tau `NULL` OR positive `numeric` OR `numeric vector` of length `n`
 #' with positive entries; bandwidth parameter. Greater values allow for more
@@ -231,10 +248,11 @@
 covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
                      pip = NULL, nssq = 5, nsbsq = 5, npip = 5, ssq_mult = 1.5,
                      ssq_lower = 1e-5, snr_upper = 25, sbsq_lower = 1e-5,
-                     pip_lower = 1e-5, tau = NULL, norm = 2, center_data = T,
-                     scale_Z = T, elbo_tol = 1e-5, alpha_tol = 1e-5,
-                     max_iter = 100, edge_threshold = 0.5, sym_method = "mean",
-                     parallel = F, num_workers = NULL, prog_bar = T){
+                     pip_lower = 1e-5, pip_upper = NULL, tau = NULL, norm = 2,
+                     center_data = T, scale_Z = T, elbo_tol = 1e-5,
+                     alpha_tol = 1e-5, max_iter = 100, edge_threshold = 0.5,
+                     sym_method = "mean", parallel = F, num_workers = NULL,
+                     prog_bar = T){
 
   start_time <- Sys.time()
 
@@ -245,6 +263,13 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
   # get sample size and number of parameters
   n <- nrow(data)
   p <- ncol(data)
+
+  # verify that data and Z have the same number of observations
+  if (nrow(Z) != n){
+    stop(paste0("Number of observations in data (", n,
+                ") and number of observations in Z (", nrow(Z),
+                ") do not match"))
+  }
 
   # if the covariates should be centered and scaled, do so ([ , ] for attributes)
   if (scale_Z) Z <- matrix(scale(Z)[ , ], n)
@@ -284,6 +309,9 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
     }else{
 
       # otherwise, register parallel backend
+      warning(paste(
+        "No registered workers detected; registering doParallel with",
+        num_workers, "workers"))
 
       # if num_workers has not been provided, get the number of workers
       if (is.null(num_workers)){
@@ -291,9 +319,6 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
       }
 
       # perform registration
-      warning(paste(
-        "No registered workers detected; registering doParallel with",
-        num_workers, "workers"))
       doParallel::registerDoParallel(cores = num_workers)
     }
 
@@ -313,7 +338,8 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
             # perform the grid search and final CAVI; save the results to res
             cavi_search(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
                         npip, ssq_mult, ssq_lower, snr_upper, sbsq_lower,
-                        pip_lower, elbo_tol, alpha_tol, max_iter, resp_index)
+                        pip_lower, pip_upper, elbo_tol, alpha_tol, max_iter,
+                        resp_index)
             }
           )
       },
@@ -348,7 +374,7 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
       res[[resp_index]] <- cavi_search(X, Z, D, y, hp_method, ssq, sbsq, pip,
                                        nssq, nsbsq, npip, ssq_mult, ssq_lower,
                                        snr_upper, sbsq_lower, pip_lower,
-                                       elbo_tol, alpha_tol, max_iter,
+                                       pip_upper, elbo_tol, alpha_tol, max_iter,
                                        resp_index)
 
       # update the progress bar
@@ -459,11 +485,12 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
   args <- list(hp_method = hp_method, nssq = nssq, nsbsq = nsbsq, npip = npip,
                ssq_mult = ssq_mult, ssq_lower = ssq_lower,
                snr_upper = snr_upper, sbsq_lower = sbsq_lower,
-               pip_lower = pip_lower, norm = norm, center_data = center_data,
-               scale_Z = scale_Z, elbo_tol = elbo_tol, alpha_tol = alpha_tol,
-               max_iter = max_iter, edge_threshold = edge_threshold,
-               sym_method = sym_method, parallel = parallel,
-               num_workers = num_workers, prog_bar = prog_bar)
+               pip_lower = pip_lower, pip_upper = pip_upper, norm = norm,
+               center_data = center_data, scale_Z = scale_Z,
+               elbo_tol = elbo_tol, alpha_tol = alpha_tol, max_iter = max_iter,
+               edge_threshold = edge_threshold, sym_method = sym_method,
+               parallel = parallel, num_workers = num_workers,
+               prog_bar = prog_bar)
 
   # create a `list` for model details
   model_details <- list(elapsed = NA, n = n, p = p, ELBO = total_elbo,

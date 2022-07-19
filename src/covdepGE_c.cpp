@@ -10,12 +10,11 @@ using namespace Rcpp;
 // Calculates ELBO for a fixed response j and individual l
 // -----------------------------ARGUMENTS---------------------------------------
 // y: n x 1 vector; responses (j-th column of the data)
-// D: n x 1 vector; weights (i-th entry is the weight of the i-th
-// individual with respect to the l-th individual using the l-th individual's
-// bandwidth)
+// D: n x 1 vector; weights (i-th entry is the weight of the i-th individual
+// with respect to the l-th individual using the l-th individual's bandwidth)
 // X: n x p matrix; data_mat with the j-th column removed
-// ssq_var, mu, alpha: p x 1 vectors; variational parameters. the k-th entry is the
-// k-th parameter for the l-th individual
+// ssq_var, mu, alpha: p x 1 vectors; variational parameters. the k-th entry is
+// the k-th parameter for the l-th individual
 // ssq, sbsq: double; spike and slab variance hyperparameters
 // pip: double; spike and slab probability of inclusion
 // -----------------------------RETURNS-----------------------------------------
@@ -31,6 +30,12 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
   // square of mu vector
   arma::colvec mu_sq = arma::pow(mu, 2);
 
+  // log of alpha and 1 - alpha with infinities replaced
+  arma::colvec log_alpha = log(alpha);
+  log_alpha.replace(-arma::datum::inf, log(DBL_MIN));
+  arma::colvec log_1minalpha = log(1 - alpha);
+  log_1minalpha.replace(-arma::datum::inf, log(DBL_MIN));
+
   // calculate the expected value of the log-prior under q
   double eqpr = sum(-alpha / 2 * log(ssq * sbsq) - alpha % (ssq_var + mu_sq) /
                     (2 * ssq * sbsq) + alpha * log(pip) + (1 - alpha) * log(1 - pip));
@@ -42,8 +47,8 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
       (2 * ssq) - X.n_rows / 2 * log(2 * M_PI * ssq);
 
   // calculate the expected value of log q under q
-  double eqq = sum(-alpha / 2 % log(ssq_var) - alpha / 2 + alpha % log(alpha +
-                   0.000001) + (1 - alpha) % log(1 - alpha + 0.000001));
+  double eqq = sum(-alpha / 2 % log(ssq_var) - alpha / 2 + alpha % log_alpha
+                     + (1 - alpha) % log_1minalpha);
 
   // calculate elbo and return
   return(eqpr + eqlik - eqq);
@@ -65,8 +70,8 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
 // ssq, sbsq: doubles; spike and slab variance hyperparameters
 // pip: double; spike and slab probability of inclusion
 // -----------------------------RETURNS-----------------------------------------
-// elbo_tot: double; ELBO for the l-th individual with j-th column fixed as the
-// response
+// elbo_tot: double; ELBO for the regression weighted with respect to the l-th
+// individual with the j-th column fixed as the response
 // -----------------------------------------------------------------------------
 double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
                      const arma::mat& X, const arma::mat& ssq_var,
@@ -152,13 +157,12 @@ void mu_update_c (const arma::colvec& y, const arma::mat& D, const arma::mat& X,
 // -----------------------------DESCRIPTION-------------------------------------
 // for a fixed response, update alpha matrix
 // -----------------------------ARGUMENTS---------------------------------------
-// mu, alpha: n x p matrices; variational parameters. the l, k entry is
+// ssq_var, mu, alpha: n x p matrices; variational parameters. the l, k entry is
 // the k-th parameter for the l-th individual
-// alpha_logit_term 1, 2, 3: double (1), n x p matrices (2, 3): terms used to
-// calculate the logit of alpha
-// upper_limit: double; during the alpha update, values of logit(alpha) greater
-// than upper_limit will be assigned a probability of 1; this avoids issues
-// with exponentiation of large numbers creating Infinity divided by Infinity
+// alpha1, alpha2_denom, alpha3: double (1), n x p matrices (2, 3): terms used
+// to calculate the logit of alpha
+// ssq, sbsq: doubles; spike and slab variance hyperparameters
+// pip: double; spike and slab probability of inclusion
 // -----------------------------------------------------------------------------
 void alpha_update_c(const arma::mat& ssq_var, const arma::mat& mu,
                     arma::mat& alpha, double alpha1,
@@ -174,13 +178,7 @@ void alpha_update_c(const arma::mat& ssq_var, const arma::mat& mu,
 
   // handle NA's due to division by infinity resulting from exponentiation of
   // large values; these probabilities are indescernible from 1
-
-  // find large values
-  double upper_limit = 9;
-  arma::uvec index1 = arma::find(alpha_logit > upper_limit);
-
-  // replace them
-  alpha.elem(index1) = arma::vec(index1.n_rows, arma::fill::ones);
+  alpha.replace(arma::datum::nan, 1);
 }
 
 // -----------------------------------------------------------------------------
@@ -194,19 +192,20 @@ void alpha_update_c(const arma::mat& ssq_var, const arma::mat& mu,
 // D: n x n matrix; weights (k,l entry is the weight of the k-th individual
 // with respect to the l-th individual using the l-th individual's bandwidth)
 // X: n x p matrix; data_mat with the j-th column removed
-// mu, alpha: n x p matrices; variational parameters. the l, k entry is
-// the k-th parameter for the l-th individual
+// mu0, alpha0: n x p matrices; initial value of variational parameters. the
+// l, k entry is the k-th parameter for the l-th individual
 // ssq, sbsq: doubles; spike and slab variance hyperparameters
 // pip: double; spike and slab probability of inclusion
-// tolerance: double; when the square root of the sum of squared changes in
-// the elements of alpha are within tolerance, stop iterating
+// elbo_tol: double; when the current ELBO minus the previous ELBO is less than
+// elbo_tol, stop iterating
+// alpha_tol: double; when the square root of the sum of squared changes in
+// the elements of alpha are within alpha_tol, stop iterating
 // max_iter: integer; maximum number of iterations
-// upper_limit: double; during the alpha update, values of logit(alpha) greater
-// than upper_limit will be assigned a probability of 1
 // -----------------------------RETURNS-----------------------------------------
-// var_alpha: n x p matrix; final alpha values
-// var_ELB: double; final value of ELBO summed across all individuals
-// converged_iter: integer; number of iterations to reach convergence
+// mu; n x p matrix; final mu values
+// alpha; n x p matrix; final alpha values
+// ssq_var; n x p matrix; final ssq_var values
+// elbo: double; final value of ELBO summed across all individuals
 // -----------------------------------------------------------------------------
 // [[Rcpp::export]]
 Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
@@ -293,7 +292,7 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
 // -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
 // for a fixed response, run CAVI for each individual across a grid of
-// hyperparameters and return the ELBO for each of the grid points
+// hyperparameters
 // -----------------------------ARGUMENTS---------------------------------------
 // y: n x 1 vector; responses (j-th column of the data)
 // D: n x n matrix; weights (k,l entry is the weight of the k-th individual
@@ -301,16 +300,28 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
 // X: n x p matrix; data_mat with the j-th column removed
 // mu, alpha: n x p; matrices of variational parameters. the l, k entry
 // is the k-th parameter for the l-th individual
-// ssq_vec: n_param x 1 vector; error term variance candidates
-// sbsq_vec: n_param x 1 vector; slab variance candidates
-// pi_vec: n_param x 1 vector; candidate spike and slab probabilities of inclusion
-// tolerance: double; when the square root of the sum of squared changes in
-// the elements of alpha are within tolerance, stop iterating
+// ssq: nssq x 1 vector; error term variance candidates
+// sbsq: nsbsq x 1 vector; slab variance candidates
+// pip: npip x 1 vector; candidate spike and slab probabilities of inclusion
+// elbo_tol: double; when the current ELBO minus the previous ELBO is less than
+// elbo_tol, stop iterating
+// alpha_tol: double; when the square root of the sum of squared changes in
+// the elements of alpha are within alpha_tol, stop iterating
+// max_iter: integer; maximum number of iterations
 // -----------------------------RETURNS-----------------------------------------
-// returns list with 2 values:
-// elbo: n_param x 1 vector; ELBO for each hyperparameter candidate
-// num_converged: integer; the number of hyperparameter candidates for which
-// the CAVI converged
+// elbo: double; final value of ELBO summed across all individuals that achieved
+// the maximum accross the hyperparameter grid
+// mu; n x p matrix; final mu values corresponding to the hyperparameters that
+// maximized the ELBO
+// alpha; n x p matrix; final alpha values corresponding to the hyperparameters
+// that maximized the ELBO
+// ssq_var; n x p matrix; final ssq_var values corresponding to the
+// hyperparameters that maximized the ELBO
+// ssq: double; value of ssq that maximized the ELBO
+// sbsq: double; value of sbsq that maximized the ELBO
+// pip: double; value of pip that maximized the ELBO
+// elbo_vec: (nssq * nsbsq * npip) x 1 vector; ELBO for each point in the
+// hyperparameter grid
 // -----------------------------------------------------------------------------
 // [[Rcpp::export]]
 Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,

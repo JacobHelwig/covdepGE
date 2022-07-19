@@ -8,12 +8,12 @@ source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/
 source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/cavi_search.R")
 source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
 source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_plots.R")
 source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_R.R")
 source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/data_gen.R")
 Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
 
-set.seed(3)
+set.seed(1)
 
 # gen the data
 cont <- generate_continuous()

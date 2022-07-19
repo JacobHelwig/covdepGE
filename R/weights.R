@@ -104,14 +104,12 @@ get_bandwidths <- function(X){
 ## -----------------------------DESCRIPTION-------------------------------------
 ## function to calculate weight matrix
 ## -----------------------------ARGUMENTS---------------------------------------
-## Z: n by p' matrix; extraneous covariates
+## Z: n by q matrix; extraneous covariates
 ##
 ## norm: numeric in [1, Inf]; norm to use when calculating weights
 ##
-## kde: logical; if T, use 2-step KDE methodology described in (2) to
-## calculate individual-specific bandwidths
-##
-## tau: vector of length n with positive entries; bandwidth parameters
+## tau: NULL OR vector of length n with positive entries; bandwidth parameters.
+## If NULL, use KDE to get bandwidths
 ## -----------------------------RETURNS-----------------------------------------
 ## D: n x n matrix of weights; i, j entry is the weighting of the i-th
 ## individual with respect to the j-th individual using the j-th individual's
@@ -136,10 +134,6 @@ get_weights <- function(Z, norm, tau){
   # calculate the weighting of the j-th individual with respect to the i-th
   # individual using the i-th individual's bandwidth
   for (i in 1:n) {
-
-    # fix the i-th individual's bandwidth
-    tau_i <- tau[i]
-
     for (j in i:n) {
 
       # take the p-norm
@@ -161,7 +155,7 @@ get_weights <- function(Z, norm, tau){
 
 
       # given the norm, find the weight of j with respect to i
-      D[j, i] <- stats::dnorm(diff_norm, 0, tau_i)
+      D[j, i] <- stats::dnorm(diff_norm, 0, tau[i])
 
       # find the weight of i with respect to j
       D[i, j] <- stats::dnorm(diff_norm, 0, tau[j])

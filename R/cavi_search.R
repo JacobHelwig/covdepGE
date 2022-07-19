@@ -90,7 +90,8 @@
 ## -----------------------------------------------------------------------------
 cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
                         npip, ssq_upper_mult, ssq_lower, snr_upper, sbsq_lower,
-                        pip_lower, elbo_tol, alpha_tol, max_iter, resp_index){
+                        pip_lower, pip_upper, elbo_tol, alpha_tol, max_iter,
+                        resp_index){
 
   # get the dimensions of the data
   n <- nrow(X)
@@ -108,7 +109,7 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
 
     # if either sbsq or pip has not been supplied, then use LASSO to estimate
     # the proportion of non-zero coefficients
-    if (any(is.null(c(sbsq, pip)))){
+    if (any(is.null(c(sbsq, pip))) & is.null(pip_upper)){
       lasso <- glmnet::cv.glmnet(X, y)
 
       # find the number of non-zero coefficients estimated by LASSO
@@ -117,7 +118,7 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
       non0 <- min(max(non0, 1), p - 1)
 
       # an upper bound for pi is the proportion of non-zero coefficients
-      pi_upper <- non0 / p
+      pip_upper <- non0 / p
     }
 
     # if ssq has not been supplied, create the grid; otherwise, find the unique
@@ -142,7 +143,7 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
       s2_sum <- sum(apply(X, 2, var))
 
       # find the upper bound for the grid of sbsq
-      sbsq_upper <- snr_upper / (pi_upper * s2_sum)
+      sbsq_upper <- snr_upper / (pip_upper * s2_sum)
 
       # create the grid candidates for sbsq
       sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)
@@ -156,7 +157,7 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
     if (is.null(pip)){
 
       # create posterior inclusion probability grid
-      pip <- exp(seq(log(pip_lower), log(pi_upper), length.out = npip))
+      pip <- seq(pip_lower, pip_upper, length.out = npip)
 
     }else{
       pip <- unique(pip)
