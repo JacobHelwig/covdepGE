@@ -1,97 +1,63 @@
 ## -----------------------------------------------------------------------------
-## -----------------------------cavi_search-------------------------------------
+## -----------------------------cavi--------------------------------------------
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
-## Performs CAVI and grid search for a fixed data matrix and response for n
-## linear regressions, where the l-th regression is weighted with respect to the
-## l-th individual. Returns matrix of posterior inclusion probabilities, details
-## on the variational updates, a vector of warnings, and the number of final
-## CAVI that DNC
+## Performs CAVI and hyperparameter selection for n linear regressions, where
+## the l-th regression is weighted with respect to the l-th individual
 ## -----------------------------ARGUMENTS---------------------------------------
-## X_mat: n x p matrix; predictors
+## X: n x p numeric matrix; data with the j-th column removed
 ##
-## Z: n x p' matrix; extraneous covariates
+## Z: n x q numeric matrix; extraneous covariates
 ##
-## D: n x n matrix; weights (k,l entry is the weight of the k-th individual
-## with respect to the l-th individual using the l-th individual's bandwidth)
+## D: n x n numeric matrix; i, j entry is the weighting of the i-th individual
+## with respect to the j-th individual using the j-th individual's bandwidth
 ##
-## y: vector of length n; response
+## y: numeric vector of length n; j-th column of the data that is fixed as the
+## reponse
 ##
-## alpha: numeric in [0, 1]; global initialization value for the variational
-## parameters alpha_matrices (approximates probabilities of inclusion). 0.2 by
-## default
+## hp_method character in c("grid_search", "model_average", "hybrid"); method
+## for setting hyperparameter values based on the hyperparameter grid.
 ##
-## mu: numeric; global initialization value for the variational parameters
-## mu_matrices (approximates posterior mean of regression coefficients). 0 by
-## default
+## ssq: NULL OR numeric vector with positive entries; candidate values
+## of the hyperparameter sigma^2 (prior residual variance)
 ##
-## sigmasq_vec: vector of length n_param with positive entries; candidate
-## values of sigmasq, the error term variance. NULL by default
+## sbsq: NULL OR numeric vector with positive entries; candidate values
+## of the hyperparameter sigma^2_beta (prior slab variance)
 ##
-## sigmabetasq_vec: vector of length n_param with positive entries; candidate
-## values of sigmabeta_sq, the slab variance. NULL by default
+## pip: NULL OR numeric vector with entries in (0, 1); candidate
+## values of the hyperparameter pi (prior inclusion probability)
 ##
-## pi_vec: vector of length n_param with entries in (0, 1); candidate values of
-## pi. 0.1 by default
+## nssq: positive integer; number of points in ssq if ssq is NULL
 ##
-## tolerance: positive numeric; end CAVI when the Frobenius norm of the
-## iteration-to-iteration change in the alpha matrix are within tolerance.
-## `1e-12` by default
+## nsbsq: positive integer; number of points in sbsq if sbsq is NULL
 ##
-## max_iter_grid: positive integer; during the grid search, if the
-## tolerance criteria has not been met by `max_iter_grid` iterations, end the
-## CAVI. `1e4` by default
+## npip: positive integer; number of points in pip if pip is NULL
 ##
-## max_iter_final: positive integer; for the final CAVI, if the tolerance
-## criteria has not been met by `max_iter_final` iterations, end the CAVI. `1e4`
-## by default
+## ssq_mult: positive numeric; used to obtain an upper bound for ssq
 ##
-## warnings: logical; if T, convergence and grid warnings will be
-## displayed. Convergence warnings occur when the tolerance exit condition has
-## not been met by max_iter_grid or max_iter_final iterations. Grid warnings
-## occur when, for either sigmabetasq_vec or pi_vec, the grid is longer than 2
-## candidates, and the final CAVI uses a candidate value on the grid boundary.
-## T by default
+## ssq_lower: positive numeric; if ssq is NULL, then ssq_lower will
+## be the least value in ssq
 ##
-## resp_index: integer in {1,...,p + 1}; the index of the column that is y in
-## data_mat
+## snr_upper: positive numeric; used to obtain an upper bound for sbsq
 ##
-## CS: logical; if T, pi_vec and sigma_sq will be selected
-## according to Carbonetto-Stephens. F by default
-## -----------------------------RETURNS-----------------------------------------
-## Returns `list` with the following values:
+## sbsq_lower: positive numeric; if sbsq is NULL, then sbsq_lower will be the
+## least value in sbsq
 ##
-## 1. alpha_matrix: n x p matrix; the l, j entry is the variational
-## approximation to the posterior inclusion probability of the j-th variable in
-## a regression with the y fixed as the response with weightings taken with
-#  respect to the l-th individual
+## pip_lower: numeric in (0, 1); if pip is NULL, then pip_lower will be the
+## least value in pip
 ##
-## 2. CAVI_details: list with the following values:
-##  - sigmasq, sigmabetasq, pi: numerics; the values of the hyperparameters
-##  that maximized the ELBO for the j-th variable
-##  - ELBO: numeric; the maximum value of ELBO for the final CAVI
-##  - converged_iter: integer; the number of iterations to attain convergence
-##  for the final CAVI
-##  - hyperparameters: n_param x 4 matrix; each of the hyperparameter grid
-##  points with the resulting ELBO
+## pip_upper: NULL OR  numeric in(0, 1); if pip is NULL, then pip_upper will be
+## the greatest value in pip
 ##
-## 3. warnings_vec: character vector; Vector of convergence warnings to be
-## displayed in covdepGE_main
+## alpha_tol: positive numeric; end CAVI when the Frobenius norm of the
+## change in the alpha matrix is within alpha_tol
 ##
-## 4. final_DNC: integer; number of final CAVIs that did not converge
-##
-## 5. sigmasq: n x (p + 1) matrix; fitted error term variances for each
-## individual in the final model. Column j corresponds to the regression with
-## the j-th variable fixed as the response.
-##
-## 6. sigmabeta_sq: n x (p + 1) matrix; fitted slab variances for each
-## individual in the final model. Column j corresponds to the regression with
-## the j-th variable fixed as the response
+## max_iter: positive integer; if a tolerance criteria has not been met by
+## max_iter_grid iterations, end CAVI
 ## -----------------------------------------------------------------------------
-cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
-                        npip, ssq_upper_mult, ssq_lower, snr_upper, sbsq_lower,
-                        pip_lower, pip_upper, elbo_tol, alpha_tol, max_iter,
-                        resp_index){
+cavi <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq, npip,
+                 ssq_mult, ssq_lower, snr_upper, sbsq_lower, pip_lower,
+                 pip_upper, alpha_tol, max_iter){
 
   # get the dimensions of the data
   n <- nrow(X)
@@ -101,19 +67,19 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
   # the variational approximation to the j-th parameter in a regression with
   # the resp_index predictor fixed as the response with weightings taken with
   # respect to the l-th individual
-  alpha <- matrix(0.1, n, p)
+  alpha <- matrix(0.2, n, p)
   mu <- matrix(0, n, p)
 
   # if the hyperparameter grid has not been fully supplied, create it
-  if (any(is.null(c(ssq, sbsq, pip)))){
+  if (is.null(ssq) | is.null(sbsq) | is.null(pip)){
 
     # if either sbsq or pip has not been supplied, then use LASSO to estimate
     # the proportion of non-zero coefficients
-    if (any(is.null(c(sbsq, pip))) & is.null(pip_upper)){
+    if ((is.null(sbsq) | is.null(pip)) & is.null(pip_upper)){
       lasso <- glmnet::cv.glmnet(X, y)
 
       # find the number of non-zero coefficients estimated by LASSO
-      # ensure that non0 is an integer in (0, p)
+      # ensure that non0 is an integer in [1, p - 1]
       non0 <- sum(coef(lasso, s = "lambda.1se")[-1] != 0)
       non0 <- min(max(non0, 1), p - 1)
 
@@ -121,22 +87,18 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
       pip_upper <- non0 / p
     }
 
-    # if ssq has not been supplied, create the grid; otherwise, find the unique
-    # values of the supplied ssq
+    # if ssq has not been supplied, create the grid
     if (is.null(ssq)){
 
       # find the upper bound for the grid of ssq
-      ssq_upper <- ssq_upper_mult * var(y)
+      ssq_upper <- ssq_mult * var(y)
 
       # create the grid candidates for ssq
       ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)
 
-    }else{
-      ssq <- unique(ssq)
     }
 
-    # if sbsq has not been supplied, create the grid; otherwise, find the unique
-    # values of the supplied sbsq
+    # if sbsq has not been supplied, create the grid
     if (is.null(sbsq)){
 
       # find the sum of the variances for each of the columns of X_mat
@@ -148,25 +110,19 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
       # create the grid candidates for sbsq
       sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)
 
-    }else{
-      sbsq <- unique(sbsq)
     }
 
-    # if pip has not been supplied, create the grid; otherwise, find the unique
-    # values of the supplied pip
+    # if pip has not been supplied, create the grid
     if (is.null(pip)){
 
       # create posterior inclusion probability grid
       pip <- seq(pip_lower, pip_upper, length.out = npip)
 
-    }else{
-      pip <- unique(pip)
     }
-
-    # create the grid
-    hp <- expand.grid(pip = pip, ssq = ssq, sbsq = sbsq, elbo = NA)
-
   }
+
+  # create the grid
+  hp <- expand.grid(pip = pip, ssq = ssq, sbsq = sbsq, elbo = NA, iter = NA)
 
   if (hp_method == "grid_search"){
 
@@ -174,15 +130,16 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
 
     # perform CAVI for each of the hyperparameter settings
     out_grid <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip,
-                              elbo_tol, alpha_tol, max_iter)
+                              alpha_tol, max_iter)
 
-    # add the ELBO for each of the grid points to the hyperparameter grid
+    # add the ELBO and converged iter for each of the grid points to hp grid
     hp$elbo <- out_grid$elbo_vec
+    hp$iter <- out_grid$conv_iter
 
     # use the best hyperparameters from the grid search to perform CAVI until
-    # max_iter is reached or alpha converges (no early stopping for ELBO)
+    # max_iter is reached or alpha converges
     out <- cavi_c(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
-                  out_grid$sbsq, out_grid$pip, -1, alpha_tol, max_iter)
+                  out_grid$sbsq, out_grid$pip, alpha_tol, max_iter)
 
     # save hyperparameter details
     final <- c(ssq = out_grid$ssq, sbsq = out_grid$sbsq, pip = out_grid$pip)
@@ -231,12 +188,12 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
 
         # grid search over the ssq and sbsq grid
         out_grid <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, pip_j,
-                                  elbo_tol, alpha_tol, max_iter)
+                                  alpha_tol, max_iter)
 
         # use the best hyperparameters from the grid search to perform CAVI until
-        # max_iter is reached or alpha converges (no early stopping for ELBO)
+        # max_iter is reached or alpha converges
         out <- cavi_c(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
-                      out_grid$sbsq, pip[j], -1, alpha_tol, max_iter)
+                      out_grid$sbsq, pip[j], alpha_tol, max_iter)
 
         # save the final hyperparameters and elbo
         hyp[j, c("ssq", "sbsq", "elbo")] <- c(out_grid$ssq, out_grid$sbsq, out$elbo)
@@ -252,7 +209,7 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
         hp_j <- hp[j, ]
 
         # perform CAVI for the hyperparameter setting
-        out <- cavi_c(y, D, X, mu, alpha, hp_j$ssq, hp_j$sbsq, hp_j$pip, elbo_tol,
+        out <- cavi_c(y, D, X, mu, alpha, hp_j$ssq, hp_j$sbsq, hp_j$pip,
                       alpha_tol, max_iter)
       }
 
@@ -276,6 +233,9 @@ cavi_search <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
       # sum the ELBO across the individuals to get the elbo for the
       # hyperparameter setting
       hp$elbo[j] <- sum(elbo_l)
+
+      # save the number of iterations to converge
+      hp$iter[j] <- out$conv_iter
     }
 
     # calculate weights for averaging and average

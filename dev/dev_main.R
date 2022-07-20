@@ -2,10 +2,9 @@ setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/c
 rm(list = ls())
 source("generate_data.R")
 
-R_code <- !T # true if R code instead of C++ should be used
-package <- !T # true if the package version is desired
-discrete_data <- !T # true if discrete example is desired
-parallel  <- T # if package == T, should the code be run in parallel?
+discrete_data <- F
+package <- F
+sbq <- c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10)
 
 # generate data and covariates
 if (discrete_data) {
@@ -19,6 +18,15 @@ if (discrete_data) {
 data_mat <- dat$data
 Z <- dat$covts
 
+# fit varbvs to get pi and ssq
+sigma <- pip_ <- rep(NA, ncol(data_mat))
+for (j in 1:ncol(data_mat)){
+  vout <- varbvs::varbvs(data_mat[ , -j], NULL, data_mat[ , j], verbose = F)
+  sigma[j] <- mean(vout$sigma)
+  pip_[j] <- mean(1/(1 + 10^(-vout$logodds)))
+}
+pip_ <- unique(pip_)
+
 if (package){
   out <- covdepGE::covdepGE(data_mat, Z, tau = tau_, kde = F, CS = T, scale = F,
                             sbsq = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
@@ -28,16 +36,14 @@ if (package){
 
 }else{
   if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
-  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_main.R")
-  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/cavi_search.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/main.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/cavi.R")
   source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
-  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
-  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/gg_covdepGE.R")
-  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_R.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/plots.R")
+  source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/data.R")
   Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
-  out <- covdepGE(data_mat, Z, tau = tau_, kde = F, CS = T, scale = F,
-                  sbsq = c(0.01, 0.05, 0.1, 0.5, 1, 3, 7, 10),
-                  R = R_code, max_iter = 100, warnings = F, alpha_tol = 1e-10, center_data = F)
+  out <- covdepGE(data_mat, Z, "grid_search", ssq = sigma, sbsq = sbq,
+                  pip = pip_, tau = tau_)
 }
 
 
@@ -51,10 +57,10 @@ if (discrete_data){
 # check for equality between the alpha matrices
 same_alpha <- T
 total_diff <- 0
-for (j in 1:length(out$alpha_matrices)) {
-  if (all.equal(out$alpha_matrices[[j]],
+for (j in 1:length(out$graphs$inclusion_probs_asym)) {
+  if (all.equal(out$graphs$inclusion_probs_asym[[j]],
                 out_original$original_alpha_matrices[[j]]) != T) {
-    total_diff <- total_diff + norm(out$alpha_matrices[[j]] -
+    total_diff <- total_diff + norm(out$graphs$inclusion_probs_asym[[j]] -
                                       out_original$original_alpha_matrices[[j]], "F")
     same_alpha <- F
   }
@@ -62,20 +68,4 @@ for (j in 1:length(out$alpha_matrices)) {
 total_diff
 same_alpha
 
-# check for equality between the inclusion probabilities
-same_probs <- T
-total_diff <- 0
-for (j in 1:length(out$inclusion_probs)) {
-  if (all.equal(out$inclusion_probs[[j]],
-                out_original$original_incl_probs[[j]]) != T) {
-    same_probs <- F
-    total_diff <- total_diff + norm(out$inclusion_probs[[j]] -
-                                      out_original$original_incl_probs[[j]], "F")
-  }
-}
-total_diff
-same_probs
-
-# check for equality between ELBO
-all.equal(unname(unlist(lapply(out$CAVI_details, `[[`, "ELBO"))), out_original$original_ELBO)
-
+summary(abs(unlist(out_original$original_alpha_matrices) - unlist(out$graphs$inclusion_probs_sym)))

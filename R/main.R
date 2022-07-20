@@ -10,23 +10,25 @@
 #'
 #' @param Z `n x q numeric matrix`; extraneous covariates
 #'
-#' @param hp_method `character` in `c("grid_search", "model_average", "hybrid")`;
-#' the hyperparameter grid will be generated as the Cartesian product of `ssq`,
-#' `sbsq`, and `pip`.
+#' @param hp_method `character` in
+#' `c("grid_search", "model_average", "hybrid")`; method for setting
+#' hyperparameter values based on the hyperparameter grid. The grid will be
+#' generated as the Cartesian product of `ssq`, `sbsq`, and `pip`.
 #'
-#' If `"grid_search"`, then the point in the hyperparameter
-#' grid that maximizes the ELBO across all individuals for a given variable will
-#' be selected.
+#' If `"grid_search"`, then the point in the hyperparameter grid that maximizes
+#' the ELBO across all individuals for a given variable `y` fixed as the
+#' response will be selected.
 #'
-#' If `"model_average`, then all posterior quantities will be a convex
-#' combination across each point in the hyperparameter grid, where the
-#' weightings are both individual and variable specific. Unnormalized weights
-#' are calculated using the exponentiated ELBO
+#' If `"model_average`, then all posterior quantities for each variable `y`
+#' fixed as the response will be a convex combination of the models resulting
+#' from each point in the hyperparameter grid, where the weightings are both
+#' individual and variable specific. Unnormalized weights are calculated using
+#' the exponentiated ELBO
 #'
 #' If `"hybrid"`, then `pip` will be averaged over as with `"model_average"`,
 #' while a single point in the grid defined by the Cartesian product of `ssq`
-#' and `sbsq` will be selected for each variable and point in `pip`. `"hybrid"`
-#' by default
+#' and `sbsq` will be selected for each variable `y` fixed as the response and
+#' point in `pip`. `"hybrid"` by default
 #'
 #' @param ssq `NULL` OR `numeric vector` with positive entries; candidate values
 #' of the hyperparameter `sigma^2` (prior residual variance). If `NULL`, `ssq`
@@ -121,9 +123,6 @@
 #' @param scale_Z `logical`; if `T`, center and scale `Z` column-wise to mean `0`,
 #' standard deviation 1 prior to calculating the weights. `T` by default
 #'
-#' @param elbo_tol non-negative `numeric`; end CAVI when the current ELBO minus
-#' the previous ELBO is less than `elbo_tol`. `1e-5` by default
-#'
 #' @param alpha_tol positive `numeric`; end CAVI when the Frobenius norm of the
 #' change in the alpha `matrix` is within `alpha_tol`. `1e-5` by default
 #'
@@ -204,7 +203,8 @@
 #' 3. `hyperparameters`: `list` of `p` lists; the `j`-th `list` has the
 #' following values for variable `j` fixed as the response:
 #'
-#' - `grid`: `matrix` of candidate hyperparameter values and corresponding ELBO
+#' - `grid`: `matrix` of candidate hyperparameter values, corresponding ELBO,
+#' and iterations to converge
 #'
 #' - `final`: the final hyperparameters chosen by grid search
 #'
@@ -246,13 +246,12 @@
 #' Density Modeling*, Statistica Sinica, 2020
 ## -----------------------------------------------------------------------------
 covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
-                     pip = NULL, nssq = 5, nsbsq = 5, npip = 5, ssq_mult = 1.5,
+                     pip = NULL, nssq = 3, nsbsq = 3, npip = 3, ssq_mult = 1.5,
                      ssq_lower = 1e-5, snr_upper = 25, sbsq_lower = 1e-5,
                      pip_lower = 1e-5, pip_upper = NULL, tau = NULL, norm = 2,
-                     center_data = T, scale_Z = T, elbo_tol = 1e-5,
-                     alpha_tol = 1e-5, max_iter = 100, edge_threshold = 0.5,
-                     sym_method = "mean", parallel = F, num_workers = NULL,
-                     prog_bar = T){
+                     center_data = T, scale_Z = T, alpha_tol = 1e-5,
+                     max_iter = 100, edge_threshold = 0.5, sym_method = "mean",
+                     parallel = F, num_workers = NULL, prog_bar = T){
 
   start_time <- Sys.time()
 
@@ -336,10 +335,9 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
             X <- data[, -resp_index, drop = F]
 
             # perform the grid search and final CAVI; save the results to res
-            cavi_search(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
-                        npip, ssq_mult, ssq_lower, snr_upper, sbsq_lower,
-                        pip_lower, pip_upper, elbo_tol, alpha_tol, max_iter,
-                        resp_index)
+            cavi(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq, npip,
+                 ssq_mult, ssq_lower, snr_upper, sbsq_lower, pip_lower,
+                 pip_upper, alpha_tol, max_iter)
             }
           )
       },
@@ -362,7 +360,7 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
     # `list` to store each of the results from cavi_search
     res <- vector("list", p)
 
-    for (resp_index in 1:(p)) {
+    for (resp_index in 1:p) {
 
       # Set variable number `resp_index` as the response
       y <- data[, resp_index]
@@ -371,11 +369,10 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
       X <- data[, -resp_index, drop = F]
 
       # perform the grid search and final CAVI; save the results to res
-      res[[resp_index]] <- cavi_search(X, Z, D, y, hp_method, ssq, sbsq, pip,
-                                       nssq, nsbsq, npip, ssq_mult, ssq_lower,
-                                       snr_upper, sbsq_lower, pip_lower,
-                                       pip_upper, elbo_tol, alpha_tol, max_iter,
-                                       resp_index)
+      res[[resp_index]] <- cavi(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq,
+                                nsbsq, npip, ssq_mult, ssq_lower, snr_upper,
+                                sbsq_lower, pip_lower, pip_upper, alpha_tol,
+                                max_iter)
 
       # update the progress bar
       if (prog_bar) utils::setTxtProgressBar(pb, resp_index)
@@ -487,7 +484,7 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
                snr_upper = snr_upper, sbsq_lower = sbsq_lower,
                pip_lower = pip_lower, pip_upper = pip_upper, norm = norm,
                center_data = center_data, scale_Z = scale_Z,
-               elbo_tol = elbo_tol, alpha_tol = alpha_tol, max_iter = max_iter,
+               alpha_tol = alpha_tol, max_iter = max_iter,
                edge_threshold = edge_threshold, sym_method = sym_method,
                parallel = parallel, num_workers = num_workers,
                prog_bar = prog_bar)

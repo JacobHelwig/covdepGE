@@ -4,13 +4,11 @@ source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/
 
 # src the scripts
 if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_main.R")
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/cavi_search.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/main.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/cavi.R")
 source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/checks.R")
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_plots.R")
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/covdepGE_R.R")
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/data_gen.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/plots.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/data.R")
 Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
 
 set.seed(1)
