@@ -73,7 +73,7 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
 // elbo_tot: double; ELBO for the regression weighted with respect to the l-th
 // individual with the j-th column fixed as the response
 // -----------------------------------------------------------------------------
-arma::colvec total_ELBO_c (const arma::colvec& y, const arma::mat& D,
+double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
                      const arma::mat& X, const arma::mat& ssq_var,
                      const arma::mat& mu, const arma::mat& alpha, double ssq,
                      double sbsq, double pip){
@@ -82,16 +82,13 @@ arma::colvec total_ELBO_c (const arma::colvec& y, const arma::mat& D,
   int n = X.n_rows;
 
   // instantiate variable to store the total ELBO
-  //double elbo_tot = 0;
-
-  ////
-  arma::colvec elbo_tot(n);
+  double elbo_tot = 0;
 
   // loop over all individuals
   for (int l = 0; l < n; l++){
 
     // calculate the ELBO for l-th individual and add it to the total ELBO
-    elbo_tot(l) = ELBO_calculator_c(y, D.col(l), X, ssq_var.row(l).t(),
+    elbo_tot += ELBO_calculator_c(y, D.col(l), X, ssq_var.row(l).t(),
                                   mu.row(l).t(), alpha.row(l).t(), ssq, sbsq,
                                   pip);
   }
@@ -259,7 +256,7 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
   }
 
   // calculate ELBO across n individuals
-  arma::colvec ELBO = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
+  double ELBO = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
 
   // return final mu matrix, alpha matrix, the final ELBO, the number of
   // iterations to converge, and the fitted variance hyperparameters
@@ -316,25 +313,19 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
   int n_param = pip.n_elem;
 
   // storage for the best ELBO, new elbo, and converged iter
-  double elbo_best = -1;
-  double elbo_new;
+  double elbo_best, elbo_new;
   int iter_new;
 
   // storage for the hyperparameters and variational parameters corresponding to
   // the current best ELBO
-  arma::mat mu_best;
-  arma::mat alpha_best;
-  arma::mat ssqv_best;
-  double ssq_best = -1;
-  double sbsq_best = -1;
-  double pip_best = -1;
+  arma::mat mu_best, alpha_best, ssqv_best;
+  double ssq_best, sbsq_best, pip_best;
 
   // instantiate a list to store the result of cavi_c
   Rcpp::List out;
 
   // vector to store ELBOs and converged iter
-  arma::colvec elbo_store(n_param);
-  arma::colvec iter_store(n_param);
+  arma::colvec elbo_store(n_param), iter_store(n_param);
 
   ////
   Rcpp::List mu_list(n_param), alpha_list(n_param), ssqv_list(n_param), elbo_list(n_param);;
@@ -345,38 +336,29 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
     // run CAVI; store elbo and number of iterations to converge
     out = cavi_c(y, D, X, mu, alpha, ssq(j), sbsq(j), pip(j), alpha_tol,
                  max_iter);
-    // elbo_new = as<double>(out["elbo"]);
+    elbo_new = as<double>(out["elbo"]);
     iter_new = as<double>(out["iter"]);
-    // elbo_store(j) = elbo_new;
+    elbo_store(j) = elbo_new;
     iter_store(j) = iter_new;
 
-    ////
-    mu_list(j) = as<arma::mat>(out["mu"]);
-    alpha_list(j) = as<arma::mat>(out["alpha"]);
-    ssqv_list(j) = as<arma::mat>(out["ssq_var"]);
-    elbo_list(j) = as<arma::colvec>(out["elbo"]);
+    // if the new ELBO is greater than the current best, update the best ELBO and
+    // parameters and whether or not the model converged
+    if (elbo_best <  elbo_new or j == 0){
 
-    // // if the new ELBO is greater than the current best, update the best ELBO and
-    // // parameters and whether or not the model converged
-    // if (elbo_best <  elbo_new or j == 0){
-    //
-    //   elbo_best = as<double>(out["elbo"]);
-    //   mu_best = as<arma::mat>(out["mu"]);
-    //   alpha_best = as<arma::mat>(out["alpha"]);
-    //   ssqv_best = as<arma::mat>(out["ssq_var"]);
-    //   ssq_best = ssq(j);
-    //   sbsq_best = sbsq(j);
-    //   pip_best = pip(j);
-    // }
+      elbo_best = as<double>(out["elbo"]);
+      mu_best = as<arma::mat>(out["mu"]);
+      alpha_best = as<arma::mat>(out["alpha"]);
+      ssqv_best = as<arma::mat>(out["ssq_var"]);
+      ssq_best = ssq(j);
+      sbsq_best = sbsq(j);
+      pip_best = pip(j);
+    }
   }
 
   return(Rcpp::List::create(
-  Rcpp::Named("elbo") = elbo_list, Rcpp::Named("mu") = mu_list,
-    Rcpp::Named("alpha") = alpha_list, Rcpp::Named("ssq_var") = ssqv_list));
-  // return(Rcpp::List::create(
-  //     Rcpp::Named("elbo") = elbo_best, Rcpp::Named("mu") = mu_best,
-  //     Rcpp::Named("alpha") = alpha_best, Rcpp::Named("ssq_var") = ssqv_best,
-  //     Rcpp::Named("ssq") = ssq_best, Rcpp::Named("sbsq") = sbsq_best,
-  //     Rcpp::Named("pip") = pip_best, Rcpp::Named("elbo_vec") = elbo_store,
-  //     Rcpp::Named("iter") = iter_store));
+      Rcpp::Named("elbo") = elbo_best, Rcpp::Named("mu") = mu_best,
+      Rcpp::Named("alpha") = alpha_best, Rcpp::Named("ssq_var") = ssqv_best,
+      Rcpp::Named("ssq") = ssq_best, Rcpp::Named("sbsq") = sbsq_best,
+      Rcpp::Named("pip") = pip_best, Rcpp::Named("elbo_vec") = elbo_store,
+      Rcpp::Named("iter") = iter_store));
 }

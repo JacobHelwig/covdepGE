@@ -170,88 +170,72 @@ cavi <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq, npip,
     # hyperparameter setting
     elbo_theta <- alpha_theta <- mu_theta <- ssqv_theta <- vector("list", n_hp)
 
-    ####
-    out <- grid_search_c(y, D, X, mu, alpha, hp$ssq, hp$sbsq, hp$pip,
-                         alpha_tol, max_iter)
-
     # iterate over each of the pip if hybrid
     # iterate over each of the hyperparameter settings otherwise
-    # for (j in 1:n_hp){
-    #
-    #   #### fix hyperparameter setting
-    #   hp_j <- hp[j, ]
+    for (j in 1:n_hp){
 
-      # # hybrid CAVI
-      # if (hp_method == "hybrid"){
-      #
-      #   # fix the values in hp corresponding to the j-th value of pip
-      #   hp_j <- hp[hp$pip == pip[j], ]
-      #
-      #   # perform CAVI for each of the hyperparameter settings
-      #   out_grid <- grid_search_c(y, D, X, mu, alpha, hp_j$ssq, hp_j$sbsq,
-      #                             hp_j$pip, alpha_tol, max_iter_grid)
-      #
-      #   # add the elbo and the converged iter to hp
-      #   hp[hp$pip == pip[j], c("elbo", "iter")] <- data.frame(
-      #     out_grid[c("elbo_vec", "iter")])
-      #
-      #   # use the best hyperparameters from the grid search to perform CAVI again
-      #   out <- cavi_c(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
-      #                 out_grid$sbsq, pip[j], alpha_tol, max_iter)
-      #
-      #   # save the final hyperparameters, elbo, and iterations to converge
-      #   hyp[j, ] <- c(out_grid$ssq, out_grid$sbsq, out_grid$pip, out$elbo,
-      #                 out$iter)
-      #
-      #   # fix the final hyperparameter setting
-      #   hp_j <- data.frame(ssq = out_grid$ssq, sbsq = out_grid$sbsq, pip = pip[j])
-      #
-      # }else{
-      #
-      #   # otherwise, model averaging CAVI
-      #
-      #   # fix hyperparameter setting
-      #   hp_j <- hp[j, ]
-      #
-      #   # perform CAVI for the hyperparameter setting
-      #   out <- cavi_c(y, D, X, mu, alpha, hp_j$ssq, hp_j$sbsq, hp_j$pip,
-      #                 alpha_tol, max_iter)
-      #
-      #   # add the elbo and the converged iter to hp
-      #   hp[j, c("elbo", "iter")] <- unlist(out[c("elbo_vec", "iter")])
-      # }
-      #
-      # # save the variational parameters and elbo
-      # alpha_theta[[j]] <- out$alpha
-      # mu_theta[[j]] <- out$mu
-      # ssqv_theta[[j]] <- out$ssq_var
+      # hybrid CAVI
+      if (hp_method == "hybrid"){
 
-    #   # calculate the elbo for each individual under the current hyperparameter
-    #   # setting and save
-    #   elbo_l <- rep(NA, n)
-    #   for (l in 1:n){
-    #     # elbo_l[l] <- ELBO_calculator_c(y, D[ , l], X, t(out$ssq_var[l, ]),
-    #     #                                t(out$mu[l, ]), t(out$alpha[l, ]),
-    #     #                                hp_j$ssq, hp_j$sbsq, hp_j$pip)
-    #     elbo_l[l] <- ELBO_calculator_c(y, D[ , l], X, t(out$ssq_var[[j]][l, ]),
-    #                                    t(out$mu[[j]][l, ]), t(out$alpha[[j]][l, ]),
-    #                                    hp_j$ssq, hp_j$sbsq, hp_j$pip)
-    #   }
-    #
-    #
-    #   # save the ELBO for all individuals
-    #   elbo_theta[[j]] <- elbo_l
-    #
-    #   # sum the ELBO across the individuals to get the elbo for the
-    #   # hyperparameter setting
-    #   hp$elbo[j] <- sum(elbo_l)
-    # }
+        # fix the values in hp corresponding to the j-th value of pip
+        hp_j <- hp[hp$pip == pip[j], ]
 
-    ####
-    elbo_theta <- out$elbo
-    alpha_theta <- out$alpha
-    mu_theta <- out$mu
-    ssqv_theta <- out$ssq_var
+        # perform CAVI for each of the hyperparameter settings
+        out_grid <- grid_search_c(y, D, X, mu, alpha, hp_j$ssq, hp_j$sbsq,
+                                  hp_j$pip, alpha_tol, max_iter_grid)
+
+        # add the elbo and the converged iter to hp
+        hp[hp$pip == pip[j], c("elbo", "iter")] <- data.frame(
+          out_grid[c("elbo_vec", "iter")])
+
+        # use the best hyperparameters from the grid search to perform CAVI again
+        out <- cavi_c(y, D, X, out_grid$mu, out_grid$alpha, out_grid$ssq,
+                      out_grid$sbsq, pip[j], alpha_tol, max_iter)
+
+        # save the final hyperparameters, elbo, and iterations to converge
+        hyp[j, ] <- c(out_grid$ssq, out_grid$sbsq, out_grid$pip, out$elbo,
+                      out$iter)
+
+        # fix the final hyperparameter setting
+        hp_j <- data.frame(ssq = out_grid$ssq, sbsq = out_grid$sbsq, pip = pip[j])
+
+      }else{
+
+        # otherwise, model averaging CAVI
+
+        # fix hyperparameter setting
+        hp_j <- hp[j, ]
+
+        # perform CAVI for the hyperparameter setting
+        out <- cavi_c(y, D, X, mu, alpha, hp_j$ssq, hp_j$sbsq, hp_j$pip,
+                      alpha_tol, max_iter)
+
+        # add the elbo and the converged iter to hp
+        hp[j, c("elbo", "iter")] <- unlist(out[c("elbo_vec", "iter")])
+      }
+
+      # save the variational parameters and elbo
+      alpha_theta[[j]] <- out$alpha
+      mu_theta[[j]] <- out$mu
+      ssqv_theta[[j]] <- out$ssq_var
+
+      # calculate the elbo for each individual under the current hyperparameter
+      # setting and save
+      elbo_l <- rep(NA, n)
+      for (l in 1:n){
+        elbo_l[l] <- ELBO_calculator_c(y, D[ , l], X, t(out$ssq_var[l, ]),
+                                       t(out$mu[l, ]), t(out$alpha[l, ]),
+                                       hp_j$ssq, hp_j$sbsq, hp_j$pip)
+      }
+
+
+      # save the ELBO for all individuals
+      elbo_theta[[j]] <- elbo_l
+
+      # sum the ELBO across the individuals to get the elbo for the
+      # hyperparameter setting
+      hp$elbo[j] <- sum(elbo_l)
+    }
 
     # calculate weights for averaging and average
 
