@@ -119,12 +119,8 @@ void mu_update_c (const arma::colvec& y, const arma::mat& D, const arma::mat& X,
   int p = X.n_cols;
 
   // instantiate matrices for the update loop
-  arma::mat mu_stack(n, p);
-  arma::mat alpha_stack(n, p);
-  arma::mat X_mu_alpha(n, p);
-  arma::mat X_mu_alpha_k(n, p);
-  arma::mat y_k(n, p);
-  arma::mat d_x_y(n, p);
+  arma::mat mu_stack(n, p), alpha_stack(n, p), X_mu_alpha(n, p);
+  arma::mat X_mu_alpha_k(n, p), y_k(n, p), d_x_y(n, p);
 
   // loop over the individuals to update mu row by row
   for (int l = 0; l < n; l++){
@@ -217,8 +213,7 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
   arma::mat alpha = alpha0;
 
   // matrices for tracking the convergence of alpha parameters
-  arma::mat alpha_last;
-  arma::mat change_alpha;
+  arma::mat alpha_last, change_alpha;
 
   // variational variance of regression coefficients update
   arma::mat ssq_var = ssq / ((arma::pow(X, 2).t() * D).t() + 1 / sbsq);
@@ -326,9 +321,6 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
 
   // vector to store ELBOs and converged iter
   arma::colvec elbo_store(n_param), iter_store(n_param);
-
-  ////
-  Rcpp::List mu_list(n_param), alpha_list(n_param), ssqv_list(n_param), elbo_list(n_param);;
 
   // perform CAVI for each grid point
   for (int j = 0; j < n_param; j++){

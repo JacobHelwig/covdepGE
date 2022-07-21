@@ -126,8 +126,14 @@
 #' @param alpha_tol positive `numeric`; end CAVI when the Frobenius norm of the
 #' change in the alpha `matrix` is within `alpha_tol`. `1e-5` by default
 #'
-#' @param max_iter positive integer; if a tolerance criteria has not been met
-#' by `max_iter_grid` iterations, end CAVI. `100` by default
+#' @param max_iter positive integer; if tolerance criteria has not been met by
+#' `max_iter` iterations, end CAVI. `100` by default
+#'
+#' @param max_iter_grid positive integer; if tolerance criteria has not been met
+#' by `max_iter_grid` iterations during grid search, end CAVI. After grid search
+#' has completed, CAVI is performed with the final hyperparameters selected by
+#' grid search for at most `max_iter` iterations. Does not apply to
+#' `hp_method = "model_average"`. `10` by default
 #'
 #' @param edge_threshold `numeric` in `(0, 1)`; a graph for each individual
 #' will be constructed by including an edge between variable `i` and
@@ -246,12 +252,13 @@
 #' Density Modeling*, Statistica Sinica, 2020
 ## -----------------------------------------------------------------------------
 covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
-                     pip = NULL, nssq = 3, nsbsq = 3, npip = 3, ssq_mult = 1.5,
+                     pip = NULL, nssq = 4, nsbsq = 5, npip = 3, ssq_mult = 1.5,
                      ssq_lower = 1e-5, snr_upper = 25, sbsq_lower = 1e-5,
                      pip_lower = 1e-5, pip_upper = NULL, tau = NULL, norm = 2,
-                     center_data = T, scale_Z = T, alpha_tol = 1e-5,
-                     max_iter = 100, edge_threshold = 0.5, sym_method = "mean",
-                     parallel = F, num_workers = NULL, prog_bar = T){
+                     center_data = T, scale_Z = T, alpha_tol = 1e-10,
+                     max_iter_grid = 10, max_iter = 100, edge_threshold = 0.5,
+                     sym_method = "mean", parallel = F, num_workers = NULL,
+                     prog_bar = T){
 
   start_time <- Sys.time()
 
@@ -337,7 +344,7 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
             # perform the grid search and final CAVI; save the results to res
             cavi(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq, npip,
                  ssq_mult, ssq_lower, snr_upper, sbsq_lower, pip_lower,
-                 pip_upper, alpha_tol, max_iter)
+                 pip_upper, alpha_tol, max_iter, max_iter_grid)
             }
           )
       },
@@ -372,7 +379,7 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
       res[[resp_index]] <- cavi(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq,
                                 nsbsq, npip, ssq_mult, ssq_lower, snr_upper,
                                 sbsq_lower, pip_lower, pip_upper, alpha_tol,
-                                max_iter)
+                                max_iter, max_iter_grid)
 
       # update the progress bar
       if (prog_bar) utils::setTxtProgressBar(pb, resp_index)
@@ -401,9 +408,8 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
   # calculate the total ELBO
   total_elbo <- sum(elbo)
 
-  # get the grid size; if hp_method is "hybrid", include the number of pip
-  grid_sz <- nrow(hp[[1]]$grid) * ifelse(hp_method == "hybrid",
-                                         nrow(hp[[1]]$final), 1)
+  # get the grid size
+  grid_sz <- nrow(hp[[1]]$grid)
 
   # Graph post-processing
 
@@ -485,9 +491,9 @@ covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
                pip_lower = pip_lower, pip_upper = pip_upper, norm = norm,
                center_data = center_data, scale_Z = scale_Z,
                alpha_tol = alpha_tol, max_iter = max_iter,
-               edge_threshold = edge_threshold, sym_method = sym_method,
-               parallel = parallel, num_workers = num_workers,
-               prog_bar = prog_bar)
+               max_iter_grid = max_iter_grid, edge_threshold = edge_threshold,
+               sym_method = sym_method, parallel = parallel,
+               num_workers = num_workers, prog_bar = prog_bar)
 
   # create a `list` for model details
   model_details <- list(elapsed = NA, n = n, p = p, ELBO = total_elbo,

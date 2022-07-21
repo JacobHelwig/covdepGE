@@ -1,6 +1,6 @@
 # package
 library(covdepGE)
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/data_gen.R")
+source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/data.R")
 
 # src the scripts
 if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)

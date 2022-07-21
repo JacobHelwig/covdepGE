@@ -8,4 +8,4 @@
 *.tex
 *.toc
 *.tex.bak
-*.Rhistory
+.Rhistory
