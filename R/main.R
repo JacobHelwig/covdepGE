@@ -252,7 +252,7 @@
 #' Density Modeling*, Statistica Sinica, 2020
 ## -----------------------------------------------------------------------------
 covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
-                     pip = NULL, nssq = 4, nsbsq = 5, npip = 3, ssq_mult = 1.5,
+                     pip = NULL, nssq = 3, nsbsq = 3, npip = 3, ssq_mult = 1.5,
                      ssq_lower = 1e-5, snr_upper = 25, sbsq_lower = 1e-5,
                      pip_lower = 1e-5, pip_upper = NULL, tau = NULL, norm = 2,
                      center_data = T, scale_Z = T, alpha_tol = 1e-10,

@@ -5,11 +5,11 @@ ELBO_calculator_c <- function(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip) {
     .Call(`_covdepGE_ELBO_calculator_c`, y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip)
 }
 
-cavi_c <- function(y, D, X, mu0, alpha0, ssq, sbsq, pip, elbo_tol, alpha_tol, max_iter) {
-    .Call(`_covdepGE_cavi_c`, y, D, X, mu0, alpha0, ssq, sbsq, pip, elbo_tol, alpha_tol, max_iter)
+cavi_c <- function(y, D, X, mu0, alpha0, ssq, sbsq, pip, alpha_tol, max_iter) {
+    .Call(`_covdepGE_cavi_c`, y, D, X, mu0, alpha0, ssq, sbsq, pip, alpha_tol, max_iter)
 }
 
-grid_search_c <- function(y, D, X, mu, alpha, ssq, sbsq, pip, elbo_tol, alpha_tol, max_iter) {
-    .Call(`_covdepGE_grid_search_c`, y, D, X, mu, alpha, ssq, sbsq, pip, elbo_tol, alpha_tol, max_iter)
+grid_search_c <- function(y, D, X, mu, alpha, ssq, sbsq, pip, alpha_tol, max_iter) {
+    .Call(`_covdepGE_grid_search_c`, y, D, X, mu, alpha, ssq, sbsq, pip, alpha_tol, max_iter)
 }
 
