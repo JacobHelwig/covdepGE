@@ -3,7 +3,7 @@ library(ggplot2)
 
 # get the data
 set.seed(1)
-data <- generate_continuous()
+data <- generateData()
 X <- data$data
 Z <- data$covts
 interval <- data$interval

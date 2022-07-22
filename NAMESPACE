@@ -3,7 +3,7 @@
 S3method(plot,covdepGE)
 S3method(print,covdepGE)
 export(covdepGE)
-export(generate_continuous)
+export(generateData)
 export(inclusionCurve)
 export(matViz)
 importFrom(Rcpp,sourceCpp)

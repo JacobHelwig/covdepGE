@@ -7,26 +7,67 @@
 \method{plot}{covdepGE}(x, graph_colors = NULL, title_sum = T, ...)
 }
 \arguments{
-\item{x}{object of class \code{covdepGE}; return of \code{covdepGE} function}
+\item{x}{object of \verb{class covdepGE}; return of \code{covdepGE} function}
 
 \item{graph_colors}{\code{NULL} OR \code{vector} of length \code{g}; \code{g} is the number of
 unique graphs from \code{x}. The \code{v}-th element is the color for the \code{v}-th unique
-graph. If \code{NULL}:
+graph. If \code{NULL}, all graphs will be colored with \code{"#500000"}. \code{NULL} by
+default}
 
-\code{graph_colors <- rep("#500000", length(out$unique_graphs))}
-
-\code{NULL} by default}
-
-\item{title_sum}{\code{logical}; whether the indices of the individuals
-corresponding to the graph should be included in the title. \code{T} by default}
+\item{title_sum}{\code{logical}; if \code{T} the indices of the individuals
+corresponding to the graph will be included in the title. \code{T} by default}
 
 \item{...}{additional arguments will be ignored}
 }
 \value{
-Returns list of \code{ggplot2} visualizations of unique adjacency matrices
-estimated by \code{covdepGE}
+Returns list of \code{ggplot2} visualizations of unique graphs estimated
+by \code{covdepGE}
 }
 \description{
-Given the return value of \code{covdepGE} function, create a list of
-visualizations of the adjacency matrix for each of the unique graphs
+Create a \code{list} of the unique graphs estimated by \code{covdepGE}
+}
+\examples{
+
+library(ggplot2)
+
+# get the data
+set.seed(1)
+data <- generateData()
+X <- data$data
+Z <- data$covts
+interval <- data$interval
+prec <- data$true_precision
+
+# get overall and within interval sample sizes
+n <- nrow(X)
+n1 <- sum(interval == 1)
+n2 <- sum(interval == 2)
+
+# visualize the distribution of the extraneous covariate
+ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
+geom_histogram(aes(Z, fill = interval), color = "black", bins = n \%/\% 5)
+
+# visualize the true precision matrices in each of the intervals
+
+# interval 1
+matViz(prec[[1]], incl_val = TRUE) +
+ggtitle("True precision matrix, interval 1")
+
+# interval 2 (varies continuously with Z)
+int2_mats <- prec[interval == 2]
+int2_inds <- c(5, n2 \%/\% 2, n2 - 5)
+lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
+ggtitle(paste("True precision matrix, interval 2, individual", j)))
+
+# interval 3
+matViz(prec[[length(prec)]], incl_val = TRUE) +
+ggtitle("True precision matrix, interval 3")
+
+# fit the model and visualize the estimated precision matrices
+(out <- covdepGE(X, Z))
+plot(out)
+
+# visualize the inclusion probabilities for variables (1, 3) and (1, 2)
+inclusionCurve(out, 1, 2)
+inclusionCurve(out, 1, 3)
 }

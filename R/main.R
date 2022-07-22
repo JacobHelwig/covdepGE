@@ -11,30 +11,34 @@
 #' @param Z `n x q numeric matrix`; extraneous covariates
 #'
 #' @param hp_method `character` in
-#' `c("grid_search", "model_average", "hybrid")`; method for setting
-#' hyperparameter values based on the hyperparameter grid. The grid will be
-#' generated as the Cartesian product of `ssq`, `sbsq`, and `pip`.
+#' `c("grid_search", "model_average", "hybrid")`; method for selecting
+#' hyperparameters from the the hyperparameter grid. The grid will be generated
+#' as the Cartesian product of `ssq`, `sbsq`, and `pip`. Fix the variable `y` as
+#' the response; then, the hyperparameters will be selected as follows:
 #'
-#' If `"grid_search"`, then the point in the hyperparameter grid that maximizes
-#' the ELBO across all individuals for a given variable `y` fixed as the
-#' response will be selected.
+#'  \itemize{
+#'    \item If `"grid_search"`, the point in the hyperparameter grid that
+#'    maximizes the total ELBO across all individuals will be selected
+#'    \item If `"model_average`, then all posterior quantities will be a convex
+#'    combination of the variational estimates resulting from the model fit for
+#'    each point in the hyperparameter grid. Note that the weightings are
+#'    individual-specific, as unnormalized weights are calculated using the
+#'    exponentiated ELBO
+#'    \item If `"hybrid"`, then `pip` will be averaged over as with
+#'    `"model_average"`, while a single point in the grid defined by the
+#'    Cartesian product of `ssq` and `sbsq` will be selected via grid search for
+#'    each point in `pip`.
+#' }
 #'
-#' If `"model_average`, then all posterior quantities for each variable `y`
-#' fixed as the response will be a convex combination of the models resulting
-#' from each point in the hyperparameter grid, where the weightings are both
-#' individual and variable specific. Unnormalized weights are calculated using
-#' the exponentiated ELBO
-#'
-#' If `"hybrid"`, then `pip` will be averaged over as with `"model_average"`,
-#' while a single point in the grid defined by the Cartesian product of `ssq`
-#' and `sbsq` will be selected for each variable `y` fixed as the response and
-#' point in `pip`. `"hybrid"` by default
+#' `"hybrid"` by default
 #'
 #' @param ssq `NULL` OR `numeric vector` with positive entries; candidate values
 #' of the hyperparameter `sigma^2` (prior residual variance). If `NULL`, `ssq`
 #' will be generated for each variable `y` fixed as the response as:
 #'
-#' `ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)`
+#' ```
+#' ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)
+#' ```
 #'
 #' `NULL` by default
 #'
@@ -42,7 +46,9 @@
 #' of the hyperparameter `sigma^2_beta` (prior slab variance). If `NULL`, `sbsq`
 #' will be generated for each variable `y` fixed as the response as:
 #'
-#' `sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)`
+#' ```
+#' sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)
+#' ```
 #'
 #' `NULL` by default
 #'
@@ -50,38 +56,40 @@
 #' values of the hyperparameter `pi` (prior inclusion probability). If `NULL`,
 #' `pip` will be generated for each variable `y` fixed as the response as:
 #'
-#' `pip <- seq(pip_lower, pi_upper, length.out = npip)`
-#'
-#' `pi_upper`
-#'
+#' ```
+#' pip <- seq(pip_lower, pi_upper, length.out = npip)
+#' ```
 #' `NULL` by default
 #'
-#' @param nssq  positive integer; number of points in `ssq` if `ssq` is `NULL`.
-#' `5` by default
+#' @param nssq  positive `integer`; number of points to generate for `ssq` if
+#' `ssq` is `NULL`. `5` by default
 #'
-#' @param nsbsq positive integer; number of points in `sbsq` if `sbsq` is
-#' `NULL`. `5` by default
+#' @param nsbsq positive `integer`; number of points to generate for `sbsq` if
+#' `sbsq` is `NULL`. `5` by default
 #'
-#' @param npip positive integer; number of points in `pip` if `pip` is `NULL`.
-#' `5` by default
+#' @param npip positive `integer`; number of points to generate for `pip` if `pip`
+#' is `NULL`. `5` by default
 #'
 #' @param ssq_mult positive `numeric`; if `ssq` is `NULL`, then for each variable
 #' `y` fixed as the response:
 #'
-#' `ssq_upper <- ssq_upper_mult * var(y)`
+#' ```
+#' ssq_upper <- ssq_mult * stats::var(y)
+#' ```
 #'
 #' Then, `ssq_upper` will be the greatest value in `ssq` for variable `y`. `1.5`
 #' by default
 #'
-#' @param ssq_lower positive `numeric`; if `ssq` is `NULL`, then `ssq_lower` will
-#' be the least value in `ssq`. `1e-5` by default
+#' @param ssq_lower positive `numeric`; if `ssq` is `NULL`, then `ssq_lower`
+#' will be the least value in `ssq`. `1e-5` by default
 #'
-#' @param snr_upper positive `numeric`; if `sbsq` is `NULL`, then for each
-#' variable `y` fixed as the response:
+#' @param snr_upper positive `numeric`; upper bound on the signal to noise
+#' ratio. If `sbsq` is `NULL`, then for each variable `y` fixed as the response:
 #'
-#' `s2_sum <- sum(apply(X, 2, var))`
-#'
-#' `sbsq_upper <- snr_upper / (pip_upper * s2_sum)`
+#' ```
+#' s2_sum <- sum(apply(X, 2, stats::var))
+#' sbsq_upper <- snr_upper / (pip_upper * s2_sum)
+#' ```
 #'
 #' Then, `sbsq_upper` will be the greatest value in `sbsq` for variable `y`.
 #' `25` by default
@@ -94,17 +102,15 @@
 #'
 #' @param pip_upper `NULL` OR  `numeric` in`(0, 1)`; if `pip` is `NULL`, then
 #' `pip_upper` will be the greatest value in `pip`. If `sbsq` is `NULL`,
-#' `pip_upper` will be used to find the greatest value in `sbsq`. If `NULL`,
-#' `pip_upper` will be generated for each variable `y` fixed as the response as:
+#' `pip_upper` will be used to calculate `sbsq_upper`. If `NULL`, `pip_upper`
+#' will be calculated for each variable `y` fixed as the response as:
 #'
-#' `lasso <- glmnet::cv.glmnet(X, y)`
-#'
-#' `non0 <- sum(coef(lasso, s = "lambda.1se")[-1] != 0)`
-#'
-#' `non0 <- min(max(non0, 1), p - 1)`
-#'
-#' `pip_upper <- non0 / p`
-#'
+#' ```
+#' lasso <- glmnet::cv.glmnet(X, y)
+#' non0 <- sum(glmnet::coef.glmnet(lasso, s = "lambda.1se")[-1] != 0)
+#' non0 <- min(max(non0, 1), p - 1)
+#' pip_upper <- non0 / p
+#' ```
 #' `NULL` by default
 #'
 #' @param tau `NULL` OR positive `numeric` OR `numeric vector` of length `n`
@@ -126,10 +132,10 @@
 #' @param alpha_tol positive `numeric`; end CAVI when the Frobenius norm of the
 #' change in the alpha `matrix` is within `alpha_tol`. `1e-5` by default
 #'
-#' @param max_iter positive integer; if tolerance criteria has not been met by
+#' @param max_iter positive `integer`; if tolerance criteria has not been met by
 #' `max_iter` iterations, end CAVI. `100` by default
 #'
-#' @param max_iter_grid positive integer; if tolerance criteria has not been met
+#' @param max_iter_grid positive `integer`; if tolerance criteria has not been met
 #' by `max_iter_grid` iterations during grid search, end CAVI. After grid search
 #' has completed, CAVI is performed with the final hyperparameters selected by
 #' grid search for at most `max_iter` iterations. Does not apply to
@@ -141,22 +147,28 @@
 #' posterior inclusion probability `matrix` corresponding to the individual is
 #' greater than `edge_threshold`. `0.5` by default
 #'
-#' @param sym_method `character` in \{`"mean"`, `"max"`, `"min"`\`; to symmetrize
+#' @param sym_method `character` in `c("mean"`, `"max"`, `"min")`; to symmetrize
 #' the posterior inclusion probability `matrix` for each individual, the
 #' `(i,j)` and `(j,i)` entries will be post-processed as
-#' `sym_method``((i,j entry), (j,i entry))`. `"mean"` by default
+#' `sym_method``((i,j) entry, (j,i) entry)`. `"mean"` by default
 #'
 #' @param parallel `logical`; if `T`, hyperparameter selection and CAVI for each
 #' of the `p` variables will be performed in parallel using `foreach`.
 #' Parallel backend may be registered prior to making a call to `covdepGE`. If
 #' no active parallel backend can be detected, then parallel backend will be
-#' automatically registered using `doParallel::registerDoParallel(num_workers)`
+#' automatically registered using:
 #'
-#' @param num_workers `NULL` OR positive integer less than or equal to
+#' ```
+#' doParallel::registerDoParallel(num_workers)
+#' ```
+#'
+#' @param num_workers `NULL` OR positive `integer` less than or equal to
 #' `parallel::detectCores()`; argument to `doParallel::registerDoParallel` if
 #' `parallel = T` and no parallel backend is detected. If `NULL`, then:
 #'
-#' `num_workers <- floor(parallel::detectCores() / 2)`
+#' ```
+#' num_workers <- floor(parallel::detectCores() / 2)
+#' ```
 #'
 #' `NULL` by default
 #'
@@ -166,81 +178,79 @@
 #'
 ## -----------------------------RETURNS-----------------------------------------
 #' @return Returns `list` with the following values:
-#'=
 #'
-#' 1. `graphs`: `list` with the following values:
+#' \enumerate{
 #'
-#' - `graphs`: `list` of `n p x p numeric` matrices; the
-#' `l`-th `matrix` is the adjacency `matrix` for the `l`-th individual
+#'  \item `graphs`: `list` with the following values:
 #'
-#' - `unique_graphs`: `list`; the `l`-th element is a `list` containing the
-#' `l`-th unique graph and the individual(s) corresponding to this graph
+#'    \itemize{
+#'      \item `graphs`: `list` of `n p x p numeric` matrices; the `l`-th
+#'      `matrix` is the adjacency `matrix` for the `l`-th individual
+#'      \item `unique_graphs`: `list`; the `l`-th element is a `list` containing
+#'      the `l`-th unique graph and the indices of the individual(s)
+#'      corresponding to this graph
+#'      \item `inclusion_probs_sym`: `list` of `n p x p numeric` matrices; the
+#'      `l`-th `matrix` is the symmetrized posterior inclusion probability
+#'      `matrix` for the `l`-th individual
+#'      \item `inclusion_probs_asym`: `list` of `n p x p numeric` matrices; the
+#'      `l`-th `matrix` is the posterior inclusion probability `matrix` for the
+#'      `l`-th individual prior to symmetrization
+#'    }
 #'
-#' - `inclusion_probs_sym`: `list` of `n p x p numeric`
-#' matrices; the `l`-th `matrix` is the symmetrized posterior inclusion
-#' probability `matrix` for the `l`-th individual
+#'  \item `variational_params`: `list` with the following values:
 #'
-#' - `inclusion_probs_asym`: `list` of `n p x p numeric`
-#' matrices; the `l`-th `matrix` is the posterior inclusion probability `matrix`
-#' for the `l`-th individual prior to symmetrization
+#'    \itemize{
+#'      \item `alpha`: `list` of `p n x (p - 1) numeric` matrices; the `(i, j)`
+#'      entry of the `k`-th `matrix` is the variational approximation to the
+#'      posterior inclusion probability of the `j`-th variable in a weighted
+#'      regression with variable `k` fixed as the response, where the weights
+#'      are taken with respect to individual `i`
+#'      \item `mu`: `list` of `p n x (p - 1) numeric` matrices; the `(i, j)`
+#'      entry of the `k`-th `matrix` is the variational approximation to the
+#'      posterior slab mean for the `j`-th variable in a weighted regression
+#'      with variable `k` fixed as the response, where the weights are taken
+#'      with respect to individual `i`
+#'      \item `ssq_var`: `list` of `p n x (p - 1) numeric` matrices; the
+#'      `(i, j)` entry of the `k`-th `matrix` is the variational approximation
+#'      to the posterior slab variance for the `j`-th variable in a weighted
+#'      regression with variable `k` fixed as the response, where the weights
+#'      are taken with respect to individual `i`
+#'    }
 #'
+#'  \item `hyperparameters`: `list` of `p` lists; the `j`-th `list` has the
+#'  following values for variable `j` fixed as the response:
 #'
-#' 2. `variational_params`: `list` with the following values:
+#'    \itemize{
+#'      \item `grid`: `matrix` of candidate hyperparameter values, corresponding
+#'      ELBO, and iterations to converge
+#'      \item `final`: the final hyperparameters chosen by grid search, and the
+#'      ELBO and iterations to converge for these hyperparameters
+#'    }
 #'
-#' - `alpha`: `list` of `p n x (p - 1) numeric` matrices; the
-#' `(i, j)` entry of the `k`-th `matrix` is the variational approximation
-#' to the posterior inclusion probability of the `j`-th variable in a
-#' weighted regression with variable `k` fixed as the response, where the
-#' weights are taken with respect to individual `i`
+#'  \item `model_details`: `list` with the following values:
 #'
-#' - `mu`: `list` of `p n x (p - 1) numeric` matrices; the
-#' `(i, j)` entry of the `k`-th `matrix` is the variational approximation
-#' to the posterior slab mean for the `j`-th variable in a weighted
-#' regression with variable `k` fixed as the response, where the weights are
-#' taken with respect to individual `i`
+#'    \itemize{
+#'      \item `elapsed`: amount of time to fit the model
+#'      \item `n`: number of individuals
+#'      \item `p`: number of variables
+#'      \item `ELBO`: ELBO summed across all individuals and variables. If
+#'      `hp_method` is `"model_average"` or `"hybrid"`, this ELBO is averaged
+#'      across the hyperparameter grid using the model averaging weights
+#'      \item `num_unique`: number of unique graphs
+#'      \item `grid_size`: number of points in the hyperparameter grid
+#'      \item `args`: `list` containing all passed arguments of `length 1`
+#'    }
 #'
-#' - `ssq_var`: `list` of `p n x (p - 1) numeric` matrices; the
-#' `(i, j)` entry of the `k`-th `matrix` is the variational approximation
-#' to the posterior slab variance for the `j`-th variable in a weighted
-#' regression with variable `k` fixed as the response, where the weights are
-#' taken with respect to individual `i`
+#'  \item `weights`: `list` with the following values:
 #'
-#'
-#' 3. `hyperparameters`: `list` of `p` lists; the `j`-th `list` has the
-#' following values for variable `j` fixed as the response:
-#'
-#' - `grid`: `matrix` of candidate hyperparameter values, corresponding ELBO,
-#' and iterations to converge
-#'
-#' - `final`: the final hyperparameters chosen by grid search
-#'
-#' 4. `model_details`: `list` with the following values:
-#'
-#' - `elapsed`: amount of time to fit the model
-#'
-#' - `n`: number of individuals
-#'
-#' - `p`: number of variables
-#'
-#' - `ELBO`: ELBO summed across all individuals and variables. If
-#' `hp_method` is `"model_average"` or `"hybrid"`, this ELBO is averaged across
-#' the hyperparameter grid using the model averaging weights
-#'
-#' - `num_unique`: number of unique graphs
-#'
-#' - `grid_size`: number of points in the hyperparameter grid
-#'
-#' - `args`: `list` containing all passed arguments of `length` 1
-#'
-#'
-#' 5. `weights`: `list` with the following values:
-#'
-#' - `weights`: `n x n numeric matrix`. The `(i, j)` entry is the weight of the
-#' `i`-th individual with respect to the `j`-th individual using the `j`-th
-#' individual's bandwidth
-#'
-#' - `bandwidths`: `numeric vector` of length `n`. The `i`-th entry is the
-#' bandwidth for the `i`-th individual
+#'  \itemize{
+#'    \item `weights`: `n x n numeric matrix`. The `(i, j)` entry is the weight
+#'    of the `i`-th individual with respect to the `j`-th individual using the
+#'    `j`-th individual's bandwidth
+#'    \item `bandwidths`: `numeric vector` of length `n`. The `i`-th entry is
+#'    the bandwidth for the `i`-th individual
+#'  }
+#'  }
 ## -----------------------------EXAMPLES----------------------------------------
 #' @examples
 #'
@@ -248,7 +258,7 @@
 #'
 #' # get the data
 #' set.seed(1)
-#' data <- generate_continuous()
+#' data <- generateData()
 #' X <- data$data
 #' Z <- data$covts
 #' interval <- data$interval
@@ -295,10 +305,10 @@
 #' Density Modeling*, Statistica Sinica, 2020
 ## -----------------------------------------------------------------------------
 covdepGE <- function(data, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
-                     pip = NULL, nssq = 3, nsbsq = 3, npip = 3, ssq_mult = 1.5,
+                     pip = NULL, nssq = 5, nsbsq = 5, npip = 5, ssq_mult = 1.5,
                      ssq_lower = 1e-5, snr_upper = 25, sbsq_lower = 1e-5,
                      pip_lower = 1e-5, pip_upper = NULL, tau = NULL, norm = 2,
-                     center_data = T, scale_Z = T, alpha_tol = 1e-10,
+                     center_data = T, scale_Z = T, alpha_tol = 1e-5,
                      max_iter_grid = 10, max_iter = 100, edge_threshold = 0.5,
                      sym_method = "mean", parallel = F, num_workers = NULL,
                      prog_bar = T){
