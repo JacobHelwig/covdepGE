@@ -53,6 +53,8 @@
 #' approaches `1` from the left, the matrix becomes more similar to the matrix
 #' for individuals in interval `3`
 #'
+#' 4. `interval`: `vector` of length `n1 + n2 + n3`; contains the ground truth
+#' interval assignments for each of the individuals
 ## -----------------------------EXAMPLES----------------------------------------
 #' @examples
 ## -----------------------------------------------------------------------------
@@ -63,15 +65,16 @@ generate_continuous <- function(p = 5, n1 = 60, n2 = 60, n3 = 60){
   # define the dimensions of the data
   n <- sum(n1, n2, n3)
 
-  # define the intervals
+  # define the intervals and assignments
   limits1 <- c(-3, -1)
   limits2 <- c(-1, 1)
   limits3 <- c(1, 3)
+  interval <- c(rep(1, n1), rep(2, n2), rep(3, n3))
 
   # define the covariate values within each interval
-  z1 <- sort(runif(n1, limits1[1], limits1[2]))
-  z2 <- sort(runif(n2, limits2[1], limits2[2]))
-  z3 <- sort(runif(n3, limits3[1], limits3[2]))
+  z1 <- sort(stats::runif(n1, limits1[1], limits1[2]))
+  z2 <- sort(stats::runif(n2, limits2[1], limits2[2]))
+  z3 <- sort(stats::runif(n3, limits3[1], limits3[2]))
   Z <- matrix(c(z1, z2, z3), n, 1)
 
   # create precision matrices
@@ -116,5 +119,6 @@ generate_continuous <- function(p = 5, n1 = 60, n2 = 60, n3 = 60){
   # generate the data using the covariance matrices
   data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p)))
 
-  return(list(data = data_mat, covts = Z, true_precision = prec_mats))
+  return(list(data = data_mat, covts = Z, true_precision = prec_mats,
+              interval = interval))
 }

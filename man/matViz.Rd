@@ -8,7 +8,6 @@ matViz(
   x,
   color1 = "white",
   color2 = "#500000",
-  shade = F,
   grid_color = "black",
   incl_val = F,
   prec = 2,
@@ -24,10 +23,6 @@ matViz(
 \item{color1}{color; color for low entries. \code{"white"} by default}
 
 \item{color2}{color; color for high entries. \code{"#500000"} by default}
-
-\item{shade}{\code{logical}; if \code{T}, then entries will be shaded according to value
-on a gradient ranging from \code{color_low} for the least value to \code{color_high}
-for the greatest value}
 
 \item{grid_color}{color; color of grid lines. \code{"black"} by default}
 

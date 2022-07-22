@@ -26,6 +26,7 @@ Imports:
     parallel,
     foreach,
     doParallel,
-    utils
+    utils,
+    glmnet
 Suggests: 
     MASS

@@ -42,253 +42,118 @@ associated with cancer,
 The main function, `covdepGE::covdepGE(`**X**, **Z**`)`, estimates the
 posterior distribution of the graphical structure 𝒢<sub>*l*</sub> for
 each of the *n* individuals using a variational mean-field
-approximation. The function will output *n* *p* × *p* symmetric matrices
-𝒜<sub>*l*</sub>, where 𝒜<sub>*i*, *j*</sub><sup>(*l*)</sup> is the
-posterior inclusion probability of an edge between the node representing
-the *i*-th variable and the node representing the *j*-th variable.
-
-There are also two plotting functions, `gg_adjMat` and
-`gg_inclusionCurve`, for visualizing the result of `covdepGE`. The
-primary functionality of `gg_adjMat` is to visualize the estimate to a
-specified individuals conditional dependence structure, however, it can
-also be used to visualize any numeric matrix. `gg_inclusionCurve` plots
-the posterior inclusion probability of an edge between two specified
-variables across all *n* individuals.
-
-## Demo
-
-``` r
-# install the package if necessary
-if  (!("covdepGE" %in% installed.packages())){
-  devtools::install_github("JacobHelwig/covdepGE")
-}
-
-library(covdepGE)
-
-set.seed(1)
-n <- 100
-p <- 4
-
-# generate the extraneous covariate
-Z_neg <- sort(runif(n / 2) * -1)
-Z_pos <- sort(runif(n / 2))
-Z <- c(Z_neg, Z_pos)
-summary(Z)
-```
-
-    ##     Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
-    ## -0.99191 -0.55799  0.02277 -0.01475  0.45622  0.96062
-
-``` r
-# create true covariance structure for 2 groups: positive Z and negative Z
-true_graph_pos <- true_graph_neg <- matrix(0, p + 1, p + 1)
-true_graph_pos[1, 2] <- true_graph_pos[2, 1] <- 1
-true_graph_neg[1, 3] <- true_graph_neg[3, 1] <- 1
-
-# visualize the true covariance structures
-(gg_adjMat(true_graph_neg) +
-    ggplot2::ggtitle("True graph for individuals with negative Z (1,...,50)"))
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
-
-``` r
-(gg_adjMat(true_graph_pos, color1 = "steelblue") +
-    ggplot2::ggtitle("True graph for individuals with positive Z (51,...,100)"))
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-2.png)<!-- -->
-
-``` r
-# generate the covariance matrices as a function of Z
-sigma_mats_neg <- lapply(Z_neg, function(z) z * true_graph_neg + diag(p + 1))
-sigma_mats_pos <- lapply(Z_pos, function(z) z * true_graph_pos + diag(p + 1))
-sigma_mats <- c(sigma_mats_neg, sigma_mats_pos)
-
-# generate the data using the covariance matrices
-data_mat <- t(sapply(sigma_mats, MASS::mvrnorm, n = 1, mu = rep(0, p + 1)))
-
-# visualize the sample correlation within each group
-(gg_adjMat(abs(cor(data_mat[1:(n / 2), ])) - diag(p + 1)) + 
-    ggplot2::ggtitle("Correlation Matrix for Negative Z (1,...,50)"))
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-3.png)<!-- -->
-
-``` r
-(gg_adjMat(abs(cor(data_mat[(n / 2 + 1):n, ])) - diag(p + 1),
-          color1 = "steelblue") + 
-    ggplot2::ggtitle("Correlation Matrix for Positive Z (51,...,100)"))
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-4.png)<!-- -->
-
-``` r
-# use varbvs to get the hyperparameter sigma
-sigmasq <- rep(NA, p + 1)
-for (j in 1:(p + 1)){
-  sigmasq[j] <- mean(varbvs::varbvs(data_mat[ , -j], Z, data_mat[ , j], verbose = F)$sigma)
-}
-#sigmasq
-#mean(sigmasq)
-
-# estimate the covariance structure
-#?covdepGE
-out <- covdepGE(
-                data_mat,
-                Z, # extraneous covariates
-                kde = T, # whether KDE should be used to calculate bandwidths 
-                sigmasq = mean(sigmasq), # hyperparameter residual variance 
-                var_min = 1e-4, # smallest sigmabeta_sq grid value
-                var_max = 1, # largest sigmabeta_sq grid value
-                n_sigma = 10, # length of the sigmabeta_sq grid
-                pi_vec = seq(0.1, 0.3, 0.05), # prior inclusion probability grid
-                norm = Inf, # norm to calculate the weights
-                scale = T, # whether the extraneous covariates should be scaled
-                tolerance = 1e-15, # variational parameter exit condition 1
-                max_iter_final = 200, # variational parameter exit condition 2
-                edge_threshold = 0.75, # minimum inclusion probability
-                sym_method = "min", # how to symmetrize the alpha matrices
-                warnings = T # whether warnings should be displayed
-                )
-```
-
-    ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min
-    ## = 1e-04, : Variable 1: CAVI did not converge in 200 iterations for 3/50 grid
-    ## search candidates
-
-    ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : Variable 2: CAVI did not converge in 200 iterations for 17/50 grid
-    ## search candidates
-
-    ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : Variable 2: final CAVI did not converge in 200 iterations
-
-    ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : Variable 3: CAVI did not converge in 200 iterations for 17/50 grid
-    ## search candidates
-
-    ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : Variable 3: final CAVI did not converge in 200 iterations
-
-    ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : For 1/5 variables, the selected value of sigmabeta_sq was on the grid
-    ## boundary. See return value CAVI_details
-
-    ## Warning in covdepGE(data_mat, Z, kde = T, sigmasq = mean(sigmasq), var_min =
-    ## 1e-04, : For 5/5 variables, the selected value of pi was on the grid boundary.
-    ## See return value cavi_details
-
-``` r
-# grid search results
-#out$ELBO
-
-# individual-specific bandwidths calculated using KDE
-#out$bandwidths
-
-# analyze results
-#?gg_adjMat
-gg_adjMat(out, 1, color1 = "coral1")
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-5.png)<!-- -->
-
-``` r
-gg_adjMat(out, 50, color1 = "tomato3")
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-6.png)<!-- -->
-
-``` r
-gg_adjMat(out, 60, color1 = "steelblue")
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-7.png)<!-- -->
-
-``` r
-gg_adjMat(out, 100, color1 = "deepskyblue3")
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-8.png)<!-- -->
-
-``` r
-#?gg_inclusionCurve
-gg_inclusionCurve(out, 1, 2)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-9.png)<!-- -->
-
-``` r
-gg_inclusionCurve(out, 1, 3, point_color = "dodgerblue")
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-10.png)<!-- -->
-
-``` r
-# find sensitivity, specificity, and accuracy
-
-# true positives
-TP_neg <- sum(sapply(out$graphs[1:(n / 2)],
-                     function(graph) sum(graph == 1 & true_graph_neg == 1)))
-TP_pos <- sum(sapply(out$graphs[(n / 2 + 1):n],
-                     function(graph) sum(graph == 1 & true_graph_pos == 1)))
-TP <- TP_neg + TP_pos
-
-# total positives
-num_pos <- sum(true_graph_pos) * n / 2 + sum(true_graph_neg) * n / 2
-
-# true negatives
-TN_neg <- sum(sapply(out$graphs[1:(n / 2)],
-                     function(graph) sum(graph == 0 & true_graph_neg == 0)))
-TN_pos <- sum(sapply(out$graphs[(n / 2 + 1):n],
-                     function(graph) sum(graph == 0 & true_graph_pos == 0)))
-TN <- TN_neg + TN_pos
-
-# total negatives
-num_neg <- length(true_graph_pos) * n - num_pos
-
-(sensitivity <- TP / num_pos)
-```
-
-    ## [1] 0.94
-
-``` r
-(specificity <- TN / num_neg)
-```
-
-    ## [1] 0.9686957
-
-``` r
-(accuracy <- (TN + TP) / (num_pos + num_neg))
-```
-
-    ## [1] 0.9664
-
-## To-do
-
--   Topic 16 slides ideas
-
--   2 ideas from `Mclust`: logo and loading bar
-
-``` r
-#    ______________  __ _____________________________
-#   / ____/ _   / / / / _   / ____/ __  / ____/ ____/ 
-#  / /   / / / / / / / / / / __/ / ___ / / _ / __/ 
-# / /___/ /_/ /\ \/ /\ \/ / /___/ /   / /_/ / /___ 
-# \____/\____/  \__/  \__/_____/_/    \____/_____/
-```
-
--   Add Carbonetto-Stephens reference in documentation
-
--   Create a vignette demonstrating usage on a simple simulated dataset
-
--   Change the `idmod` probs to logbase 10
-
--   Handle constant covariate with `CS = T`
-
--   Remove `CS` argument
+approximation.
 
 ## Bibliography
 
 1.  Dasgupta S., Ghosh P., Pati D., Mallick B. “An approximate Bayesian
     approach to covariate dependent graphical modeling.” 2021
+
+## Demo
+
+``` r
+library(covdepGE)
+library(ggplot2)
+
+# get the data
+set.seed(1)
+data <- generate_continuous()
+X <- data$data
+Z <- data$covts
+interval <- data$interval
+prec <- data$true_precision
+
+# get overall and within interval sample sizes
+n <- nrow(X)
+n1 <- sum(interval == 1)
+n2 <- sum(interval == 2)
+
+# visualize the distribution of the extraneous covariate
+ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
+  geom_histogram(aes(Z, fill = interval), color = "black", bins = n %/% 5)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
+
+``` r
+# visualize the true precision matrices in each of the intervals
+
+# interval 1
+matViz(prec[[1]], incl_val = T) + ggtitle("True precision matrix, interval 1")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-1-2.png)<!-- -->
+
+``` r
+# interval 2 (varies continuously with Z)
+int2_mats <- prec[interval == 2]
+int2_inds <- c(5, n2 %/% 2, n2 - 5)
+lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = T) +
+         ggtitle(paste("True precision matrix, interval 2, individual", j)))
+```
+
+    ## [[1]]
+
+![](README_files/figure-gfm/unnamed-chunk-1-3.png)<!-- -->
+
+    ## 
+    ## [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-1-4.png)<!-- -->
+
+    ## 
+    ## [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-1-5.png)<!-- -->
+
+``` r
+# interval 3
+matViz(prec[[length(prec)]], incl_val = T) +
+  ggtitle("True precision matrix, interval 3")
+```
+
+![](README_files/figure-gfm/unnamed-chunk-1-6.png)<!-- -->
+
+``` r
+# fit the model and visualize the estimated precision matrices
+(out <- covdepGE(X, Z))
+```
+
+    ##   |                                                                              |                                                                      |   0%  |                                                                              |==============                                                        |  20%  |                                                                              |============================                                          |  40%  |                                                                              |==========================================                            |  60%  |                                                                              |========================================================              |  80%  |                                                                              |======================================================================| 100%
+
+    ##                       Covariate Dependent Graphical Model
+    ## 
+    ## ELBO: -187187.75                                             # Unique Graphs: 3
+    ## n: 180, variables: 5                        Hyperparameter grid size: 27 points
+    ## Model fit completed in 8.269 secs
+
+``` r
+plot(out)
+```
+
+    ## [[1]]
+
+![](README_files/figure-gfm/unnamed-chunk-1-7.png)<!-- -->
+
+    ## 
+    ## [[2]]
+
+![](README_files/figure-gfm/unnamed-chunk-1-8.png)<!-- -->
+
+    ## 
+    ## [[3]]
+
+![](README_files/figure-gfm/unnamed-chunk-1-9.png)<!-- -->
+
+``` r
+# visualize the posterior inclusion probabilities for variables (1, 3) and (1, 2)
+inclusionCurve(out, 1, 2)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-1-10.png)<!-- -->
+
+``` r
+inclusionCurve(out, 1, 3)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-1-11.png)<!-- -->

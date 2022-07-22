@@ -11,10 +11,6 @@
 #'
 #' @param color2 color; color for high entries. `"#500000"` by default
 #'
-#' @param shade `logical`; if `T`, then entries will be shaded according to value
-#' on a gradient ranging from `color_low` for the least value to `color_high`
-#' for the greatest value
-#'
 #' @param grid_color color; color of grid lines. `"black"` by default
 #'
 #' @param incl_val logical; if `T`, the value for each entry will be displayed.
@@ -39,7 +35,7 @@
 ## -----------------------------EXAMPLES----------------------------------------
 #' @examples
 ## -----------------------------------------------------------------------------
-matViz <- function(x, color1 = "white", color2 = "#500000", shade = F,
+matViz <- function(x, color1 = "white", color2 = "#500000",
                    grid_color = "black", incl_val = F, prec = 2, font_size = 3,
                    font_color1 = "black", font_color2 = "white",
                    font_thres = mean(x)){
@@ -50,8 +46,8 @@ matViz <- function(x, color1 = "white", color2 = "#500000", shade = F,
   }
 
   # takes care of no visible bindings
-  Var1 <- Var2 <- value <- NULL
-  rm(list = c("Var1", "Var2", "value"))
+  Var1 <- Var2 <- value <- graph <- NULL
+  rm(list = c("Var1", "Var2", "value", "graph"))
 
   # save col and row names and remove them
   colnames <- rownames <- NULL
@@ -63,7 +59,7 @@ matViz <- function(x, color1 = "white", color2 = "#500000", shade = F,
   long_graph <- reshape2::melt(x)
 
   # shade on a gradient according to value
-  if (shade){
+  if (length(unique(c(x))) > 2){
 
     # if values are to be displayed, add an indicator to edges for the cells that
     # will be darker
@@ -91,11 +87,7 @@ matViz <- function(x, color1 = "white", color2 = "#500000", shade = F,
 
   }else{
 
-    # otherwise, use binary shading; verify that x has 2 or less unique
-    # values
-    if (length(unique(as.vector(x))) > 2){
-      stop("Set `shade = T` if x has greater than 2 unique values")
-    }
+    # otherwise, x has less than 3 unique values; use binary shading
 
     # factor the edges - specifies a discrete scale to ggplot2
     long_graph$value <- as.factor(long_graph$value)

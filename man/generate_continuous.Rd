@@ -55,6 +55,10 @@ Thus, as \code{z_i} approaches \code{-1} from the right, the precision matrix be
 more similar to the matrix for individuals in interval 1. Similarly, as \code{z_i}
 approaches \code{1} from the left, the matrix becomes more similar to the matrix
 for individuals in interval \code{3}
+\enumerate{
+\item \code{interval}: \code{vector} of length \code{n1 + n2 + n3}; contains the ground truth
+interval assignments for each of the individuals
+}
 }
 \description{
 function to generate a \code{1}-dimensional extraneous covariate and

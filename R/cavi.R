@@ -83,7 +83,7 @@ cavi <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq, npip,
 
       # find the number of non-zero coefficients estimated by LASSO
       # ensure that non0 is an integer in [1, p - 1]
-      non0 <- sum(coef(lasso, s = "lambda.1se")[-1] != 0)
+      non0 <- sum(glmnet::coef.glmnet(lasso, s = "lambda.1se")[-1] != 0)
       non0 <- min(max(non0, 1), p - 1)
 
       # an upper bound for pi is the proportion of non-zero coefficients
@@ -94,7 +94,7 @@ cavi <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq, npip,
     if (is.null(ssq)){
 
       # find the upper bound for the grid of ssq
-      ssq_upper <- ssq_mult * var(y)
+      ssq_upper <- ssq_mult * stats::var(y)
 
       # create the grid candidates for ssq
       ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)
@@ -105,7 +105,7 @@ cavi <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq, npip,
     if (is.null(sbsq)){
 
       # find the sum of the variances for each of the columns of X_mat
-      s2_sum <- sum(apply(X, 2, var))
+      s2_sum <- sum(apply(X, 2, stats::var))
 
       # find the upper bound for the grid of sbsq
       sbsq_upper <- snr_upper / (pip_upper * s2_sum)
