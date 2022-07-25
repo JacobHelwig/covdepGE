@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots.R
 \name{matViz}
 \alias{matViz}
-\title{matViz}
+\title{Visualize a \code{matrix}}
 \usage{
 matViz(
   x,
@@ -81,7 +81,7 @@ ggtitle("True precision matrix, interval 1")
 int2_mats <- prec[interval == 2]
 int2_inds <- c(5, n2 \%/\% 2, n2 - 5)
 lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-ggtitle(paste("True precision matrix, interval 2, individual", j)))
+ggtitle(paste("True precision matrix, interval 2, observation", j)))
 
 # interval 3
 matViz(prec[[length(prec)]], incl_val = TRUE) +

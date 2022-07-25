@@ -2,7 +2,7 @@
 ## -----------------------------silverman---------------------------------------
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
-## calculates silverman's rule of thumb for a data vector according to:
+## calculate silverman's rule of thumb for a data vector according to:
 ## https://github.com/statsmodels/statsmodels/blob/main/statsmodels/nonparametric/bandwidths.py
 ## -----------------------------ARGUMENTS---------------------------------------
 ## x: vector of length n; data vector for which the bandwidth will be estimated
@@ -20,13 +20,14 @@ silverman <- function(x){
 ## -----------------------------phi0_k.z----------------------------------------
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
-## calulates the density of a point under a mixture density of n Gaussians
+## calulate the density of a point under a mixture of n Gaussians with common
+## standard deviation
 ## -----------------------------ARGUMENTS---------------------------------------
 ## z: numeric; point for which the density will be calculated
 ##
-## mu: vector of length n; j-th entry is the mean of the j-th Gaussian
+## mu: numeric vector of length n; j-th entry is the mean of the j-th Gaussian
 ##
-## sigma: numeric; common standard deviation of the Gaussians
+## sigma: positive numeric; common standard deviation of the Gaussians
 ## -----------------------------RETURNS-----------------------------------------
 ## returns density
 ## -----------------------------------------------------------------------------
@@ -40,16 +41,17 @@ phi0_k.z <- function(z, mu, sigma){
 ## -----------------------------phi0_k------------------------------------------
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
-## function to calulate the densities of a vector of points under a mixture
-## density of n Gaussians
+## calulate the densities of a vector of points under a mixture
+## of n Gaussians with common standard deviation
 ## -----------------------------ARGUMENTS---------------------------------------
-## Z: vector of length N; points for which the densities will be calculated
+## Z: numeric vector of length N; points for which the densities will be
+## calculated
 ##
-## mu: vector of length n; j-th entry is the mean of the j-th Gaussian
+## mu: numeric vector of length n; j-th entry is the mean of the j-th Gaussian
 ##
-## sigma: numeric; common standard deviation of the Gaussians
+## sigma: positive numeric; common standard deviation of the Gaussians
 ## -----------------------------RETURNS-----------------------------------------
-## returns vector of N densities
+## returns numeric vector of N densities
 ## -----------------------------------------------------------------------------
 phi0_k <- function(Z, mu, sigma){
   return(sapply(Z, phi0_k.z, mu = mu, sigma = sigma))
@@ -59,7 +61,7 @@ phi0_k <- function(Z, mu, sigma){
 ## -----------------------------get_bandwidths----------------------------------
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
-## function to calculate individual specific bandwidths for data following the
+## calculate observation specific bandwidths for data following the
 ## methodology described in "A Two-Step Geometric Framework For Density Modeling"
 ## -----------------------------ARGUMENTS---------------------------------------
 ## X: n x p matrix; data
@@ -72,7 +74,7 @@ get_bandwidths <- function(X){
   n <- nrow(X)
   p <- ncol(X)
 
-  # find the component-wise density for each of the individuals
+  # find the component-wise density for each of the observations
   # also find silverman's rule of thumb for each of the columns of X
   densities <- matrix(NA, n, p)
   sigma <- rep(NA, p)
@@ -112,17 +114,17 @@ get_bandwidths <- function(X){
 ## If NULL, use KDE to get bandwidths
 ## -----------------------------RETURNS-----------------------------------------
 ## D: n x n matrix of weights; i, j entry is the weighting of the i-th
-## individual with respect to the j-th individual using the j-th individual's
+## observation with respect to the j-th observation using the j-th observation's
 ## bandwidth
 ##
-## bandwidths: vector of length n; individual-specific bandwidths
+## bandwidths: vector of length n; observation-specific bandwidths
 ## -----------------------------------------------------------------------------
 get_weights <- function(Z, norm, tau){
 
   # get n
   n <- nrow(Z)
 
-  # if tau is null, use kde to get individual-specific bandwidths
+  # if tau is null, use kde to get observation-specific bandwidths
   if (is.null(tau)){
     tau <- get_bandwidths(Z)
   }else if (length(tau) == 1){
@@ -131,8 +133,8 @@ get_weights <- function(Z, norm, tau){
 
   D <- matrix(NA, n, n)
 
-  # calculate the weighting of the j-th individual with respect to the i-th
-  # individual using the i-th individual's bandwidth
+  # calculate the weighting of the j-th observation with respect to the i-th
+  # observation using the i-th observation's bandwidth
   for (i in 1:n) {
     for (j in i:n) {
 

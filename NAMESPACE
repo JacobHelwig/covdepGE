@@ -2,6 +2,7 @@
 
 S3method(plot,covdepGE)
 S3method(print,covdepGE)
+S3method(summary,covdepGE)
 export(covdepGE)
 export(generateData)
 export(inclusionCurve)

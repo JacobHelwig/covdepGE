@@ -7,18 +7,18 @@ using namespace Rcpp;
 // -----------------------------ELBO_calculator_c-------------------------------
 // -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
-// Calculates ELBO for a fixed response j and individual l
+// Calculates ELBO for a fixed response j and observation l
 // -----------------------------ARGUMENTS---------------------------------------
 // y: n x 1 vector; responses (j-th column of the data)
-// D: n x 1 vector; weights (i-th entry is the weight of the i-th individual
-// with respect to the l-th individual using the l-th individual's bandwidth)
+// D: n x 1 vector; weights (i-th entry is the weight of the i-th observation
+// with respect to the l-th observation using the l-th observation's bandwidth)
 // X: n x p matrix; data_mat with the j-th column removed
 // ssq_var, mu, alpha: p x 1 vectors; variational parameters. the k-th entry is
-// the k-th parameter for the l-th individual
+// the k-th parameter for the l-th observation
 // ssq, sbsq: double; spike and slab variance hyperparameters
 // pip: double; spike and slab probability of inclusion
 // -----------------------------RETURNS-----------------------------------------
-// Returns: double; ELBO for the l-th individual and j-th column fixed as the
+// Returns: double; ELBO for the l-th observation and j-th column fixed as the
 // response
 // -----------------------------------------------------------------------------
 // [[Rcpp::export]]
@@ -58,20 +58,20 @@ double ELBO_calculator_c (const arma::colvec& y, const arma::colvec& D,
 // -----------------------------total_elbo_c------------------------------------
 // -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
-// for a fixed response, calculate and sum the ELBO for all individuals in the
+// for a fixed response, calculate and sum the ELBO for all observations in the
 // data
 // -----------------------------ARGUMENTS---------------------------------------
 // y: n x 1 vector; responses (j-th column of the data)
-// D: n x n matrix; weights (k,l entry is the weight of the k-th individual
-// with respect to the l-th individual using the l-th individual's bandwidth)
+// D: n x n matrix; weights (k,l entry is the weight of the k-th observation
+// with respect to the l-th observation using the l-th observation's bandwidth)
 // X: n x p matrix; data_mat with the j-th column removed
 // ssq_var, mu, alpha: n x p matrices; variational parameters. the l, k
-// entry is the k-th parameter for the l-th individual
+// entry is the k-th parameter for the l-th observation
 // ssq, sbsq: doubles; spike and slab variance hyperparameters
 // pip: double; spike and slab probability of inclusion
 // -----------------------------RETURNS-----------------------------------------
 // elbo_tot: double; ELBO for the regression weighted with respect to the l-th
-// individual with the j-th column fixed as the response
+// observation with the j-th column fixed as the response
 // -----------------------------------------------------------------------------
 double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
                      const arma::mat& X, const arma::mat& ssq_var,
@@ -84,10 +84,10 @@ double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
   // instantiate variable to store the total ELBO
   double elbo_tot = 0;
 
-  // loop over all individuals
+  // loop over all observations
   for (int l = 0; l < n; l++){
 
-    // calculate the ELBO for l-th individual and add it to the total ELBO
+    // calculate the ELBO for l-th observation and add it to the total ELBO
     elbo_tot += ELBO_calculator_c(y, D.col(l), X, ssq_var.row(l).t(),
                                   mu.row(l).t(), alpha.row(l).t(), ssq, sbsq,
                                   pip);
@@ -103,11 +103,11 @@ double total_ELBO_c (const arma::colvec& y, const arma::mat& D,
 // for a fixed response, update mu matrix
 // -----------------------------ARGUMENTS---------------------------------------
 // y: n x 1 vector; responses (j-th column of the data)
-// D: n x n matrix; weights (k,l entry is the weight of the k-th individual
-// with respect to the l-th individual using the l-th individual's bandwidth)
+// D: n x n matrix; weights (k,l entry is the weight of the k-th observation
+// with respect to the l-th observation using the l-th observation's bandwidth)
 // X: n x p matrix; data_mat with the j-th column removed
 // ssq_var, mu, alpha: n x p matrices; variational parameters. the l, k entry is
-// the k-th parameter for the l-th individual
+// the k-th parameter for the l-th observation
 // ssq: double; spike and slab variance hyperparameter
 // -----------------------------------------------------------------------------
 void mu_update_c (const arma::colvec& y, const arma::mat& D, const arma::mat& X,
@@ -122,7 +122,7 @@ void mu_update_c (const arma::colvec& y, const arma::mat& D, const arma::mat& X,
   arma::mat mu_stack(n, p), alpha_stack(n, p), X_mu_alpha(n, p);
   arma::mat X_mu_alpha_k(n, p), y_k(n, p), d_x_y(n, p);
 
-  // loop over the individuals to update mu row by row
+  // loop over the observations to update mu row by row
   for (int l = 0; l < n; l++){
 
     // l-th row of mu, alpha stacked n times
@@ -154,7 +154,7 @@ void mu_update_c (const arma::colvec& y, const arma::mat& D, const arma::mat& X,
 // for a fixed response, update alpha matrix
 // -----------------------------ARGUMENTS---------------------------------------
 // ssq_var, mu, alpha: n x p matrices; variational parameters. the l, k entry is
-// the k-th parameter for the l-th individual
+// the k-th parameter for the l-th observation
 // alpha1, alpha2_denom, alpha3: double (1), n x p matrices (2, 3): terms used
 // to calculate the logit of alpha
 // ssq, sbsq: doubles; spike and slab variance hyperparameters
@@ -182,14 +182,14 @@ void alpha_update_c(const arma::mat& ssq_var, const arma::mat& mu,
 // -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
 // The core function that performs CAVI to calculate and return the final
-// variational estimates of a single regression for each of the n individuals
+// variational estimates of a single regression for each of the n observations
 // -----------------------------ARGUMENTS---------------------------------------
 // y: n x 1 vector; responses (j-th column of the data)
-// D: n x n matrix; weights (k,l entry is the weight of the k-th individual
-// with respect to the l-th individual using the l-th individual's bandwidth)
+// D: n x n matrix; weights (k,l entry is the weight of the k-th observation
+// with respect to the l-th observation using the l-th observation's bandwidth)
 // X: n x p matrix; data_mat with the j-th column removed
 // mu0, alpha0: n x p matrices; initial value of variational parameters. the
-// l, k entry is the k-th parameter for the l-th individual
+// l, k entry is the k-th parameter for the l-th observation
 // ssq, sbsq: doubles; spike and slab variance hyperparameters
 // pip: double; spike and slab probability of inclusion
 // alpha_tol: double; when the square root of the sum of squared changes in
@@ -199,7 +199,7 @@ void alpha_update_c(const arma::mat& ssq_var, const arma::mat& mu,
 // mu; n x p matrix; final mu values
 // alpha; n x p matrix; final alpha values
 // ssq_var; n x p matrix; final ssq_var values
-// elbo: double; final value of ELBO summed across all individuals
+// elbo: double; final value of ELBO summed across all observations
 // iter: integer; number of iterations to converge
 // -----------------------------------------------------------------------------
 // [[Rcpp::export]]
@@ -250,7 +250,7 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
     }
   }
 
-  // calculate ELBO across n individuals
+  // calculate ELBO across n observations
   double ELBO = total_ELBO_c(y, D, X, ssq_var, mu, alpha, ssq, sbsq, pip);
 
   // return final mu matrix, alpha matrix, the final ELBO, the number of
@@ -265,15 +265,15 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
 // -----------------------------grid_search_c-----------------------------------
 // -----------------------------------------------------------------------------
 // -----------------------------DESCRIPTION-------------------------------------
-// for a fixed response, run CAVI for each individual across a grid of
+// for a fixed response, run CAVI for each observation across a grid of
 // hyperparameters
 // -----------------------------ARGUMENTS---------------------------------------
 // y: n x 1 vector; responses (j-th column of the data)
-// D: n x n matrix; weights (k,l entry is the weight of the k-th individual
-// with respect to the l-th individual using the l-th individual's bandwidth)
+// D: n x n matrix; weights (k,l entry is the weight of the k-th observation
+// with respect to the l-th observation using the l-th observation's bandwidth)
 // X: n x p matrix; data_mat with the j-th column removed
 // mu, alpha: n x p; matrices of variational parameters. the l, k entry
-// is the k-th parameter for the l-th individual
+// is the k-th parameter for the l-th observation
 // ssq: nssq x 1 vector; error term variance candidates
 // sbsq: nsbsq x 1 vector; slab variance candidates
 // pip: npip x 1 vector; candidate spike and slab probabilities of inclusion
@@ -281,7 +281,7 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
 // the elements of alpha are within alpha_tol, stop iterating
 // max_iter: integer; maximum number of iterations
 // -----------------------------RETURNS-----------------------------------------
-// elbo: double; final value of ELBO summed across all individuals that achieved
+// elbo: double; final value of ELBO summed across all observations that achieved
 // the maximum accross the hyperparameter grid
 // mu; n x p matrix; final mu values corresponding to the hyperparameters that
 // maximized the ELBO

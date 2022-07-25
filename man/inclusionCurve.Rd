@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots.R
 \name{inclusionCurve}
 \alias{inclusionCurve}
-\title{inclusionCurve}
+\title{Plot PIP as a Function of Index}
 \usage{
 inclusionCurve(
   out,
@@ -18,11 +18,11 @@ inclusionCurve(
 )
 }
 \arguments{
-\item{out}{object of \verb{class covdepGE}; return of \code{covdepGE} function}
+\item{out}{object of \code{class} \code{covdepGE}; return of \code{covdepGE} function}
 
-\item{col_idx1}{\code{integer} in \verb{[1, p]}; column index of the first variable}
+\item{col_idx1}{\code{integer} in \verb{[1,p]}; column index of the first variable}
 
-\item{col_idx2}{\code{integer} in \verb{[1, p]}; column index of the second variable}
+\item{col_idx2}{\code{integer} in \verb{[1,p]}; column index of the second variable}
 
 \item{line_type}{linetype; \code{ggplot2} line type to interpolate the
 probabilities. \code{"solid"} by default}
@@ -32,7 +32,7 @@ probabilities. \code{"solid"} by default}
 
 \item{line_color}{color; color of interpolating line. \code{"black"} by default}
 
-\item{point_shape}{shape; shape of the points denoting individual-specific
+\item{point_shape}{shape; shape of the points denoting observation-specific
 inclusion probabilities; \code{21} by default}
 
 \item{point_size}{positive \code{numeric}; size of probability points. \code{1.5} by
@@ -47,8 +47,8 @@ shapes. \code{"white"} by default}
 Returns \code{ggplot2} visualization of inclusion probability curve
 }
 \description{
-Plots the posterior probability of the inclusion of an edge
-between two variables as a function of individual index
+Plot the posterior inclusion probability of an edge between two
+variables as a function of observation index
 }
 \examples{
 
@@ -81,7 +81,7 @@ ggtitle("True precision matrix, interval 1")
 int2_mats <- prec[interval == 2]
 int2_inds <- c(5, n2 \%/\% 2, n2 - 5)
 lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-ggtitle(paste("True precision matrix, interval 2, individual", j)))
+ggtitle(paste("True precision matrix, interval 2, observation", j)))
 
 # interval 3
 matViz(prec[[length(prec)]], incl_val = TRUE) +

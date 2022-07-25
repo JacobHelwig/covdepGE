@@ -2,19 +2,19 @@
 % Please edit documentation in R/plots.R
 \name{plot.covdepGE}
 \alias{plot.covdepGE}
-\title{plot.covdepGE}
+\title{Plot the Graphs Estimated by \code{covdepGE}}
 \usage{
 \method{plot}{covdepGE}(x, graph_colors = NULL, title_sum = T, ...)
 }
 \arguments{
-\item{x}{object of \verb{class covdepGE}; return of \code{covdepGE} function}
+\item{x}{object of \code{class} \code{covdepGE}; return of \code{covdepGE} function}
 
 \item{graph_colors}{\code{NULL} OR \code{vector} of length \code{g}; \code{g} is the number of
 unique graphs from \code{x}. The \code{v}-th element is the color for the \code{v}-th unique
 graph. If \code{NULL}, all graphs will be colored with \code{"#500000"}. \code{NULL} by
 default}
 
-\item{title_sum}{\code{logical}; if \code{T} the indices of the individuals
+\item{title_sum}{\code{logical}; if \code{T} the indices of the observations
 corresponding to the graph will be included in the title. \code{T} by default}
 
 \item{...}{additional arguments will be ignored}
@@ -57,7 +57,7 @@ ggtitle("True precision matrix, interval 1")
 int2_mats <- prec[interval == 2]
 int2_inds <- c(5, n2 \%/\% 2, n2 - 5)
 lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-ggtitle(paste("True precision matrix, interval 2, individual", j)))
+ggtitle(paste("True precision matrix, interval 2, observation", j)))
 
 # interval 3
 matViz(prec[[length(prec)]], incl_val = TRUE) +

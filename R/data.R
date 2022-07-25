@@ -1,5 +1,5 @@
 ## -----------------------------------------------------------------------------
-#' @title generateData
+#' @title Generate Covariate-Dependent Data
 #' @export
 ## -----------------------------DESCRIPTION-------------------------------------
 #' @description function to generate a `1`-dimensional extraneous covariate and
@@ -8,54 +8,55 @@
 ## -----------------------------ARGUMENTS---------------------------------------
 #' @param p positive `integer`; number of variables in the data `matrix`
 #'
-#' @param n1 positive `integer`; number of individuals in the first interval
+#' @param n1 positive `integer`; number of observations in the first interval
 #'
-#' @param n2 positive `integer`; number of individuals in the second interval
+#' @param n2 positive `integer`; number of observations in the second interval
 #'
-#' @param n3 positive `integer`; number of individuals in the third interval
+#' @param n3 positive `integer`; number of observations in the third interval
 ## -----------------------------RETURNS-----------------------------------------
 #' @return Returns list with the following values:
 #'
 #'  \enumerate{
-#'    \item `data`: a `(n1 + n2 + n3) x p numeric matrix`, where the `i`-th
-#'    row is drawn from a `p`-dimensional Gaussian with mean `0` and precision
-#'    `matrix true_precision[[i]]`
+#'    \item `data`: a `(n1 + n2 + n3)` `x` `p` `numeric` `matrix`, where the
+#'    `i`-th row is drawn from a `p`-dimensional Gaussian with mean `0` and
+#'    precision `matrix` `true_precision[[i]]`
 #'
-#'    \item `covts`: a `(n1 + n2 + n3) x 1 numeric matrix`, where the `i`-th
-#'    entry is the extraneous covariate `z_i` for individual `i`
+#'    \item `covts`: a `(n1 + n2 + n3)` `x` `1` `numeric` `matrix`, where the
+#'    `i`-th entry is the extraneous covariate `z_i` for observation `i`
 #'
-#'    The first `n1` individuals have `z_i` from from a uniform distribution on
-#'    the interval `(-3, -1)` (the first interval)
+#'    The first `n1` observations have `z_i` from from a uniform distribution on
+#'    the interval `(-3,-1)` (the first interval)
 #'
-#'    Individuals `n1 + 1` to `n1 + n2` have `z_i` from from a uniform
-#'    distribution on the interval `(-1, 1)` (the second interval)
+#'    Observations `n1 + 1` to `n1 + n2` have `z_i` from from a uniform
+#'    distribution on the interval `(-1,1)` (the second interval)
 #'
-#'    Individuals `n1 + n2 + 1` to `n1 + n2 + n3` have `z_i` from a uniform
-#'    distribution on the interval `(1, 3)` (the third interval)
+#'    observations `n1 + n2 + 1` to `n1 + n2 + n3` have `z_i` from a uniform
+#'    distribution on the interval `(1,3)` (the third interval)
 #'
-#'    \item `true_precision`: `list` of `n1 + n2 + n3 p x p` matrices; the
-#'    `i`-th `matrix` is the precision `matrix` for the `i`-th individual
+#'    \item `true_precision`: `list` of `n1 + n2 + n3` `p` `x` `p` matrices; the
+#'    `i`-th `matrix` is the precision `matrix` for the `i`-th observation
 #'
 #'    All precision matrices have `2` on the diagonal and `1` in the
-#'    `(2, 3)/(3, 2)` positions
+#'    `(2,3)`/`(3,2)` positions
 #'
-#'    Individuals in the first interval (`(-3, -1)`) have a `1` in the
-#'    `(1, 2)/(2, 1)` positions, while individuals in the third interval
-#'    (`(1, 3)`) have a `1` in the `(1, 3)/(3, 1)` positions
+#'    Observations in the first interval have a `1` in the `(1,2)`/`(2,1)`
+#'    positions, while observations in the third interval have a `1` in the
+#'    `(1,3)`/`(3,1)` positions
 #'
-#'    Individuals in the second interval (`(-1, 1)`) have 2 entries that vary as
+#'    Observations in the second interval (`(-1,1)`) have 2 entries that vary as
 #'    a linear function of their extraneous covariate. Let `beta = 1/2`. Then,
-#'    the `(1, 2)/(2, 1)` positions for the `i`-th individual in interval 2 are
-#'    equal to `beta * (1 - z_i)`, while the `(1, 3)/(3, 1)` entries are equal
-#'    to `beta * (1 + z_i)`
+#'    the `(1, 2)`/`(2, 1)` positions for the `i`-th observation in interval 2
+#'    are `beta * (1 - z_i)`, while the `(1, 3)`/`(3, 1)` entries are
+#'    `beta * (1 + z_i)`
 #'
 #'    Thus, as `z_i` approaches `-1` from the right, the associated precision
-#'    `matrix` becomes more similar to the `matrix` for individuals in interval
-#'    1. Similarly, as `z_i` approaches `1` from the left, the `matrix` becomes
-#'    more similar to the `matrix` for individuals in interval `3`
+#'    `matrix` becomes more similar to the `matrix` for observations in the
+#'    first interval. Similarly, as `z_i` approaches `1` from the left, the
+#'    `matrix` becomes more similar to the `matrix` for observations in the
+#'    third interval
 #'
 #'    \item `interval`: `vector` of length `n1 + n2 + n3`; contains the ground
-#'    truth interval assignments for each of the individuals
+#'    truth interval assignments for each of the observations
 #' }
 ## -----------------------------EXAMPLES----------------------------------------
 #' @examples
@@ -89,7 +90,7 @@
 #' int2_mats <- prec[interval == 2]
 #' int2_inds <- c(5, n2 %/% 2, n2 - 5)
 #' lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-#' ggtitle(paste("True precision matrix, interval 2, individual", j)))
+#' ggtitle(paste("True precision matrix, interval 2, observation", j)))
 #'
 #' # interval 3
 #' matViz(prec[[length(prec)]], incl_val = TRUE) +
@@ -105,9 +106,9 @@
 ## -----------------------------------------------------------------------------
 generateData <- function(p = 5, n1 = 60, n2 = 60, n3 = 60){
 
-  # create covariate for individuals in each of the three intervals
+  # create covariate for observations in each of the three intervals
 
-  # define the dimensions of the data
+  # define number of samples
   n <- sum(n1, n2, n3)
 
   # define the intervals and assignments
@@ -138,17 +139,17 @@ generateData <- function(p = 5, n1 = 60, n2 = 60, n3 = 60){
   int2_str12 <- int2_str13 <- `matrix`(0, p, p)
   int2_str12[1, 2] <- int2_str13[1, 3] <- 1
 
-  # define the precision matrices for each of the individuals in interval 2
+  # define the precision matrices for each of the observations in interval 2
   int2_prec <- lapply(z2, function(z) common_str +
                         ((1 - beta0 - beta1*z)*int2_str12) +
                         ((beta0 + beta1*z)*int2_str13))
 
-  # interval 1 has a 1 in the (1, 2) and interval 3 has a 1 in the (1, 3)
-  # position; define structures for each of these components
-  int1_str12 <- int3_str13 <- `matrix`(0, p, p)
+  # interval 1 has a 1 in the (1, 2) position and interval 3 has a 1 in the
+  # (1, 3) position; define structures for each of these components
+  int1_str12 <- int3_str13 <- matrix(0, p, p)
   int1_str12[1, 2] <- int3_str13[1, 3] <- 1
 
-  # define the precision matrices for each of the individuals in interval 1 and
+  # define the precision matrices for each of the observations in interval 1 and
   # interval 3
   int1_prec <- rep(list(common_str + int1_str12), n1)
   int3_prec <- rep(list(common_str + int3_str13), n3)

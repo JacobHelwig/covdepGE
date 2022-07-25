@@ -2,64 +2,63 @@
 % Please edit documentation in R/data.R
 \name{generateData}
 \alias{generateData}
-\title{generateData}
+\title{Generate Covariate-Dependent Data}
 \usage{
 generateData(p = 5, n1 = 60, n2 = 60, n3 = 60)
 }
 \arguments{
 \item{p}{positive \code{integer}; number of variables in the data \code{matrix}}
 
-\item{n1}{positive \code{integer}; number of individuals in the first interval}
+\item{n1}{positive \code{integer}; number of observations in the first interval}
 
-\item{n2}{positive \code{integer}; number of individuals in the second interval}
+\item{n2}{positive \code{integer}; number of observations in the second interval}
 
-\item{n3}{positive \code{integer}; number of individuals in the third interval}
+\item{n3}{positive \code{integer}; number of observations in the third interval}
 }
 \value{
 Returns list with the following values:
 
 \enumerate{
-\item \code{data}: a \verb{(n1 + n2 + n3) x p numeric matrix}, where the \code{i}-th
-row is drawn from a \code{p}-dimensional Gaussian with mean \code{0} and precision
-\verb{matrix true_precision[[i]]}
+\item \code{data}: a \code{(n1 + n2 + n3)} \code{x} \code{p} \code{numeric} \code{matrix}, where the
+\code{i}-th row is drawn from a \code{p}-dimensional Gaussian with mean \code{0} and
+precision \code{matrix} \code{true_precision[[i]]}
 
-\item \code{covts}: a \verb{(n1 + n2 + n3) x 1 numeric matrix}, where the \code{i}-th
-entry is the extraneous covariate \code{z_i} for individual \code{i}
+\item \code{covts}: a \code{(n1 + n2 + n3)} \code{x} \code{1} \code{numeric} \code{matrix}, where the
+\code{i}-th entry is the extraneous covariate \code{z_i} for observation \code{i}
 
-The first \code{n1} individuals have \code{z_i} from from a uniform distribution on
-the interval \verb{(-3, -1)} (the first interval)
+The first \code{n1} observations have \code{z_i} from from a uniform distribution on
+the interval \verb{(-3,-1)} (the first interval)
 
-Individuals \code{n1 + 1} to \code{n1 + n2} have \code{z_i} from from a uniform
-distribution on the interval \verb{(-1, 1)} (the second interval)
+Observations \code{n1 + 1} to \code{n1 + n2} have \code{z_i} from from a uniform
+distribution on the interval \verb{(-1,1)} (the second interval)
 
-Individuals \code{n1 + n2 + 1} to \code{n1 + n2 + n3} have \code{z_i} from a uniform
-distribution on the interval \verb{(1, 3)} (the third interval)
+observations \code{n1 + n2 + 1} to \code{n1 + n2 + n3} have \code{z_i} from a uniform
+distribution on the interval \verb{(1,3)} (the third interval)
 
-\item \code{true_precision}: \code{list} of \verb{n1 + n2 + n3 p x p} matrices; the
-\code{i}-th \code{matrix} is the precision \code{matrix} for the \code{i}-th individual
+\item \code{true_precision}: \code{list} of \code{n1 + n2 + n3} \code{p} \code{x} \code{p} matrices; the
+\code{i}-th \code{matrix} is the precision \code{matrix} for the \code{i}-th observation
 
 All precision matrices have \code{2} on the diagonal and \code{1} in the
-\verb{(2, 3)/(3, 2)} positions
+\verb{(2,3)}/\verb{(3,2)} positions
 
-Individuals in the first interval (\verb{(-3, -1)}) have a \code{1} in the
-\verb{(1, 2)/(2, 1)} positions, while individuals in the third interval
-(\verb{(1, 3)}) have a \code{1} in the \verb{(1, 3)/(3, 1)} positions
+Observations in the first interval have a \code{1} in the \verb{(1,2)}/\verb{(2,1)}
+positions, while observations in the third interval have a \code{1} in the
+\verb{(1,3)}/\verb{(3,1)} positions
 
-Individuals in the second interval (\verb{(-1, 1)}) have 2 entries that vary as
+Observations in the second interval (\verb{(-1,1)}) have 2 entries that vary as
 a linear function of their extraneous covariate. Let \code{beta = 1/2}. Then,
-the \verb{(1, 2)/(2, 1)} positions for the \code{i}-th individual in interval 2 are
-equal to \code{beta * (1 - z_i)}, while the \verb{(1, 3)/(3, 1)} entries are equal
-to \code{beta * (1 + z_i)}
+the \verb{(1, 2)}/\verb{(2, 1)} positions for the \code{i}-th observation in interval 2
+are \code{beta * (1 - z_i)}, while the \verb{(1, 3)}/\verb{(3, 1)} entries are
+\code{beta * (1 + z_i)}
 
 Thus, as \code{z_i} approaches \code{-1} from the right, the associated precision
-\code{matrix} becomes more similar to the \code{matrix} for individuals in interval
-\enumerate{
-\item Similarly, as \code{z_i} approaches \code{1} from the left, the \code{matrix} becomes
-more similar to the \code{matrix} for individuals in interval \code{3}
-}
+\code{matrix} becomes more similar to the \code{matrix} for observations in the
+first interval. Similarly, as \code{z_i} approaches \code{1} from the left, the
+\code{matrix} becomes more similar to the \code{matrix} for observations in the
+third interval
 
 \item \code{interval}: \code{vector} of length \code{n1 + n2 + n3}; contains the ground
-truth interval assignments for each of the individuals
+truth interval assignments for each of the observations
 }
 }
 \description{
@@ -98,7 +97,7 @@ ggtitle("True precision matrix, interval 1")
 int2_mats <- prec[interval == 2]
 int2_inds <- c(5, n2 \%/\% 2, n2 - 5)
 lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-ggtitle(paste("True precision matrix, interval 2, individual", j)))
+ggtitle(paste("True precision matrix, interval 2, observation", j)))
 
 # interval 3
 matViz(prec[[length(prec)]], incl_val = TRUE) +

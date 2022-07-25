@@ -6,16 +6,15 @@
 \alias{_PACKAGE}
 \title{covdepGE: Covariate Dependent Graph Estimation}
 \description{
-Assume a \eqn{n} by \eqn{p} data matrix of independent observations, \eqn{X}, and a \eqn{n} by \eqn{p′} matrix of extraneous covariates, \eqn{Z}. The conditional dependence structure of \eqn{X} can be modeled as an undirected graph \eqn{G} such that there is an edge between two variables if, and only if, these variables are dependent on each other given all other variables. Further suppose that the conditional dependence structure of \eqn{X} is not homogeneous across the individuals, and is instead a continuous function of the extraneous covariates \eqn{Z}. Then, this methodology aims to estimate a graph for each of the individuals, possibly unique to the individual, such that similar estimates are made for those who are similar to one another in terms of the extraneous covariate.
+Suppose that `X` is a `p`-dimensional data `matrix` with `n` observations and that `Z` is a `q`-dimensional extraneous covariate, also with `n` observations, where the `l`-th observation in `Z` is associated with the `l`-th observation in `X`. Further suppose that the `l`-th row of `X` follows a `p`-dimensional Gaussian distribution with mean `0` and precision matrix `Omega(z_l)`, where `z_l` is the `l`-th entry of `Z` and `Omega` is a continuous function mapping from the space of extraneous covariates to the space of `p` `x` `p` non-singular matrices. Then, for the `l`-th observation, the `(j,k)` entry of `Omega(z_l)` is non-zero if, and only if, variable `j` and variable `k` are dependent given the remaining variables in `X`. Given data satisfying these assumptions, the `covdepGE` function employs the algorithm described in (1) to estimate a graphical representation of the structure of `Omega` for each of the observations in `X` as a continuous function of `Z`. This graph contains an undirected edge between two variables `X_j` and `X_k` if, and only if, `X_j` and `X_k` are conditionally dependent given the remaining variables.
 }
 \author{
-\strong{Maintainer}: Jacob Helwig \email{jacob.a.helwig@stat.tamu.edu}
+\strong{Maintainer}: Jacob Helwig \email{jacob.a.helwig@tamu.edu}
 
 Authors:
 \itemize{
   \item Sutanoy Dasgupta \email{sutanoy@stat.tamu.edu}
   \item Debdeep Pati \email{debdeep@stat.tamu.edu}
-  \item Patrick Ding \email{patrickding@stat.tamu.edu}
 }
 
 }

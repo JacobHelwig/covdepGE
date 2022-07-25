@@ -1,5 +1,5 @@
 ## -----------------------------------------------------------------------------
-#' @title matViz
+#' @title Visualize a `matrix`
 #' @export
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
@@ -64,7 +64,7 @@
 #' int2_mats <- prec[interval == 2]
 #' int2_inds <- c(5, n2 %/% 2, n2 - 5)
 #' lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-#' ggtitle(paste("True precision matrix, interval 2, individual", j)))
+#' ggtitle(paste("True precision matrix, interval 2, observation", j)))
 #'
 #' # interval 3
 #' matViz(prec[[length(prec)]], incl_val = TRUE) +
@@ -161,18 +161,18 @@ matViz <- function(x, color1 = "white", color2 = "#500000",
 }
 
 ## -----------------------------------------------------------------------------
-#' @title inclusionCurve
+#' @title Plot PIP as a Function of Index
 #' @export
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
-#' @description Plots the posterior probability of the inclusion of an edge
-#' between two variables as a function of individual index
+#' @description Plot the posterior inclusion probability of an edge between two
+#' variables as a function of observation index
 ## -----------------------------ARGUMENTS---------------------------------------
-#' @param out object of `class covdepGE`; return of `covdepGE` function
+#' @param out object of `class` `covdepGE`; return of `covdepGE` function
 #'
-#' @param col_idx1 `integer` in `[1, p]`; column index of the first variable
+#' @param col_idx1 `integer` in `[1,p]`; column index of the first variable
 #'
-#' @param col_idx2 `integer` in `[1, p]`; column index of the second variable
+#' @param col_idx2 `integer` in `[1,p]`; column index of the second variable
 #'
 #' @param line_type linetype; `ggplot2` line type to interpolate the
 #' probabilities. `"solid"` by default
@@ -182,7 +182,7 @@ matViz <- function(x, color1 = "white", color2 = "#500000",
 #'
 #' @param line_color color; color of interpolating line. `"black"` by default
 #'
-#' @param point_shape shape; shape of the points denoting individual-specific
+#' @param point_shape shape; shape of the points denoting observation-specific
 #' inclusion probabilities; `21` by default
 #'
 #' @param point_size positive `numeric`; size of probability points. `1.5` by
@@ -226,7 +226,7 @@ matViz <- function(x, color1 = "white", color2 = "#500000",
 #' int2_mats <- prec[interval == 2]
 #' int2_inds <- c(5, n2 %/% 2, n2 - 5)
 #' lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-#' ggtitle(paste("True precision matrix, interval 2, individual", j)))
+#' ggtitle(paste("True precision matrix, interval 2, observation", j)))
 #'
 #' # interval 3
 #' matViz(prec[[length(prec)]], incl_val = TRUE) +
@@ -254,7 +254,7 @@ inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
   idx <- prob <- NULL
   rm(list = c("idx", "prob"))
 
-  # get the probabilities for each individual of an edge between the variables
+  # get the probabilities for each observation of an edge between the variables
   # corresponding to col_idx1 and col_idx2
   prob1_2 <- sapply(out$graphs$inclusion_probs_sym,
                     function(x) x[col_idx1, col_idx2])
@@ -265,7 +265,7 @@ inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
               linetype = line_type, size = line_size, color = line_color) +
             ggplot2::geom_point(shape = point_shape, size = point_size,
                                 color = point_color, fill = point_fill) +
-            ggplot2::xlab("Subject index") +
+            ggplot2::xlab("Observation Index") +
             ggplot2::ylab("Posterior Inclusion Probability") +
             ggplot2::ggtitle(latex2exp::TeX(paste(
               "Inclusion probability of an edge between $x_", col_idx1,
@@ -278,20 +278,20 @@ inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 }
 
 ## -----------------------------------------------------------------------------
-#' @title plot.covdepGE
+#' @title Plot the Graphs Estimated by `covdepGE`
 #' @export
 ## -----------------------------------------------------------------------------
 ## -----------------------------DESCRIPTION-------------------------------------
 #' @description Create a `list` of the unique graphs estimated by `covdepGE`
 ## -----------------------------ARGUMENTS---------------------------------------
-#' @param x object of `class covdepGE`; return of `covdepGE` function
+#' @param x object of `class` `covdepGE`; return of `covdepGE` function
 #'
 #' @param graph_colors `NULL` OR `vector` of length `g`; `g` is the number of
 #' unique graphs from `x`. The `v`-th element is the color for the `v`-th unique
 #' graph. If `NULL`, all graphs will be colored with `"#500000"`. `NULL` by
 #' default
 #'
-#' @param title_sum `logical`; if `T` the indices of the individuals
+#' @param title_sum `logical`; if `T` the indices of the observations
 #' corresponding to the graph will be included in the title. `T` by default
 #'
 #' @param ... additional arguments will be ignored
@@ -330,7 +330,7 @@ inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 #' int2_mats <- prec[interval == 2]
 #' int2_inds <- c(5, n2 %/% 2, n2 - 5)
 #' lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-#' ggtitle(paste("True precision matrix, interval 2, individual", j)))
+#' ggtitle(paste("True precision matrix, interval 2, observation", j)))
 #'
 #' # interval 3
 #' matViz(prec[[length(prec)]], incl_val = TRUE) +
@@ -359,10 +359,10 @@ plot.covdepGE <- function(x, graph_colors = NULL, title_sum = T, ...){
   # create the titles for the plots
   titles <- paste("Graph", 1:length(x$graphs$unique_graphs))
 
-  # check if the title should include the individual's summaries
+  # check if the title should include the observation's summaries
   if(title_sum){
-    indv_sum <- sapply(x$graphs$unique_graphs, `[[`, "individuals_summary")
-    titles <- paste0(titles, ", Individuals ", indv_sum)
+    obs_sum <- sapply(x$graphs$unique_graphs, `[[`, "ind_sum")
+    titles <- paste0(titles, ", observations ", obs_sum)
   }
 
   # get the unique graphs
