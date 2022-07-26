@@ -4,37 +4,35 @@
 #' @export
 ## -----------------------------DESCRIPTION-------------------------------------
 #' @description Model the conditional dependence structure of `X` as a function
-#' of `Z` as described in (1).
+#' of `Z` as described in (1)
 ## -----------------------------ARGUMENTS---------------------------------------
 #' @param X `n` `x` `p` `numeric` `matrix`; data `matrix`
 #'
 #' @param Z `n` `x` `q` `numeric` `matrix`; extraneous covariates
 #'
-#' @param hp_method `character` in
-#' `c("grid_search", "model_average", "hybrid")`; method for selecting
-#' hyperparameters from the the hyperparameter grid. The grid will be generated
-#' as the Cartesian product of `ssq`, `sbsq`, and `pip`. Fix `X_j`, the `j-th`
-#' column of `X`, as the response; then, the hyperparameters will be selected as
-#' follows:
+#' @param hp_method `character` in `c("grid_search","model_average","hybrid")`;
+#' method for selecting hyperparameters from the the hyperparameter grid. The
+#' grid will be generated as the Cartesian product of `ssq`, `sbsq`, and `pip`.
+#' Fix `X_j`, the `j-th` column of `X`, as the response; then, the
+#' hyperparameters will be selected as follows:
 #'
 #'  \itemize{
 #'    \item If `"grid_search"`, the point in the hyperparameter grid that
-#'    maximizes the total ELBO across summed across all `n` regressions will be
+#'    maximizes the total ELBO summed across all `n` regressions will be
 #'    selected
-#'    \item If `"model_average`, then all posterior quantities will be a convex
-#'    combination of the variational estimates resulting from the model fit for
-#'    each point in the hyperparameter grid. Note that the weightings are
-#'    observation-specific, as unnormalized weights are calculated using the
-#'    exponentiated ELBO
-#'    \item If `"hybrid"`, then `pip` will be averaged over as with
-#'    `"model_average"`, while a single point in the grid defined by the
-#'    Cartesian product of `ssq` and `sbsq` will be selected via grid search for
-#'    each point in `pip`
+#'    \item If `"model_average"`, then all posterior quantities will be an
+#'    average of the variational estimates resulting from the model fit for
+#'    each point in the hyperparameter grid. The averaging weights for each
+#'    of the `n` regressions are the exponentiated ELBO
+#'    \item If `"hybrid"`, then models will be averaged over `pip` as in
+#'    `model_average`, with `sigma^2` and `sigma_beta^2` chosen for each
+#'    `pi` in `pip` by maximizing the total ELBO over the grid defined by the
+#'    Cartesian product of `ssq` and `sbsq` as in `grid_search`
 #' }
 #'
 #' `"hybrid"` by default
 #'
-#' @param ssq `NULL` OR `numeric vector` with positive entries; candidate values
+#' @param ssq `NULL` OR `numeric` `vector` with positive entries; candidate values
 #' of the hyperparameter `sigma^2` (prior residual variance). If `NULL`, `ssq`
 #' will be generated for each variable `X_j` fixed as the response as:
 #'
@@ -44,8 +42,8 @@
 #'
 #' `NULL` by default
 #'
-#' @param sbsq `NULL` OR `numeric vector` with positive entries; candidate
-#' values of the hyperparameter `sigma^2_beta` (prior slab variance). If `NULL`,
+#' @param sbsq `NULL` OR `numeric` `vector` with positive entries; candidate
+#' values of the hyperparameter `sigma_beta^2` (prior slab variance). If `NULL`,
 #' `sbsq` will be generated for each variable `X_j` fixed as the response as:
 #'
 #' ```
@@ -54,7 +52,7 @@
 #'
 #' `NULL` by default
 #'
-#' @param pip `NULL` OR `numeric vector` with entries in `(0,1)`; candidate
+#' @param pip `NULL` OR `numeric` `vector` with entries in (`0`,`1`); candidate
 #' values of the hyperparameter `pi` (prior inclusion probability). If `NULL`,
 #' `pip` will be generated for each variable `X_j` fixed as the response as:
 #'
@@ -76,7 +74,7 @@
 #' `X_j` fixed as the response:
 #'
 #' ```
-#' ssq_upper <- ssq_mult * stats::var(y)
+#' ssq_upper <- ssq_mult * stats::var(X_j)
 #' ```
 #'
 #' Then, `ssq_upper` will be the greatest value in `ssq` for variable `X_j`.
@@ -85,7 +83,7 @@
 #' @param ssq_lower positive `numeric`; if `ssq` is `NULL`, then `ssq_lower`
 #' will be the least value in `ssq`. `1e-5` by default
 #'
-#' @param snr_upper positive `numeric`; upper bound on the signal to noise
+#' @param snr_upper positive `numeric`; upper bound on the signal-to-noise
 #' ratio. If `sbsq` is `NULL`, then for each variable `X_j` fixed as the
 #' response:
 #'
@@ -100,10 +98,10 @@
 #' @param sbsq_lower positive `numeric`; if `sbsq` is `NULL`, then `sbsq_lower`
 #' will be the least value in `sbsq`. `1e-5` by default
 #'
-#' @param pip_lower `numeric` in `(0,1)`; if `pip` is `NULL`, then
+#' @param pip_lower `numeric` in (`0`,`1`); if `pip` is `NULL`, then
 #' `pip_lower` will be the least value in `pip`. `1e-5` by default
 #'
-#' @param pip_upper `NULL` OR  `numeric` in`(0,1)`; if `pip` is `NULL`, then
+#' @param pip_upper `NULL` OR  `numeric` in (`0`,`1`); if `pip` is `NULL`, then
 #' `pip_upper` will be the greatest value in `pip`. If `sbsq` is `NULL`,
 #' `pip_upper` will be used to calculate `sbsq_upper`. If `NULL`, `pip_upper`
 #' will be calculated for each variable `X_j` fixed as the response as:
@@ -116,15 +114,15 @@
 #' ```
 #' `NULL` by default
 #'
-#' @param tau `NULL` OR positive `numeric` OR `numeric vector` of length `n`
+#' @param tau `NULL` OR positive `numeric` OR `numeric` `vector` of length `n`
 #' with positive entries; bandwidth parameter. Greater values allow for more
 #' information to be shared between observations. Allows for global or
 #' observation-specific specification. If `NULL`, use 2-step KDE methodology as
 #' described in (2) to calculate observation-specific bandwidths. `NULL` by
 #' default
 #'
-#' @param norm `numeric` in `[1,Inf]`; norm to use when calculating weights.
-#' `Inf` results in infinity norm. `2` by default
+#' @param norm `numeric` in `[` `1`,`Inf` `]`; norm to use when calculating
+#' weights. `Inf` results in infinity norm. `2` by default
 #'
 #' @param center_X `logical`; if `T`, center `X` column-wise to mean `0`.
 #' `T` by default
@@ -144,16 +142,16 @@
 #' selected by grid search for at most `max_iter` iterations. Does not apply to
 #' `hp_method = "model_average"`. `10` by default
 #'
-#' @param edge_threshold `numeric` in `(0,1)`; a graph for each observation
+#' @param edge_threshold `numeric` in (`0`,`1`); a graph for each observation
 #' will be constructed by including an edge between variable `i` and
-#' variable `j` if, and only if, the `(i,j)` entry of the symmetrized
+#' variable `j` if, and only if, the (`i`,`j`) entry of the symmetrized
 #' posterior inclusion probability `matrix` corresponding to the observation is
 #' greater than `edge_threshold`. `0.5` by default
 #'
-#' @param sym_method `character` in `c("mean"`, `"max"`, `"min")`; to symmetrize
+#' @param sym_method `character` in `c("mean","max","min")`; to symmetrize
 #' the posterior inclusion probability `matrix` for each observation, the
-#' `(i,j)` and `(j,i)` entries will be post-processed as `sym_method` applied to
-#' the `(i,j)` and `(j,i)` entries. `"mean"` by default
+#' (`i`,`j`) and (`j`,`i`) entries will be post-processed as `sym_method` applied to
+#' the (`i`,`j`) and (`j`,`i`) entries. `"mean"` by default
 #'
 #' @param parallel `logical`; if `T`, hyperparameter selection and CAVI for each
 #' of the `p` variables will be performed in parallel using `foreach`.
@@ -203,18 +201,18 @@
 #'  \item `variational_params`: `list` with the following values:
 #'
 #'    \itemize{
-#'      \item `alpha`: `list` of `p` `n` `x` `(p-1)` `numeric` matrices; the
-#'      `(i,j)` entry of the `k`-th `matrix` is the variational approximation to
+#'      \item `alpha`: `list` of `p` `n` `x` (`p-1`) `numeric` matrices; the
+#'      (`i`,`j`) entry of the `k`-th `matrix` is the variational approximation to
 #'      the posterior inclusion probability of the `j`-th variable in a weighted
 #'      regression with variable `k` fixed as the response, where the weights
 #'      are taken with respect to observation `i`
-#'      \item `mu`: `list` of `p` `n` `x` `(p-1)` `numeric` matrices; the
-#'      `(i,j)` entry of the `k`-th `matrix` is the variational approximation to
+#'      \item `mu`: `list` of `p` `n` `x` (`p-1`) `numeric` matrices; the
+#'      (`i`,`j`) entry of the `k`-th `matrix` is the variational approximation to
 #'      the posterior slab mean for the `j`-th variable in a weighted regression
 #'      with variable `k` fixed as the response, where the weights are taken
 #'      with respect to observation `i`
-#'      \item `ssq_var`: `list` of `p` `n` `x` `(p-1)` `numeric` matrices; the
-#'      `(i,j)` entry of the `k`-th `matrix` is the variational approximation
+#'      \item `ssq_var`: `list` of `p` `n` `x` (`p-1`) `numeric` matrices; the
+#'      (`i`,`j`) entry of the `k`-th `matrix` is the variational approximation
 #'      to the posterior slab variance for the `j`-th variable in a weighted
 #'      regression with variable `k` fixed as the response, where the weights
 #'      are taken with respect to observation `i`
@@ -226,7 +224,7 @@
 #'    \itemize{
 #'      \item `grid`: `matrix` of candidate hyperparameter values, corresponding
 #'      ELBO, and iterations to converge
-#'      \item `final`: the final hyperparameters chosen by grid search, and the
+#'      \item `final`: the final hyperparameters chosen by grid search and the
 #'      ELBO and iterations to converge for these hyperparameters
 #'    }
 #'
@@ -238,7 +236,8 @@
 #'      \item `p`: number of variables
 #'      \item `ELBO`: ELBO summed across all observations and variables. If
 #'      `hp_method` is `"model_average"` or `"hybrid"`, this ELBO is averaged
-#'      across the hyperparameter grid using the model averaging weights
+#'      across the hyperparameter grid using the model averaging weights for
+#'      each variable
 #'      \item `num_unique`: number of unique graphs
 #'      \item `grid_size`: number of points in the hyperparameter grid
 #'      \item `args`: `list` containing all passed arguments of `length 1`
@@ -247,10 +246,10 @@
 #'  \item `weights`: `list` with the following values:
 #'
 #'  \itemize{
-#'    \item `weights`: `n` `x` `n` `numeric` `matrix`. The `(i,j)` entry is the
-#'    weight of the `i`-th observation with respect to the `j`-th observation
-#'    using the `j`-th observation's bandwidth
-#'    \item `bandwidths`: `numeric vector` of length `n`. The `i`-th entry is
+#'    \item `weights`: `n` `x` `n` `numeric` `matrix`. The (`i`,`j`) entry is
+#'    the similarity weight of the `i`-th observation with respect to the `j`-th
+#'    observation using the `j`-th observation's bandwidth
+#'    \item `bandwidths`: `numeric` `vector` of length `n`. The `i`-th entry is
 #'    the bandwidth for the `i`-th observation
 #'  }
 #'  }
@@ -312,7 +311,7 @@
 #' `Omega(z_l)`, where `z_l` is the `l`-th entry of `Z` and `Omega` is a
 #' continuous function mapping from the space of extraneous covariates to the
 #' space of `p` `x` `p` non-singular matrices. Then, for the `l`-th observation,
-#' the `(j,k)` entry of `Omega(z_l)` is non-zero if, and only if, variable `j`
+#' the (`j`,`k`) entry of `Omega(z_l)` is non-zero if, and only if, variable `j`
 #' and variable `k` are dependent given the remaining variables in `X`.
 #'
 #' Given data satisfying these assumptions, the `covdepGE` function employs the
@@ -350,7 +349,7 @@
 #'
 #' CAVI for the `n` regressions is performed simultaneously for variable `X_j`
 #' fixed as the response. With each of the `n` sets of `alpha` as the rows of an
-#' `n` `x` `(p-1)` `matrix`, the CAVI for variable `X_j` is ended for all `n`
+#' `n` `x` (`p-1`) `matrix`, the CAVI for variable `X_j` is ended for all `n`
 #' regressions when the Frobenius norm of the change in the `alpha` `matrix` is
 #' less than `alpha_tol` or after `max_iter` iterations of CAVI have been
 #' performed.
@@ -365,7 +364,7 @@
 #'
 #' Each regression requires the specification of 3 hyperparameters: `pi` (the
 #' prior probability of inclusion), `sigma^2` (the prior residual variance), and
-#' `sigma^2_beta` (the prior variance of the slab). `covdepGE` offers 3 methods
+#' `sigma_beta^2` (the prior variance of the slab). `covdepGE` offers 3 methods
 #' for hyperparameter specification via the `hp_method` argument: `grid_search`,
 #' `model_average`, and `hybrid`. Empirically, `grid search` offers the best
 #' sensitivity and `model_average` offers the best specificity, while `hybrid`
@@ -373,7 +372,7 @@
 #'
 #' The hyperparameter candidate grid is generated by taking the Cartesian
 #' product between `ssq`, `sbsq`, and `pip` (candidate values for `sigma^2`,
-#' `sigma^2_beta`, and `pi`, respectively). Each of the methods gives an
+#' `sigma_beta^2`, and `pi`, respectively). Each of the methods gives an
 #' approach for selecting points from this grid.
 #'
 #' In `grid_search`, the point from the grid that produces the model that has
@@ -404,7 +403,7 @@
 #' less than `max_iter` (as is the default) will result in a more efficient
 #' search.
 #'
-#' ## Candidate grid generation
+#' # Candidate grid generation
 #'
 #' The candidate grids (`ssq`, `sbsq`, and `pip`) may be passed as arguments,
 #' however, by default, these grids are generated automatically. Each of the
@@ -426,24 +425,24 @@
 #' to `1` or `p-2` (respectively) to ensure that `pip_upper` is greater than `0`
 #' and less than `1`.
 #'
-#' Finally, an upper bound is induced on `sigma^2_beta` by deriving a rough
-#' upper bound for the signal-to-noise ratio that depends on `sigma^2_beta`. Let
+#' Finally, an upper bound is induced on `sigma_beta^2` by deriving a rough
+#' upper bound for the signal-to-noise ratio that depends on `sigma_beta^2`. Let
 #' `sum_S^2` be the sum of the sample variances of the columns of the predictors
 #' `X’`. Under the simplifying assumptions that the expected values of `X’` and
 #' the spike-and-slab regression coefficients `beta` are `0` and that `X’` and
 #' `beta` are independent, the variance of the dot product of `X’` with `beta`
-#' is `pi*sigma^2*sigma^2_beta*sum_S^2`. Thus, the signal-to-noise ratio under
-#' these assumptions is given by `pi*sigma^2_beta*sum_S^2`, and so replacing
-#' `pi` with `pip_upper` and `sigma^2_beta` with `sbsq_upper` gives an upper
-#' bound on the signal to noise ratio. Setting this bound equal to `snr_upper`
+#' is `pi*sigma^2*sigma_beta^2*sum_S^2`. Thus, the signal-to-noise ratio under
+#' these assumptions is given by `pi*sigma_beta^2*sum_S^2`, and so replacing
+#' `pi` with `pip_upper` and `sigma_beta^2` with `sbsq_upper` gives an upper
+#' bound on the signal-to-noise ratio. Setting this bound equal to `snr_upper`
 #' gives an expression for `sbsq_upper`.
 #'
-#' # Weights
+#' # Similarity Weights
 #'
 #' The similarity weight for individual `k` with respect to individual `l` is
-#' calculated as `dnorm(Norm(z_l, z_k), tau_l)`, where `Norm(z_l, z_k)` denotes
-#' the norm specified by the `norm` argument of the values of `Z` for the `l`-th
-#' and `k`-th observations, and `tau_l` is the bandwidth for the `l`-th
+#' calculated as `dnorm(Norm(z_l, z_k), tau_l`), where `Norm(z_l, z_k)` denotes
+#' the norm (specified by the `norm` argument) of the values of `Z` for the
+#' `l`-th and `k`-th observations, and `tau_l` is the bandwidth for the `l`-th
 #' observation. `tau` may be passed as an argument, however, by default, it is
 #' estimated using the methodology given in (2). (2) describes a two-step
 #' approach for density estimation, where in the first step, an initial estimate

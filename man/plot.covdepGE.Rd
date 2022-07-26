@@ -9,10 +9,9 @@
 \arguments{
 \item{x}{object of \code{class} \code{covdepGE}; return of \code{covdepGE} function}
 
-\item{graph_colors}{\code{NULL} OR \code{vector} of length \code{g}; \code{g} is the number of
-unique graphs from \code{x}. The \code{v}-th element is the color for the \code{v}-th unique
-graph. If \code{NULL}, all graphs will be colored with \code{"#500000"}. \code{NULL} by
-default}
+\item{graph_colors}{\code{NULL} OR \code{vector}; the \code{j}-th element is the color for
+the \code{j}-th graph. If \code{NULL}, all graphs will be colored with \code{"#500000"}.
+\code{NULL} by default}
 
 \item{title_sum}{\code{logical}; if \code{T} the indices of the observations
 corresponding to the graph will be included in the title. \code{T} by default}

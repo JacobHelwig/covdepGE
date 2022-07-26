@@ -20,9 +20,9 @@ inclusionCurve(
 \arguments{
 \item{out}{object of \code{class} \code{covdepGE}; return of \code{covdepGE} function}
 
-\item{col_idx1}{\code{integer} in \verb{[1,p]}; column index of the first variable}
+\item{col_idx1}{\code{integer} in \code{[} \code{1},\code{p} \verb{]}; column index of the first variable}
 
-\item{col_idx2}{\code{integer} in \verb{[1,p]}; column index of the second variable}
+\item{col_idx2}{\code{integer} in \code{[} \code{1},\code{p} \verb{]}; column index of the second variable}
 
 \item{line_type}{linetype; \code{ggplot2} line type to interpolate the
 probabilities. \code{"solid"} by default}

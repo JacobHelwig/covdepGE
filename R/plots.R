@@ -170,9 +170,9 @@ matViz <- function(x, color1 = "white", color2 = "#500000",
 ## -----------------------------ARGUMENTS---------------------------------------
 #' @param out object of `class` `covdepGE`; return of `covdepGE` function
 #'
-#' @param col_idx1 `integer` in `[1,p]`; column index of the first variable
+#' @param col_idx1 `integer` in `[` `1`,`p` `]`; column index of the first variable
 #'
-#' @param col_idx2 `integer` in `[1,p]`; column index of the second variable
+#' @param col_idx2 `integer` in `[` `1`,`p` `]`; column index of the second variable
 #'
 #' @param line_type linetype; `ggplot2` line type to interpolate the
 #' probabilities. `"solid"` by default
@@ -286,10 +286,9 @@ inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 ## -----------------------------ARGUMENTS---------------------------------------
 #' @param x object of `class` `covdepGE`; return of `covdepGE` function
 #'
-#' @param graph_colors `NULL` OR `vector` of length `g`; `g` is the number of
-#' unique graphs from `x`. The `v`-th element is the color for the `v`-th unique
-#' graph. If `NULL`, all graphs will be colored with `"#500000"`. `NULL` by
-#' default
+#' @param graph_colors `NULL` OR `vector`; the `j`-th element is the color for
+#' the `j`-th graph. If `NULL`, all graphs will be colored with `"#500000"`.
+#' `NULL` by default
 #'
 #' @param title_sum `logical`; if `T` the indices of the observations
 #' corresponding to the graph will be included in the title. `T` by default

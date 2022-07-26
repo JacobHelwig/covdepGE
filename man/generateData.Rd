@@ -27,29 +27,29 @@ precision \code{matrix} \code{true_precision[[i]]}
 \code{i}-th entry is the extraneous covariate \code{z_i} for observation \code{i}
 
 The first \code{n1} observations have \code{z_i} from from a uniform distribution on
-the interval \verb{(-3,-1)} (the first interval)
+the interval (\code{-3},\code{-1}) (the first interval)
 
 Observations \code{n1 + 1} to \code{n1 + n2} have \code{z_i} from from a uniform
-distribution on the interval \verb{(-1,1)} (the second interval)
+distribution on the interval (\code{-1},\code{1}) (the second interval)
 
 observations \code{n1 + n2 + 1} to \code{n1 + n2 + n3} have \code{z_i} from a uniform
-distribution on the interval \verb{(1,3)} (the third interval)
+distribution on the interval (\code{1},\code{3}) (the third interval)
 
 \item \code{true_precision}: \code{list} of \code{n1 + n2 + n3} \code{p} \code{x} \code{p} matrices; the
 \code{i}-th \code{matrix} is the precision \code{matrix} for the \code{i}-th observation
 
 All precision matrices have \code{2} on the diagonal and \code{1} in the
-\verb{(2,3)}/\verb{(3,2)} positions
+(\code{2},\code{3})/(\code{3},\code{2}) positions
 
-Observations in the first interval have a \code{1} in the \verb{(1,2)}/\verb{(2,1)}
+Observations in the first interval have a \code{1} in the (\code{1},\code{2})/(\code{2},\code{1})
 positions, while observations in the third interval have a \code{1} in the
-\verb{(1,3)}/\verb{(3,1)} positions
+(\code{1},\code{3})/(\code{3},\code{1}) positions
 
-Observations in the second interval (\verb{(-1,1)}) have 2 entries that vary as
-a linear function of their extraneous covariate. Let \code{beta = 1/2}. Then,
-the \verb{(1, 2)}/\verb{(2, 1)} positions for the \code{i}-th observation in interval 2
-are \code{beta * (1 - z_i)}, while the \verb{(1, 3)}/\verb{(3, 1)} entries are
-\code{beta * (1 + z_i)}
+Observations in the second interval have 2 entries that vary as a linear
+function of their extraneous covariate. Let \code{beta = 1/2}. Then,
+the (\code{1}, \code{2})/(\code{2}, \code{1}) positions for the \code{i}-th observation in the
+second interval are \code{beta * (1 - z_i)}, while the (\code{1}, \code{3})/(\code{3}, \code{1})
+entries are \code{beta * (1 + z_i)}
 
 Thus, as \code{z_i} approaches \code{-1} from the right, the associated precision
 \code{matrix} becomes more similar to the \code{matrix} for observations in the

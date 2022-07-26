@@ -25,29 +25,29 @@
 #'    `i`-th entry is the extraneous covariate `z_i` for observation `i`
 #'
 #'    The first `n1` observations have `z_i` from from a uniform distribution on
-#'    the interval `(-3,-1)` (the first interval)
+#'    the interval (`-3`,`-1`) (the first interval)
 #'
 #'    Observations `n1 + 1` to `n1 + n2` have `z_i` from from a uniform
-#'    distribution on the interval `(-1,1)` (the second interval)
+#'    distribution on the interval (`-1`,`1`) (the second interval)
 #'
 #'    observations `n1 + n2 + 1` to `n1 + n2 + n3` have `z_i` from a uniform
-#'    distribution on the interval `(1,3)` (the third interval)
+#'    distribution on the interval (`1`,`3`) (the third interval)
 #'
 #'    \item `true_precision`: `list` of `n1 + n2 + n3` `p` `x` `p` matrices; the
 #'    `i`-th `matrix` is the precision `matrix` for the `i`-th observation
 #'
 #'    All precision matrices have `2` on the diagonal and `1` in the
-#'    `(2,3)`/`(3,2)` positions
+#'    (`2`,`3`)/(`3`,`2`) positions
 #'
-#'    Observations in the first interval have a `1` in the `(1,2)`/`(2,1)`
+#'    Observations in the first interval have a `1` in the (`1`,`2`)/(`2`,`1`)
 #'    positions, while observations in the third interval have a `1` in the
-#'    `(1,3)`/`(3,1)` positions
+#'    (`1`,`3`)/(`3`,`1`) positions
 #'
-#'    Observations in the second interval (`(-1,1)`) have 2 entries that vary as
-#'    a linear function of their extraneous covariate. Let `beta = 1/2`. Then,
-#'    the `(1, 2)`/`(2, 1)` positions for the `i`-th observation in interval 2
-#'    are `beta * (1 - z_i)`, while the `(1, 3)`/`(3, 1)` entries are
-#'    `beta * (1 + z_i)`
+#'    Observations in the second interval have 2 entries that vary as a linear
+#'    function of their extraneous covariate. Let `beta = 1/2`. Then,
+#'    the (`1`, `2`)/(`2`, `1`) positions for the `i`-th observation in the
+#'    second interval are `beta * (1 - z_i)`, while the (`1`, `3`)/(`3`, `1`)
+#'    entries are `beta * (1 + z_i)`
 #'
 #'    Thus, as `z_i` approaches `-1` from the right, the associated precision
 #'    `matrix` becomes more similar to the `matrix` for observations in the
