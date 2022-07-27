@@ -35,19 +35,439 @@ covdepGE(
   prog_bar = T
 )
 }
+\arguments{
+\item{X}{\eqn{n \times p}{n x q} numeric matrix; data matrix}
+
+\item{Z}{\eqn{n \times q}{n x q} numeric matrix; extraneous covariates}
+
+\item{hp_method}{\code{character} in \code{c("grid_search","model_average","hybrid")};
+method for selecting hyperparameters from the the hyperparameter grid. The
+grid will be generated as the Cartesian product of \code{ssq}, \code{sbsq}, and \code{pip}.
+Fix \eqn{X_j}{Xj}, the \eqn{j}-th column of \code{X}, as the response; then, the
+hyperparameters will be selected as follows:
+
+\itemize{
+\item If \code{"grid_search"}, the point in the hyperparameter grid that
+maximizes the total ELBO summed across all \eqn{n} regressions will be
+selected
+\item If \code{"model_average"}, then all posterior quantities will be an
+average of the variational estimates resulting from the model fit for each
+point in the hyperparameter grid. The averaging weights for each of the
+\eqn{n} regressions are the exponentiated ELBO
+\item If \code{"hybrid"}, then models will be averaged over \code{pip} as in
+\code{"model_average"}, with \eqn{\sigma^2}{sigma^2} and
+\eqn{\sigma_\beta^2}{sigma_beta^2} chosen for each \eqn{\pi}{pi} in \code{pip}
+by maximizing the total ELBO over the grid defined by the Cartesian
+product of \code{ssq} and \code{sbsq} as in \code{"grid_search"}
+}
+
+\code{"hybrid"} by default}
+
+\item{ssq}{\code{NULL} OR numeric vector with positive entries; candidate values
+of the hyperparameter \eqn{\sigma^2}{sigma^2} (prior residual variance). If
+\code{NULL}, \code{ssq} will be generated for each variable \eqn{X_j}{Xj} fixed as the
+response as:\preformatted{ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)
+}
+
+\code{NULL} by default}
+
+\item{sbsq}{\code{NULL} OR numeric vector with positive entries; candidate values
+of the hyperparameter \eqn{\sigma_\beta^2}{sigma_beta^2} (prior slab
+variance). If \code{NULL}, \code{sbsq} will be generated for each variable \eqn{X_j}{Xj}
+fixed as the response as:\preformatted{sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)
+}
+
+\code{NULL} by default}
+
+\item{pip}{\code{NULL} OR numeric vector with entries in \eqn{(0, 1)}; candidate
+values of the hyperparameter \eqn{\pi}{pi} (prior inclusion probability). If
+\code{NULL}, \code{pip} will be generated for each variable \eqn{X_j}{Xj} fixed as the
+response as:\preformatted{pip <- seq(pip_lower, pi_upper, length.out = npip)
+}
+
+\code{NULL} by default}
+
+\item{nssq}{positive integer; number of points to generate for \code{ssq} if
+\code{ssq} is \code{NULL}. \code{5} by default}
+
+\item{nsbsq}{positive integer; number of points to generate for \code{sbsq} if
+\code{sbsq} is \code{NULL}. \code{5} by default}
+
+\item{npip}{positive integer; number of points to generate for \code{pip} if \code{pip}
+is \code{NULL}. \code{5} by default}
+
+\item{ssq_mult}{positive numeric; if \code{ssq} is \code{NULL}, then for each variable
+\eqn{X_j}{Xj} fixed as the response:\preformatted{ssq_upper <- ssq_mult * stats::var(X_j)
+}
+
+Then, \code{ssq_upper} will be the greatest value in \code{ssq} for variable \eqn{X_j}{Xj}.
+\code{1.5} by default}
+
+\item{ssq_lower}{positive numeric; if \code{ssq} is \code{NULL}, then \code{ssq_lower} will
+be the least value in \code{ssq}. \code{1e-5} by default}
+
+\item{snr_upper}{positive numeric; upper bound on the signal-to-noise ratio.
+If \code{sbsq} is \code{NULL}, then for each variable \eqn{X_j}{Xj} fixed as the response:\preformatted{s2_sum <- sum(apply(X, 2, stats::var))
+sbsq_upper <- snr_upper / (pip_upper * s2_sum)
+}
+
+Then, \code{sbsq_upper} will be the greatest value in \code{sbsq} for variable
+\eqn{X_j}{Xj}. \code{25} by default}
+
+\item{sbsq_lower}{positive numeric; if \code{sbsq} is \code{NULL}, then \code{sbsq_lower}
+will be the least value in \code{sbsq}. \code{1e-5} by default}
+
+\item{pip_lower}{numeric in \eqn{(0, 1)}; if \code{pip} is \code{NULL}, then
+\code{pip_lower} will be the least value in \code{pip}. \code{1e-5} by default}
+
+\item{pip_upper}{\code{NULL} OR  numeric in \eqn{(0, 1)}; if \code{pip} is \code{NULL}, then
+\code{pip_upper} will be the greatest value in \code{pip}. If \code{sbsq} is \code{NULL},
+\code{pip_upper} will be used to calculate \code{sbsq_upper}. If \code{NULL}, \code{pip_upper}
+will be calculated for each variable \eqn{X_j}{Xj} fixed as the response as:\preformatted{lasso <- glmnet::cv.glmnet(X, X_j)
+non0 <- sum(glmnet::coef.glmnet(lasso, s = "lambda.1se")[-1] != 0)
+non0 <- min(max(non0, 1), p - 1)
+pip_upper <- non0 / p
+}
+
+\code{NULL} by default}
+
+\item{tau}{\code{NULL} OR positive numeric OR numeric vector of length \eqn{n}
+with positive entries; bandwidth parameter. Greater values allow for more
+information to be shared between observations. Allows for global or
+observation-specific specification. If \code{NULL}, use 2-step KDE methodology as
+described in (2) to calculate observation-specific bandwidths. \code{NULL} by
+default}
+
+\item{norm}{numeric in \eqn{[1, \infty]}{[1, Inf]}; norm to use when
+calculating weights. \code{Inf} results in infinity norm. \code{2} by default}
+
+\item{center_X}{logical; if \code{T}, center \code{X} column-wise to mean \eqn{0}.
+\code{T} by default}
+
+\item{scale_Z}{logical; if \code{T}, center and scale \code{Z} column-wise to mean
+\eqn{0}, standard deviation \eqn{1} prior to calculating the weights. \code{T} by
+default}
+
+\item{alpha_tol}{positive numeric; end CAVI when the Frobenius norm of the
+change in the alpha matrix is within \code{alpha_tol}. \code{1e-5} by default}
+
+\item{max_iter_grid}{positive integer; if tolerance criteria has not been
+met by \code{max_iter_grid} iterations during grid search, end CAVI. After grid
+search has completed, CAVI is performed with the final hyperparameters
+selected by grid search for at most \code{max_iter} iterations. Does not apply to
+\code{hp_method = "model_average"}. \code{10} by default}
+
+\item{max_iter}{positive integer; if tolerance criteria has not been met by
+\code{max_iter} iterations, end CAVI. \code{100} by default}
+
+\item{edge_threshold}{numeric in \eqn{(0, 1)}; a graph for each observation
+will be constructed by including an edge between variable \eqn{i} and
+variable \eqn{j} if, and only if, the \eqn{(i, j)} entry of the symmetrized
+posterior inclusion probability matrix corresponding to the observation is
+greater than \code{edge_threshold}. \code{0.5} by default}
+
+\item{sym_method}{\code{character} in \code{c("mean","max","min")}; to symmetrize
+the posterior inclusion probability matrix for each observation, the
+\eqn{(i, j)} and \eqn{(j, i)} entries will be post-processed as \code{sym_method}
+applied to the \eqn{(i, j)} and \eqn{(j, i)} entries. \code{"mean"} by default}
+
+\item{parallel}{logical; if \code{T}, hyperparameter selection and CAVI for each
+of the \eqn{p} variables will be performed in parallel using \code{foreach}.
+Parallel backend may be registered prior to making a call to \code{covdepGE}. If
+no active parallel backend can be detected, then parallel backend will be
+automatically registered using:\preformatted{doParallel::registerDoParallel(num_workers)
+}}
+
+\item{num_workers}{\code{NULL} OR positive integer less than or equal to
+\code{parallel::detectCores()}; argument to \code{doParallel::registerDoParallel} if
+\code{parallel = T} and no parallel backend is detected. If \code{NULL}, then:\preformatted{num_workers <- floor(parallel::detectCores() / 2)
+}
+
+\code{NULL} by default}
+
+\item{prog_bar}{logical; if \code{T}, then a progress bar will be displayed
+denoting the number of remaining variables to fix as the response and perform
+CAVI. If \code{parallel}, no progress bar will be displayed. \code{T} by default}
+}
+\value{
+Returns list with the following values:
+
+\enumerate{
+
+\item \code{graphs}: list with the following values:
+
+\itemize{
+\item \code{graphs}: list of \eqn{n} numeric matrices of dimension
+\eqn{p \times p}{p x p}; the \eqn{l}-th matrix is the adjacency matrix
+for the \eqn{l}-th observation
+\item \code{unique_graphs}: list; the \eqn{l}-th element is a list containing
+the \eqn{l}-th unique graph and the indices of the observation(s)
+corresponding to this graph
+\item \code{inclusion_probs_sym}: list of \eqn{n} numeric matrices of
+dimension \eqn{p \times p}{p x p}; the \eqn{l}-th matrix is the
+symmetrized posterior inclusion probability matrix for the \eqn{l}-th
+observation
+\item \code{inclusion_probs_asym}: list of \eqn{n} numeric matrices of
+dimension \eqn{p \times p}{p x p}; the \eqn{l}-th matrix is the
+posterior inclusion probability matrix for the \eqn{l}-th observation
+prior to symmetrization
+}
+
+\item \code{variational_params}: list with the following values:
+
+\itemize{
+\item \code{alpha}: list of \eqn{p} numeric matrices of dimension
+\eqn{n \times (p - 1)}{n x (p - 1)}; the \eqn{(i, j)} entry of the
+\eqn{k}-th matrix is the variational approximation to the posterior
+inclusion probability of the \eqn{j}-th variable in a weighted
+regression with variable \eqn{k} fixed as the response, where the
+weights are taken with respect to observation \eqn{i}
+\item \code{mu}: list of \eqn{p} numeric matrices of dimension
+\eqn{n \times (p - 1)}{n x (p - 1)}; the \eqn{(i, j)} entry of the
+\eqn{k}-th matrix is the variational approximation to the posterior slab
+mean for the \eqn{j}-th variable in a weighted regression with variable
+\eqn{k} fixed as the response, where the weights are taken with respect
+to observation \eqn{i}
+\item \code{ssq_var}: list of \eqn{p} numeric
+matrices of dimension \eqn{n \times (p - 1)}{n x (p - 1)}; the
+\eqn{(i, j)} entry of the \eqn{k}-th matrix is the variational
+approximation to the posterior slab variance for the \eqn{j}-th variable
+in a weighted regression with variable \eqn{k} fixed as the response,
+where the weights are taken with respect to observation \eqn{i}
+}
+
+\item \code{hyperparameters}: list of \eqn{p} lists; the \eqn{j}-th list has the
+following values for variable \eqn{j} fixed as the response:
+
+\itemize{
+\item \code{grid}: matrix of candidate hyperparameter values, corresponding
+ELBO, and iterations to converge
+\item \code{final}: the final hyperparameters chosen by grid search and the
+ELBO and iterations to converge for these hyperparameters
+}
+
+\item \code{model_details}: list with the following values:
+
+\itemize{
+\item \code{elapsed}: amount of time to fit the model
+\item \code{n}: number of observations
+\item \code{p}: number of variables
+\item \code{ELBO}: ELBO summed across all observations and variables. If
+\code{hp_method} is \code{"model_average"} or \code{"hybrid"}, this ELBO is averaged
+across the hyperparameter grid using the model averaging weights for
+each variable
+\item \code{num_unique}: number of unique graphs
+\item \code{grid_size}: number of points in the hyperparameter grid
+\item \code{args}: list containing all passed arguments of length \eqn{1}
+}
+
+\item \code{weights}: list with the following values:
+
+\itemize{
+\item \code{weights}: \eqn{n} \code{x} \eqn{n} numeric matrix. The \eqn{(i, j)}
+entry is the similarity weight of the \eqn{i}-th observation with respect
+to the \eqn{j}-th observation using the \eqn{j}-th observation's bandwidth
+\item \code{bandwidths}: numeric vector of length \eqn{n}. The \eqn{i}-th entry
+is the bandwidth for the \eqn{i}-th observation
+}
+}
+}
 \description{
 Model the conditional dependence structure of \code{X} as a function
 of \code{Z} as described in (1)
 }
-\examples{
+\section{Overview}{
+Suppose that \code{X} is a \eqn{p}-dimensional data matrix with \eqn{n}
+observations and that \code{Z} is a \eqn{q}-dimensional extraneous covariate, also
+with \eqn{n} observations, where the \eqn{l}-th observation in \code{Z} is
+associated with the \eqn{l}-th observation in \code{X}. Further suppose that the
+\eqn{l}-th row of \code{X} follows a \eqn{p}-dimensional Gaussian distribution
+with mean \eqn{0} and precision matrix \eqn{\Omega(z_l)}{Omega(zl)}, where
+\eqn{z_l}{zl} is the \eqn{l}-th entry of \code{Z} and \eqn{\Omega}{Omega} is a
+continuous function mapping from the space of extraneous covariates to the
+space of \eqn{p \times p}{p x p} non-singular matrices. Then, for the
+\eqn{l}-th observation, the (\eqn{j},\eqn{k}) entry of
+\eqn{\Omega(z_l)}{Omega(zl)} is non-zero if, and only if, variable \eqn{j}
+and variable \eqn{k} are dependent given the remaining variables in \code{X}.
 
+Given data satisfying these assumptions, the \code{covdepGE} function employs the
+algorithm described in (1) to estimate a graphical representation of the
+structure of \eqn{\Omega}{Omega} for each of the observations in \code{X} as a
+continuous function of \code{Z}. This graph contains an undirected edge between
+two variables \eqn{X_j}{Xj} and \eqn{X_k}{Xk} if, and only if, \eqn{X_j}{Xj}
+and \eqn{X_k}{Xk} are conditionally dependent given the remaining variables.
+Two core components of this methodology are the weighted psuedo-likelihood
+framework in which inference is conducted via a block-mean variational
+approximation.
+}
+
+\section{Graph Estimation}{
+Graphs are constructed under the psuedo-likelihood paradigm by fixing each of
+the columns \eqn{X_j}{Xj} of \code{X} as the response and performing a
+spike-and-slab regression using the remaining variables \eqn{X_k}{Xk} in \code{X}
+as predictors. To determine if an edge should be added between \eqn{X_j}{Xj}
+and \eqn{X_k}{Xk}, the posterior inclusion probability of \eqn{X_k}{Xk} in a
+regression with \eqn{X_j}{Xj} fixed as the response
+(\eqn{PIP_j(X_k)}{PIPj(Xk)}) and vice versa (\eqn{PIP_k(X_j)}{PIPk(Xj)}) are
+symmetrized according to \code{sym_method} (e.g., by taking the mean of
+\eqn{PIP_k(X_j)}{PIPk(Xj)} and \eqn{PIP_j(X_k)}{PIPj(Xk)}). If the
+symmetrized \eqn{PIP} is greater than \code{edge_threshold}, an edge will be
+included between \eqn{X_j}{Xj} and \eqn{X_k}{Xk}.
+
+To model \eqn{\Omega}{Omega} as a function of \code{Z}, \eqn{n} weighted
+spike-and-slab regressions are performed for each variable \eqn{X_j}{Xj}
+fixed as the response. The similarity weights for the \eqn{l}-th regression
+are taken with respect to observation \eqn{l} such that observations having
+similar values of \code{Z} will have larger weights. These similarity weights in
+conjunction with the psuedo-likelihood framework comprise the weighted
+psuedo-likelihood approach introduced by (1).
+}
+
+\section{Variational Inference}{
+Spike-and-slab posterior quantities are estimated using a block-mean
+variational approximation. Coordinate Ascent Variational Inference (CAVI) is
+performed for each of the weighted regressions to select the variational
+parameters that maximize the ELBO. The parameters for each of the regression
+coefficients are the mean and variance of the slab (\eqn{\mu}{mu} and
+\eqn{\sigma^2_{\rm{var}}}{ssq_var}, respectively) and the probability that
+the coefficient is non-zero (\eqn{\alpha}{alpha}).
+
+CAVI for the \eqn{n} regressions is performed simultaneously for variable
+\eqn{X_j}{Xj} fixed as the response. With each of the \eqn{n} sets of
+\eqn{\alpha}{alpha} as the rows of an \eqn{n \times (p - 1)}{n x (p - 1)}
+matrix, the CAVI for variable \eqn{X_j}{Xj} is ended for all \eqn{n}
+regressions when the Frobenius norm of the change in the \eqn{\alpha}{alpha}
+matrix is less than \code{alpha_tol} or after \code{max_iter} iterations of CAVI have
+been performed.
+
+Note that since the regressions performed for variable \eqn{X_j}{Xj} and
+\eqn{X_k}{Xk} fixed as the response are independent of each other, they may
+be performed in parallel by setting \code{parallel = T}. Registering parallel
+backend with greater than \eqn{p} workers offers no benefit, since each
+worker takes on one variable to fix as the response and perform the \eqn{n}
+regressions.
+}
+
+\section{Hyperparameter specification}{
+Each regression requires the specification of \eqn{3} hyperparameters:
+\eqn{\pi}{pi} (the prior probability of inclusion), \eqn{\sigma^2}{sigma^2}
+(the prior residual variance), and \eqn{\sigma_\beta^2}{sigma_beta^2} (the
+prior variance of the slab). \code{covdepGE} offers \eqn{3} methods for
+hyperparameter specification via the \code{hp_method} argument: \code{grid_search},
+\code{model_average}, and \code{hybrid}. Empirically, \verb{grid search} offers the best
+sensitivity and \code{model_average} offers the best specificity, while \code{hybrid}
+sits between the other two methods in both metrics.
+
+The hyperparameter candidate grid is generated by taking the Cartesian
+product between \code{ssq}, \code{sbsq}, and \code{pip} (candidate values for
+\eqn{\sigma^2}{sigma^2}, \eqn{\sigma_\beta^2}{sigma_beta^2}, and
+\eqn{\pi}{pi}, respectively). Each of the methods gives an approach for
+selecting points from this grid.
+
+In \code{grid_search}, the point from the grid that produces the model that has
+the greatest total ELBO is selected, where the total ELBO is calculated by
+summing the ELBO for each of the \eqn{n} regressions for a variable
+\eqn{X_j}{Xj} fixed as the response. Thus, all observations use the same set
+of hyperparameters for the regression on \eqn{X_j}{Xj}.
+
+Instead of selecting only one model as in \code{grid_search}, models are averaged
+over in \code{model_average}. With \eqn{X_j}{Xj} fixed as the response, the
+unnormalized weights for each grid point used to perform this averaging is
+calculated by exponentiating the ELBO for each of the \eqn{n} regressions.
+Note that since the ELBO for a given grid point will vary across the \eqn{n}
+regressions due to differing similarity weights, each of the \eqn{n} sets of
+averaging weights will be unique.
+
+Finally, \code{hybrid} combines \code{grid_search} and \code{model_average}. Fixing
+\eqn{X_j}{Xj} as the response, for each \eqn{\pi}{pi} candidate in \code{pip}, the
+point in the grid defined by the Cartesian product of \code{ssq} and \code{sbsq} is
+selected by maximizing the total ELBO summed across the \eqn{n} regressions.
+The resulting models for each of the \eqn{\pi}{pi} candidates are then
+averaged using the exponentiated ELBO for each of the \eqn{n} regressions as
+the unnormalized averaging weights.
+
+Note that in the search step of \code{grid_search} and \code{hybrid}, CAVI for each of
+the grid points is performed for at most \code{max_iter_grid} iterations. A second
+CAVI is then performed for \code{max_iter} iterations using the \eqn{n} models
+that maximized the total ELBO in the first step. Setting \code{max_iter_grid} to
+be less than \code{max_iter} (as is the default) will result in a more efficient
+search.
+}
+
+\section{Candidate grid generation}{
+The candidate grids (\code{ssq}, \code{sbsq}, and \code{pip}) may be passed as arguments,
+however, by default, these grids are generated automatically. Each of the
+grids are spaced uniformly between an upper end point and a lower end point.
+The number of points in each grid is \code{5} by default. Grids include end
+points, and the number of points in each grid is controlled by the arguments
+\code{nssq}, \code{nsbsq}, and \code{npip}. The lower endpoints (\code{ssq_lower}, \code{sbsq_lower},
+and \code{pip_lower}) are all \code{1e-5} by default. The upper endpoints are
+calculated dependent on the variable \eqn{X_j}{Xj} fixed as the response.
+
+\code{ssq_upper} is simply the variance of \eqn{X_j}{Xj} times \code{ssq_mult}. By
+default, \code{ssq_mult} is \code{1.5}.
+
+\code{pip_upper} is calculated by regressing the remaining variables on
+\eqn{X_j}{Xj} using LASSO. The shrinkage hyperparameter for LASSO is chosen
+to be \code{lambda.1se}. The number of non-zero coefficients estimated by LASSO is
+then divided by \code{p - 1} to calculate \code{pip_upper}. Note that if the LASSO
+estimate to the number of non-zero coefficients is \code{0} or \code{p - 1}, this
+estimate is changed to \code{1} or \code{p-2} (respectively) to ensure that \code{pip_upper}
+is greater than \eqn{0} and less than \eqn{1}.
+
+Finally, an upper bound is induced on \eqn{\sigma_\beta^2}{sigma_beta^2} by
+deriving a rough upper bound for the signal-to-noise ratio that depends on
+\eqn{\sigma_\beta^2}{sigma_beta^2}. Let \eqn{\Sigma S_j^2}{sum_S^2} be the
+sum of the sample variances of the columns of the predictors \eqn{X’}. Under
+the simplifying assumptions that the expected values of \eqn{X’} and the
+spike-and-slab regression coefficients \eqn{\beta}{beta} are \eqn{0} and that
+\eqn{X’} and \eqn{\beta}{beta} are independent, the variance of the dot
+product of \eqn{X’} with \eqn{\beta}{beta} is:
+
+\deqn{\pi\cdot \sigma^2 \cdot\sigma_\beta^2\cdot \Sigma S_j^2}{
+pi * sigma^2 * sigma_beta^2 * sum_S^2}
+
+Thus, the signal-to-noise ratio under these assumptions is given by:
+
+\deqn{\pi\cdot \sigma_\beta^2\cdot \Sigma S_j^2}{pi * sigma_beta^2 * sum_S^2}
+
+Replacing \eqn{\pi}{pi} with \code{pip_upper} and
+\eqn{\sigma_\beta^2}{sigma_beta^2} with \code{sbsq_upper} gives an upper bound on
+the signal-to-noise ratio. Setting this bound equal to \code{snr_upper} gives an
+expression for \code{sbsq_upper}.
+}
+
+\section{Similarity Weights}{
+The similarity weight for observation \eqn{k} with respect to observation
+\eqn{l} is calculated as:
+
+\deqn{\phi_{\tau_l}(||z_l - z_k||)}{dnorm(||z_l - z_k||, tau_l)}
+
+Where \eqn{|| \cdot ||}{||.||} denotes the norm specified
+by the \code{norm} argument, \eqn{z_l}{zl} and \eqn{z_k}{zk} are the values of \code{Z}
+for the \eqn{l}-th and \eqn{k}-th observations,
+\eqn{\phi_{\tau l}}{dnorm(., tau_l)} is the univariate Gaussian desity with
+standard deviation \eqn{\tau_l}{tau_l} and \eqn{\tau_l}{tau_l} is the
+bandwidth for the \eqn{l}-th observation (the \eqn{l}-th observation in
+\code{tau}).
+
+\code{tau} may be passed as an argument, however, by default, it is estimated
+using the methodology given in (2). (2) describes a two-step approach for
+density estimation, where in the first step, an initial estimate is
+calculated using Silverman’s rule of thumb for initializing bandwidth values,
+and in the second step, the density is refined by updating the bandwidth
+values. This methodology is used here to estimate the density of \code{Z}, and the
+updated bandwidths from the second step are used for \code{tau}.
+}
+
+\examples{
 library(ggplot2)
 
 # get the data
-set.seed(1)
+set.seed(12)
 data <- generateData()
-X <- data$data
-Z <- data$covts
+X <- data$X
+Z <- data$Z
 interval <- data$interval
 prec <- data$true_precision
 
@@ -55,41 +475,42 @@ prec <- data$true_precision
 n <- nrow(X)
 n1 <- sum(interval == 1)
 n2 <- sum(interval == 2)
+n3 <- sum(interval == 3)
 
 # visualize the distribution of the extraneous covariate
 ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
-geom_histogram(aes(Z, fill = interval), color = "black", bins = n \%/\% 5)
+  geom_histogram(aes(Z, fill = interval), color = "black", bins = n \%/\% 5)
 
 # visualize the true precision matrices in each of the intervals
 
 # interval 1
 matViz(prec[[1]], incl_val = TRUE) +
-ggtitle("True precision matrix, interval 1")
+  ggtitle(paste0("True precision matrix, interval 1, observations 1,...,", n1))
 
 # interval 2 (varies continuously with Z)
+cat("\nInterval 2, observations ", n1 + 1, ",...,", n1 + n2, sep = "")
 int2_mats <- prec[interval == 2]
 int2_inds <- c(5, n2 \%/\% 2, n2 - 5)
 lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-ggtitle(paste("True precision matrix, interval 2, observation", j)))
+         ggtitle(paste("True precision matrix, interval 2, observation", j + n1)))
 
 # interval 3
 matViz(prec[[length(prec)]], incl_val = TRUE) +
-ggtitle("True precision matrix, interval 3")
+  ggtitle(paste0("True precision matrix, interval 3, observations ",
+                 n1 + n2 + 1, ",...,", n1 + n2 + n3))
 
-# fit the model and visualize the estimated precision matrices
+# fit the model and visualize the estimated graphs
 (out <- covdepGE(X, Z))
 plot(out)
 
-# visualize the inclusion probabilities for variables (1, 3) and
+# visualize the posterior inclusion probabilities for variables (1, 3) and (1, 2)
 inclusionCurve(out, 1, 2)
 inclusionCurve(out, 1, 3)
-
 }
 \references{
-\enumerate{
-\item Dasgupta S., Ghosh P., Pati D., Mallick B., \emph{An approximate Bayesian
-approach to covariate dependent graphical modeling}, 2021
-\item Dasgupta S., Pati D., Srivastava A., \emph{A Two-Step Geometric Framework For
+(1) Dasgupta S., Zhao P., Ghosh P., Pati D., Mallick B., \emph{An approximate
+Bayesian approach to covariate dependent graphical modeling}, 2021
+
+(2) Dasgupta S., Pati D., Srivastava A., \emph{A Two-Step Geometric Framework For
 Density Modeling}, Statistica Sinica, 2020
-}
 }

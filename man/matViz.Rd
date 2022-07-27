@@ -2,7 +2,7 @@
 % Please edit documentation in R/plots.R
 \name{matViz}
 \alias{matViz}
-\title{Visualize a \code{matrix}}
+\title{Visualize a matrix}
 \usage{
 matViz(
   x,
@@ -18,7 +18,7 @@ matViz(
 )
 }
 \arguments{
-\item{x}{\code{matrix}; \code{matrix} to be visualized}
+\item{x}{matrix; matrix to be visualized}
 
 \item{color1}{color; color for low entries. \code{"white"} by default}
 
@@ -29,10 +29,10 @@ matViz(
 \item{incl_val}{logical; if \code{T}, the value for each entry will be displayed.
 \code{F} by default}
 
-\item{prec}{positive \code{integer}; number of decimal places to round entries to if
+\item{prec}{positive integer; number of decimal places to round entries to if
 \code{incl_val} is \code{T}. \code{2} by default}
 
-\item{font_size}{positive \code{numeric}; size of font if \code{incl_val} is \code{T}. \code{3}
+\item{font_size}{positive numeric; size of font if \code{incl_val} is \code{T}. \code{3}
 by default}
 
 \item{font_color1}{color; color of font for low entries if \code{incl_val} is \code{T}.
@@ -41,24 +41,23 @@ by default}
 \item{font_color2}{color; color of font for high entries if \code{incl_val} is
 \code{T}. \code{"white"} by default}
 
-\item{font_thres}{\code{numeric}; values less than \code{font_thres} will be displayed
+\item{font_thres}{numeric; values less than \code{font_thres} will be displayed
 in \code{font_color1} if \code{incl_val} is \code{T}. \code{mean(x)} by default}
 }
 \value{
-Returns \code{ggplot2} visualization of \code{matrix}
+Returns \code{ggplot2} visualization of matrix
 }
 \description{
-Create a visualization of a \code{matrix}
+Create a visualization of a matrix
 }
 \examples{
-
 library(ggplot2)
 
 # get the data
-set.seed(1)
+set.seed(12)
 data <- generateData()
-X <- data$data
-Z <- data$covts
+X <- data$X
+Z <- data$Z
 interval <- data$interval
 prec <- data$true_precision
 
@@ -66,33 +65,35 @@ prec <- data$true_precision
 n <- nrow(X)
 n1 <- sum(interval == 1)
 n2 <- sum(interval == 2)
+n3 <- sum(interval == 3)
 
 # visualize the distribution of the extraneous covariate
 ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
-geom_histogram(aes(Z, fill = interval), color = "black", bins = n \%/\% 5)
+  geom_histogram(aes(Z, fill = interval), color = "black", bins = n \%/\% 5)
 
 # visualize the true precision matrices in each of the intervals
 
 # interval 1
 matViz(prec[[1]], incl_val = TRUE) +
-ggtitle("True precision matrix, interval 1")
+  ggtitle(paste0("True precision matrix, interval 1, observations 1,...,", n1))
 
 # interval 2 (varies continuously with Z)
+cat("\nInterval 2, observations ", n1 + 1, ",...,", n1 + n2, sep = "")
 int2_mats <- prec[interval == 2]
 int2_inds <- c(5, n2 \%/\% 2, n2 - 5)
 lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-ggtitle(paste("True precision matrix, interval 2, observation", j)))
+         ggtitle(paste("True precision matrix, interval 2, observation", j + n1)))
 
 # interval 3
 matViz(prec[[length(prec)]], incl_val = TRUE) +
-ggtitle("True precision matrix, interval 3")
+  ggtitle(paste0("True precision matrix, interval 3, observations ",
+                 n1 + n2 + 1, ",...,", n1 + n2 + n3))
 
-# fit the model and visualize the estimated precision matrices
+# fit the model and visualize the estimated graphs
 (out <- covdepGE(X, Z))
 plot(out)
 
-# visualize the inclusion probabilities for variables (1, 3) and (1, 2)
+# visualize the posterior inclusion probabilities for variables (1, 3) and (1, 2)
 inclusionCurve(out, 1, 2)
 inclusionCurve(out, 1, 3)
-
 }

@@ -162,7 +162,7 @@ bandwidth values. This methodology is used here to estimate the density of
 
 ## Bibliography 
 
-1. Dasgupta S., Ghosh P., Pati D., Mallick B., *An approximate Bayesian
+1. Dasgupta S., Zhao P., Ghosh P., Pati D., Mallick B., *An approximate Bayesian
 approach to covariate dependent graphical modeling*, 2021
 
 2. Dasgupta S., Pati D., Srivastava A., *A Two-Step Geometric Framework For
@@ -177,8 +177,8 @@ library(ggplot2)
 # get the data
 set.seed(12)
 data <- generateData()
-X <- data$data
-Z <- data$covts
+X <- data$X
+Z <- data$Z
 interval <- data$interval
 prec <- data$true_precision
 
@@ -186,6 +186,7 @@ prec <- data$true_precision
 n <- nrow(X)
 n1 <- sum(interval == 1)
 n2 <- sum(interval == 2)
+n3 <- sum(interval == 3)
 
 # visualize the distribution of the extraneous covariate
 ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
@@ -194,19 +195,22 @@ ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
 # visualize the true precision matrices in each of the intervals
 
 # interval 1
-matViz(prec[[1]], incl_val = T) + ggtitle("True precision matrix, interval 1")
+matViz(prec[[1]], incl_val = TRUE) +
+  ggtitle(paste0("True precision matrix, interval 1, observations 1,...,", n1))
 
 # interval 2 (varies continuously with Z)
+cat("\nInterval 2, observations ", n1 + 1, ",...,", n1 + n2, sep = "")
 int2_mats <- prec[interval == 2]
 int2_inds <- c(5, n2 %/% 2, n2 - 5)
-lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = T) +
-         ggtitle(paste("True precision matrix, interval 2, individual", j)))
+lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
+         ggtitle(paste("True precision matrix, interval 2, observation", j + n1)))
 
 # interval 3
-matViz(prec[[length(prec)]], incl_val = T) +
-  ggtitle("True precision matrix, interval 3")
+matViz(prec[[length(prec)]], incl_val = TRUE) +
+  ggtitle(paste0("True precision matrix, interval 3, observations ",
+                 n1 + n2 + 1, ",...,", n1 + n2 + n3))
 
-# fit the model and visualize the estimated precision matrices
+# fit the model and visualize the estimated graphs
 (out <- covdepGE(X, Z))
 plot(out)
 

@@ -180,7 +180,8 @@
 #' @param prog_bar logical; if `T`, then a progress bar will be displayed
 #' denoting the number of remaining variables to fix as the response and perform
 #' CAVI. If `parallel`, no progress bar will be displayed. `T` by default
-#' ## -----------------------------RETURNS-----------------------------------------@return Returns list with the following values:
+## -----------------------------RETURNS-----------------------------------------
+#' @return Returns list with the following values:
 #'
 #' \enumerate{
 #'
@@ -206,24 +207,24 @@
 #'  \item `variational_params`: list with the following values:
 #'
 #'    \itemize{
-#'      \item \eqn{\alpha}{alpha}: list of \eqn{p} numeric matrices of dimension
+#'      \item `alpha`: list of \eqn{p} numeric matrices of dimension
 #'      \eqn{n \times (p - 1)}{n x (p - 1)}; the \eqn{(i, j)} entry of the
 #'      \eqn{k}-th matrix is the variational approximation to the posterior
 #'      inclusion probability of the \eqn{j}-th variable in a weighted
 #'      regression with variable \eqn{k} fixed as the response, where the
 #'      weights are taken with respect to observation \eqn{i}
-#'      \item \eqn{\mu}{mu}: list of \eqn{p} numeric matrices of dimension
+#'      \item `mu`: list of \eqn{p} numeric matrices of dimension
 #'      \eqn{n \times (p - 1)}{n x (p - 1)}; the \eqn{(i, j)} entry of the
 #'      \eqn{k}-th matrix is the variational approximation to the posterior slab
 #'      mean for the \eqn{j}-th variable in a weighted regression with variable
 #'      \eqn{k} fixed as the response, where the weights are taken with respect
 #'      to observation \eqn{i}
-#'      \item \eqn{\sigma^2_{\text{var}}}{ssq_var}: list of \eqn{p} numeric matrices of dimension
-#'      \eqn{n \times (p - 1)}{n x (p - 1)}; the \eqn{(i, j)} entry of the
-#'      \eqn{k}-th matrix is the variational approximation to the posterior slab
-#'      variance for the \eqn{j}-th variable in a weighted regression with
-#'      variable \eqn{k} fixed as the response, where the weights are taken with
-#'      respect to observation \eqn{i}
+#'      \item `ssq_var`: list of \eqn{p} numeric
+#'      matrices of dimension \eqn{n \times (p - 1)}{n x (p - 1)}; the
+#'      \eqn{(i, j)} entry of the \eqn{k}-th matrix is the variational
+#'      approximation to the posterior slab variance for the \eqn{j}-th variable
+#'      in a weighted regression with variable \eqn{k} fixed as the response,
+#'      where the weights are taken with respect to observation \eqn{i}
 #'    }
 #'
 #'  \item `hyperparameters`: list of \eqn{p} lists; the \eqn{j}-th list has the
@@ -263,14 +264,13 @@
 #'  }
 ## -----------------------------EXAMPLES----------------------------------------
 #' @examples
-#'
 #' library(ggplot2)
 #'
 #' # get the data
-#' set.seed(1)
+#' set.seed(12)
 #' data <- generateData()
-#' X <- data$data
-#' Z <- data$covts
+#' X <- data$X
+#' Z <- data$Z
 #' interval <- data$interval
 #' prec <- data$true_precision
 #'
@@ -278,35 +278,37 @@
 #' n <- nrow(X)
 #' n1 <- sum(interval == 1)
 #' n2 <- sum(interval == 2)
+#' n3 <- sum(interval == 3)
 #'
 #' # visualize the distribution of the extraneous covariate
 #' ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
-#' geom_histogram(aes(Z, fill = interval), color = "black", bins = n %/% 5)
+#'   geom_histogram(aes(Z, fill = interval), color = "black", bins = n %/% 5)
 #'
 #' # visualize the true precision matrices in each of the intervals
 #'
 #' # interval 1
 #' matViz(prec[[1]], incl_val = TRUE) +
-#' ggtitle("True precision matrix, interval 1")
+#'   ggtitle(paste0("True precision matrix, interval 1, observations 1,...,", n1))
 #'
 #' # interval 2 (varies continuously with Z)
+#' cat("\nInterval 2, observations ", n1 + 1, ",...,", n1 + n2, sep = "")
 #' int2_mats <- prec[interval == 2]
 #' int2_inds <- c(5, n2 %/% 2, n2 - 5)
 #' lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-#' ggtitle(paste("True precision matrix, interval 2, observation", j)))
+#'          ggtitle(paste("True precision matrix, interval 2, observation", j + n1)))
 #'
 #' # interval 3
 #' matViz(prec[[length(prec)]], incl_val = TRUE) +
-#' ggtitle("True precision matrix, interval 3")
+#'   ggtitle(paste0("True precision matrix, interval 3, observations ",
+#'                  n1 + n2 + 1, ",...,", n1 + n2 + n3))
 #'
-#' # fit the model and visualize the estimated precision matrices
+#' # fit the model and visualize the estimated graphs
 #' (out <- covdepGE(X, Z))
 #' plot(out)
 #'
-#' # visualize the inclusion probabilities for variables (1, 3) and
+#' # visualize the posterior inclusion probabilities for variables (1, 3) and (1, 2)
 #' inclusionCurve(out, 1, 2)
 #' inclusionCurve(out, 1, 3)
-#'
 ## -----------------------------DETAILS-----------------------------------------
 #' @details
 #' # Overview
@@ -330,35 +332,40 @@
 #' continuous function of `Z`. This graph contains an undirected edge between
 #' two variables \eqn{X_j}{Xj} and \eqn{X_k}{Xk} if, and only if, \eqn{X_j}{Xj}
 #' and \eqn{X_k}{Xk} are conditionally dependent given the remaining variables.
+#' Two core components of this methodology are the weighted psuedo-likelihood
+#' framework in which inference is conducted via a block-mean variational
+#' approximation.
 #'
 #' # Graph Estimation
 #'
-#' Graphs are constructed by fixing each of the columns \eqn{X_j}{Xj} of `X` as
-#' the response and performing a spike-and-slab regression using the remaining
-#' variables \eqn{X_k}{Xk} in `X` as predictors. To determine if an edge should
-#' be added between \eqn{X_j}{Xj} and \eqn{X_k}{Xk}, the posterior inclusion
-#' probability of \eqn{X_k}{Xk} in a regression with \eqn{X_j}{Xj} fixed as the
-#' response (\eqn{PIP_j(X_k)}{PIPj(Xk)}) and vice versa
-#' (\eqn{PIP_k(X_j)}{PIPk(Xj)}) are symmetrized according to `sym_method` (e.g.,
-#' by taking the mean of \eqn{PIP_k(X_j)}{PIPk(Xj)} and
-#' \eqn{PIP_j(X_k)}{PIPj(Xk)}). If the symmetrized PIP is greater than
-#' `edge_threshold`, an edge will be included between \eqn{X_j}{Xj} and
-#' \eqn{X_k}{Xk}.
+#' Graphs are constructed under the psuedo-likelihood paradigm by fixing each of
+#' the columns \eqn{X_j}{Xj} of `X` as the response and performing a
+#' spike-and-slab regression using the remaining variables \eqn{X_k}{Xk} in `X`
+#' as predictors. To determine if an edge should be added between \eqn{X_j}{Xj}
+#' and \eqn{X_k}{Xk}, the posterior inclusion probability of \eqn{X_k}{Xk} in a
+#' regression with \eqn{X_j}{Xj} fixed as the response
+#' (\eqn{PIP_j(X_k)}{PIPj(Xk)}) and vice versa (\eqn{PIP_k(X_j)}{PIPk(Xj)}) are
+#' symmetrized according to `sym_method` (e.g., by taking the mean of
+#' \eqn{PIP_k(X_j)}{PIPk(Xj)} and \eqn{PIP_j(X_k)}{PIPj(Xk)}). If the
+#' symmetrized \eqn{PIP} is greater than `edge_threshold`, an edge will be
+#' included between \eqn{X_j}{Xj} and \eqn{X_k}{Xk}.
 #'
 #' To model \eqn{\Omega}{Omega} as a function of `Z`, \eqn{n} weighted
 #' spike-and-slab regressions are performed for each variable \eqn{X_j}{Xj}
 #' fixed as the response. The similarity weights for the \eqn{l}-th regression
 #' are taken with respect to observation \eqn{l} such that observations having
-#' similar values of `Z` will have larger weights.
+#' similar values of `Z` will have larger weights. These similarity weights in
+#' conjunction with the psuedo-likelihood framework comprise the weighted
+#' psuedo-likelihood approach introduced by (1).
 #'
 #' # Variational Inference
 #'
-#' Spike-and-slab posterior quantities are estimated using a variational
-#' approximation. Coordinate Ascent Variational Inference (CAVI) is performed
-#' for each of the weighted regressions to select the variational parameters
-#' that maximize the ELBO. The parameters for each of the regression
+#' Spike-and-slab posterior quantities are estimated using a block-mean
+#' variational approximation. Coordinate Ascent Variational Inference (CAVI) is
+#' performed for each of the weighted regressions to select the variational
+#' parameters that maximize the ELBO. The parameters for each of the regression
 #' coefficients are the mean and variance of the slab (\eqn{\mu}{mu} and
-#' \eqn{\sigma^2_{\text{var}}}{ssq_var}, respectively) and the probability that
+#' \eqn{\sigma^2_{\rm{var}}}{ssq_var}, respectively) and the probability that
 #' the coefficient is non-zero (\eqn{\alpha}{alpha}).
 #'
 #' CAVI for the \eqn{n} regressions is performed simultaneously for variable
@@ -440,25 +447,25 @@
 #' \eqn{X_j}{Xj} using LASSO. The shrinkage hyperparameter for LASSO is chosen
 #' to be `lambda.1se`. The number of non-zero coefficients estimated by LASSO is
 #' then divided by `p - 1` to calculate `pip_upper`. Note that if the LASSO
-#' estimate to the number of non-zero coefficients is `0` or `p - 1`, this
+#' estimate to the number of non-zero coefficients is \eqn{0} or \eqn{p - 1}, this
 #' estimate is changed to `1` or `p-2` (respectively) to ensure that `pip_upper`
 #' is greater than \eqn{0} and less than \eqn{1}.
 #'
 #' Finally, an upper bound is induced on \eqn{\sigma_\beta^2}{sigma_beta^2} by
 #' deriving a rough upper bound for the signal-to-noise ratio that depends on
-#' \eqn{\sigma_\beta^2}{sigma_beta^2}. Let \eqn{\Sigma S_j^2}{sum_S^2} be the
+#' \eqn{\sigma_\beta^2}{sigma_beta^2}. Let \eqn{\Sigma s_j^2}{sum_S^2} be the
 #' sum of the sample variances of the columns of the predictors \eqn{X’}. Under
 #' the simplifying assumptions that the expected values of \eqn{X’} and the
 #' spike-and-slab regression coefficients \eqn{\beta}{beta} are \eqn{0} and that
 #' \eqn{X’} and \eqn{\beta}{beta} are independent, the variance of the dot
 #' product of \eqn{X’} with \eqn{\beta}{beta} is:
 #'
-#' \deqn{\pi\cdot \sigma^2 \cdot\sigma_\beta^2\cdot \Sigma S_j^2}{
-#' pi * sigma^2 * sigma_beta^2 * sum_S^2}
+#' \deqn{\pi\cdot \sigma^2 \cdot\sigma_\beta^2\cdot \Sigma s_j^2}{
+#' pi * sigma^2 * sigma_beta^2 * sum_s^2}
 #'
 #' Thus, the signal-to-noise ratio under these assumptions is given by:
 #'
-#' \deqn{\pi\cdot \sigma_\beta^2\cdot \Sigma S_j^2}{pi * sigma_beta^2 * sum_S^2}
+#' \deqn{\pi\cdot \sigma_\beta^2\cdot \Sigma s_j^2}{pi * sigma_beta^2 * sum_S^2}
 #'
 #' Replacing \eqn{\pi}{pi} with `pip_upper` and
 #' \eqn{\sigma_\beta^2}{sigma_beta^2} with `sbsq_upper` gives an upper bound on
@@ -470,12 +477,12 @@
 #' The similarity weight for observation \eqn{k} with respect to observation
 #' \eqn{l} is calculated as:
 #'
-#' \deqn{\phi_{\tau_l}(\lVert z_l, z_k \rVert)}{dnorm(Norm(z_l, z_k), tau_l)}
+#' \deqn{\phi_{\tau_l}(||z_l - z_k||)}{dnorm(||z_l - z_k||, tau_l)}
 #'
-#' Where \eqn{\lVert \cdot \rVert}{Norm} denotes the norm specified
+#' Where \eqn{|| \cdot ||}{||.||} denotes the norm specified
 #' by the `norm` argument, \eqn{z_l}{zl} and \eqn{z_k}{zk} are the values of `Z`
 #' for the \eqn{l}-th and \eqn{k}-th observations,
-#' \eqn{\phi_{\tau_l}}{dnorm(., tau_l)} is the univariate Gaussian desity with
+#' \eqn{\phi_{\tau l}}{dnorm(., tau_l)} is the univariate Gaussian desity with
 #' standard deviation \eqn{\tau_l}{tau_l} and \eqn{\tau_l}{tau_l} is the
 #' bandwidth for the \eqn{l}-th observation (the \eqn{l}-th observation in
 #' `tau`).
@@ -489,10 +496,10 @@
 #' updated bandwidths from the second step are used for `tau`.
 ## -----------------------------REFERENCES--------------------------------------
 #' @references
-#' 1. Dasgupta S., Ghosh P., Pati D., Mallick B., *An approximate Bayesian
-#' approach to covariate dependent graphical modeling*, 2021
+#' (1) Dasgupta S., Zhao P., Ghosh P., Pati D., Mallick B., *An approximate
+#' Bayesian approach to covariate dependent graphical modeling*, 2021
 #'
-#' 2. Dasgupta S., Pati D., Srivastava A., *A Two-Step Geometric Framework For
+#' (2) Dasgupta S., Pati D., Srivastava A., *A Two-Step Geometric Framework For
 #' Density Modeling*, Statistica Sinica, 2020
 ## -----------------------------------------------------------------------------
 covdepGE <- function(X, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,

@@ -168,8 +168,8 @@ second step are used for `tau`.
 
 ## Bibliography
 
-1.  Dasgupta S., Ghosh P., Pati D., Mallick B., *An approximate Bayesian
-    approach to covariate dependent graphical modeling*, 2021
+1.  Dasgupta S., Zhao P., Ghosh P., Pati D., Mallick B., *An approximate
+    Bayesian approach to covariate dependent graphical modeling*, 2021
 
 2.  Dasgupta S., Pati D., Srivastava A., *A Two-Step Geometric Framework
     For Density Modeling*, Statistica Sinica, 2020
@@ -187,8 +187,8 @@ library(ggplot2)
 # get the data
 set.seed(12)
 data <- generateData()
-X <- data$data
-Z <- data$covts
+X <- data$X
+Z <- data$Z
 interval <- data$interval
 prec <- data$true_precision
 
@@ -196,6 +196,7 @@ prec <- data$true_precision
 n <- nrow(X)
 n1 <- sum(interval == 1)
 n2 <- sum(interval == 2)
+n3 <- sum(interval == 3)
 
 # visualize the distribution of the extraneous covariate
 ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
@@ -208,17 +209,25 @@ ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
 # visualize the true precision matrices in each of the intervals
 
 # interval 1
-matViz(prec[[1]], incl_val = T) + ggtitle("True precision matrix, interval 1")
+matViz(prec[[1]], incl_val = TRUE) +
+  ggtitle(paste0("True precision matrix, interval 1, observations 1,...,", n1))
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-1-2.png)<!-- -->
 
 ``` r
 # interval 2 (varies continuously with Z)
+cat("\nInterval 2, observations ", n1 + 1, ",...,", n1 + n2, sep = "")
+```
+
+    ## 
+    ## Interval 2, observations 61,...,120
+
+``` r
 int2_mats <- prec[interval == 2]
 int2_inds <- c(5, n2 %/% 2, n2 - 5)
-lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = T) +
-         ggtitle(paste("True precision matrix, interval 2, individual", j)))
+lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
+         ggtitle(paste("True precision matrix, interval 2, observation", j + n1)))
 ```
 
     ## [[1]]
@@ -237,14 +246,15 @@ lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = T) +
 
 ``` r
 # interval 3
-matViz(prec[[length(prec)]], incl_val = T) +
-  ggtitle("True precision matrix, interval 3")
+matViz(prec[[length(prec)]], incl_val = TRUE) +
+  ggtitle(paste0("True precision matrix, interval 3, observations ",
+                 n1 + n2 + 1, ",...,", n1 + n2 + n3))
 ```
 
 ![](README_files/figure-gfm/unnamed-chunk-1-6.png)<!-- -->
 
 ``` r
-# fit the model and visualize the estimated precision matrices
+# fit the model and visualize the estimated graphs
 (out <- covdepGE(X, Z))
 ```
 
@@ -254,7 +264,7 @@ matViz(prec[[length(prec)]], incl_val = T) +
     ## 
     ## ELBO: -171501.68                                             # Unique Graphs: 3
     ## n: 180, variables: 5                       Hyperparameter grid size: 125 points
-    ## Model fit completed in 7.422 secs
+    ## Model fit completed in 7.841 secs
 
 ``` r
 plot(out)

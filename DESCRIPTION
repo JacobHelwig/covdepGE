@@ -5,7 +5,7 @@ Authors@R:
     c(person("Jacob", "Helwig", email = "jacob.a.helwig@tamu.edu", role = c("cre", "aut")),
     person("Sutanoy", "Dasgupta", email = "sutanoy@stat.tamu.edu", role = c("aut")), 
     person("Debdeep", "Pati", email = "debdeep@stat.tamu.edu", role = c("aut")))
-Description: Suppose that X is a p-dimensional data matrix with n observations and that Z is a q-dimensional extraneous covariate, also with n observations, where the l-th observation in Z is associated with the l-th observation in X. Further suppose that the l-th row of X follows a p-dimensional Gaussian distribution with mean 0 and precision matrix Omega(z_l), where z_l is the l-th entry of Z and Omega is a continuous function mapping from the space of extraneous covariates to the space of p x p non-singular matrices. Then, for the l-th observation, the (j,k) entry of Omega(z_l) is non-zero if, and only if, variable j and variable k are dependent given the remaining variables in X. Given data satisfying these assumptions, this package employs the algorithm described in (1) to estimate a graphical representation of the structure of Omega for each of the observations in X as a continuous function of Z. This graph contains an undirected edge between two variables X_j and X_k if, and only if, X_j and X_k are conditionally dependent given the remaining variables.
+Description: A weighted psuedo-likelihood approach for modelling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block-mean variational approximation
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true

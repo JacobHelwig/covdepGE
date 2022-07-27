@@ -4,77 +4,101 @@
 \alias{generateData}
 \title{Generate Covariate-Dependent Data}
 \usage{
-generateData(p = 5, n1 = 60, n2 = 60, n3 = 60)
+generateData(p = 5, n1 = 60, n2 = 60, n3 = 60, Z = NULL, true_precision = NULL)
 }
 \arguments{
-\item{p}{positive \code{integer}; number of variables in the data \code{matrix}}
+\item{p}{positive integer; number of variables in the data matrix. \code{5} by
+default}
 
-\item{n1}{positive \code{integer}; number of observations in the first interval}
+\item{n1}{positive integer; number of observations in the first interval.
+\code{60} by default}
 
-\item{n2}{positive \code{integer}; number of observations in the second interval}
+\item{n2}{positive integer; number of observations in the second interval.
+\code{60} by default}
 
-\item{n3}{positive \code{integer}; number of observations in the third interval}
+\item{n3}{positive integer; number of observations in the third interval.
+\code{60} by default}
+
+\item{Z}{\code{NULL} or numeric vector of length \code{n1 + n2 + n3}; extraneous
+covariate values for each observation. If \code{NULL}, \code{Z} will be generated
+from a uniform distribution on each of the intervals}
+
+\item{true_precision}{\code{NULL} OR list of \code{n1 + n2 + n3} matrices of dimension
+\eqn{p \times p}{p x p}; true precision matrix for each observation. If
+\code{NULL}, the true precision matrices will be generated dependent on \code{Z}.
+\code{NULL} by default}
 }
 \value{
 Returns list with the following values:
 
 \enumerate{
-\item \code{data}: a \code{(n1 + n2 + n3)} \code{x} \code{p} \code{numeric} \code{matrix}, where the
-\code{i}-th row is drawn from a \code{p}-dimensional Gaussian with mean \code{0} and
-precision \code{matrix} \code{true_precision[[i]]}
+\item \code{X}: a \code{(n1 + n2 + n3)} \eqn{\times p}{x p} numeric matrix, where
+the \eqn{i}-th row is drawn from a \eqn{p}-dimensional Gaussian with mean
+\eqn{0} and precision matrix \code{true_precision[[i]]}
 
-\item \code{covts}: a \code{(n1 + n2 + n3)} \code{x} \code{1} \code{numeric} \code{matrix}, where the
-\code{i}-th entry is the extraneous covariate \code{z_i} for observation \code{i}
+\item \code{Z}: a \code{(n1 + n2 + n3)} \eqn{\times 1}{x 1} numeric matrix, where
+the \eqn{i}-th entry is the extraneous covariate \eqn{z_i}{zi} for
+observation \eqn{i}
 
-The first \code{n1} observations have \code{z_i} from from a uniform distribution on
-the interval (\code{-3},\code{-1}) (the first interval)
+\item \code{true_precision}: list of \code{n1 + n2 + n3} matrices of dimension
+\eqn{p \times p}{p x p}; the \eqn{i}-th matrix is the precision matrix for
+the \eqn{i}-th observation
 
-Observations \code{n1 + 1} to \code{n1 + n2} have \code{z_i} from from a uniform
-distribution on the interval (\code{-1},\code{1}) (the second interval)
-
-observations \code{n1 + n2 + 1} to \code{n1 + n2 + n3} have \code{z_i} from a uniform
-distribution on the interval (\code{1},\code{3}) (the third interval)
-
-\item \code{true_precision}: \code{list} of \code{n1 + n2 + n3} \code{p} \code{x} \code{p} matrices; the
-\code{i}-th \code{matrix} is the precision \code{matrix} for the \code{i}-th observation
-
-All precision matrices have \code{2} on the diagonal and \code{1} in the
-(\code{2},\code{3})/(\code{3},\code{2}) positions
-
-Observations in the first interval have a \code{1} in the (\code{1},\code{2})/(\code{2},\code{1})
-positions, while observations in the third interval have a \code{1} in the
-(\code{1},\code{3})/(\code{3},\code{1}) positions
-
-Observations in the second interval have 2 entries that vary as a linear
-function of their extraneous covariate. Let \code{beta = 1/2}. Then,
-the (\code{1}, \code{2})/(\code{2}, \code{1}) positions for the \code{i}-th observation in the
-second interval are \code{beta * (1 - z_i)}, while the (\code{1}, \code{3})/(\code{3}, \code{1})
-entries are \code{beta * (1 + z_i)}
-
-Thus, as \code{z_i} approaches \code{-1} from the right, the associated precision
-\code{matrix} becomes more similar to the \code{matrix} for observations in the
-first interval. Similarly, as \code{z_i} approaches \code{1} from the left, the
-\code{matrix} becomes more similar to the \code{matrix} for observations in the
-third interval
-
-\item \code{interval}: \code{vector} of length \code{n1 + n2 + n3}; contains the ground
+\item \code{interval}: vector of length \code{n1 + n2 + n3}; contains the ground
 truth interval assignments for each of the observations
 }
 }
 \description{
-function to generate a \code{1}-dimensional extraneous covariate and
-\code{p}-dimensional Gaussian data with a precision \code{matrix} that varies as a
-continuous function of the extraneous covariate
+function to generate a \eqn{1}-dimensional extraneous covariate
+and \eqn{p}-dimensional Gaussian data with a precision matrix that varies as
+a continuous function of the extraneous covariate. This data is distributed
+similar to that used in the simulation study from (1)
 }
-\examples{
+\section{Extraneous Covariate}{
+If \code{Z = NULL}, then the generation of the \code{Z} is as follows.
 
+The first \code{n1} observations have \eqn{z_i}{zi} from from a uniform
+distribution on the interval \eqn{(-3, -1)} (the first interval).
+
+Observations \code{n1 + 1} to \code{n1 + n2} have \eqn{z_i}{zi} from from a uniform
+distribution on the interval \eqn{(-1, 1)} (the second interval).
+
+Observations \code{n1 + n2 + 1} to \code{n1 + n2 + n3} have \eqn{z_i}{zi} from a
+uniform distribution on the interval \eqn{(1, 3)} (the third interval).
+}
+
+\section{Precision Matrices}{
+If \code{true_precision = NULL}, then the generation of the true precision
+matrices is as follows:
+
+All precision matrices have \eqn{2} on the diagonal and \eqn{1} in the
+\eqn{(2, 3)/ (3, 2)} positions.
+
+Observations in the first interval have a \eqn{1} in the
+\eqn{(1, 2) / (1, 2)} positions, while observations in the third interval
+have a \eqn{1} in the \eqn{(1, 3)/ (3, 1)} positions.
+
+Observations in the second interval have 2 entries that vary as a linear
+function of their extraneous covariate. Let \eqn{\beta = 1/2}{beta = 1/2}.
+Then, the \eqn{(1, 2)/(2, 1)} positions for the \eqn{i}-th observation in the
+second interval are \eqn{\beta(1 - z_i)}{betabeta(1 - zi)}, while the
+\eqn{(1, 3)/ (3, 1)} entries are \eqn{\beta(1 + z_i)}{beta(1 + zi)}.
+
+Thus, as \eqn{z_i}{zi} approaches \eqn{-1} from the right, the associated
+precision matrix becomes more similar to the matrix for observations in the
+first interval. Similarly, as \eqn{z_i}{zi} approaches \eqn{1} from the left,
+the matrix becomes more similar to the matrix for observations in the third
+interval.
+}
+
+\examples{
 library(ggplot2)
 
 # get the data
-set.seed(1)
+set.seed(12)
 data <- generateData()
-X <- data$data
-Z <- data$covts
+X <- data$X
+Z <- data$Z
 interval <- data$interval
 prec <- data$true_precision
 
@@ -82,32 +106,35 @@ prec <- data$true_precision
 n <- nrow(X)
 n1 <- sum(interval == 1)
 n2 <- sum(interval == 2)
+n3 <- sum(interval == 3)
 
 # visualize the distribution of the extraneous covariate
 ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
-geom_histogram(aes(Z, fill = interval), color = "black", bins = n \%/\% 5)
+  geom_histogram(aes(Z, fill = interval), color = "black", bins = n \%/\% 5)
 
 # visualize the true precision matrices in each of the intervals
 
 # interval 1
 matViz(prec[[1]], incl_val = TRUE) +
-ggtitle("True precision matrix, interval 1")
+  ggtitle(paste0("True precision matrix, interval 1, observations 1,...,", n1))
 
 # interval 2 (varies continuously with Z)
+cat("\nInterval 2, observations ", n1 + 1, ",...,", n1 + n2, sep = "")
 int2_mats <- prec[interval == 2]
 int2_inds <- c(5, n2 \%/\% 2, n2 - 5)
 lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-ggtitle(paste("True precision matrix, interval 2, observation", j)))
+         ggtitle(paste("True precision matrix, interval 2, observation", j + n1)))
 
 # interval 3
 matViz(prec[[length(prec)]], incl_val = TRUE) +
-ggtitle("True precision matrix, interval 3")
+  ggtitle(paste0("True precision matrix, interval 3, observations ",
+                 n1 + n2 + 1, ",...,", n1 + n2 + n3))
 
-# fit the model and visualize the estimated precision matrices
+# fit the model and visualize the estimated graphs
 (out <- covdepGE(X, Z))
 plot(out)
 
-# visualize the inclusion probabilities for variables (1, 3) and (1, 2)
+# visualize the posterior inclusion probabilities for variables (1, 3) and (1, 2)
 inclusionCurve(out, 1, 2)
 inclusionCurve(out, 1, 3)
 }
