@@ -6,7 +6,7 @@
 \alias{_PACKAGE}
 \title{covdepGE: Covariate Dependent Graph Estimation}
 \description{
-A weighted psuedo-likelihood approach for modelling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block-mean variational approximation
+A weighted psuedo-likelihood approach for modelling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block mean-field variational approximation
 }
 \author{
 \strong{Maintainer}: Jacob Helwig \email{jacob.a.helwig@tamu.edu}

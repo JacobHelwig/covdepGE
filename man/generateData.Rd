@@ -17,7 +17,7 @@ default}
 \code{60} by default}
 
 \item{n3}{positive integer; number of observations in the third interval.
-\code{60} by default}
+\code{60} by default. \code{NULL} by default}
 
 \item{Z}{\code{NULL} or numeric vector of length \code{n1 + n2 + n3}; extraneous
 covariate values for each observation. If \code{NULL}, \code{Z} will be generated
@@ -44,18 +44,19 @@ observation \eqn{i}
 \eqn{p \times p}{p x p}; the \eqn{i}-th matrix is the precision matrix for
 the \eqn{i}-th observation
 
-\item \code{interval}: vector of length \code{n1 + n2 + n3}; contains the ground
-truth interval assignments for each of the observations
+\item \code{interval}: vector of length \code{n1 + n2 + n3}; interval assignments
+for each of the observations, where the \eqn{i}-th entry is the interval
+assignment for the \eqn{i}-th observation
 }
 }
 \description{
-function to generate a \eqn{1}-dimensional extraneous covariate
+Generate a \eqn{1}-dimensional extraneous covariate
 and \eqn{p}-dimensional Gaussian data with a precision matrix that varies as
 a continuous function of the extraneous covariate. This data is distributed
 similar to that used in the simulation study from (1)
 }
 \section{Extraneous Covariate}{
-If \code{Z = NULL}, then the generation of the \code{Z} is as follows.
+If \code{Z = NULL}, then the generation of the \code{Z} is as follows:
 
 The first \code{n1} observations have \eqn{z_i}{zi} from from a uniform
 distribution on the interval \eqn{(-3, -1)} (the first interval).
@@ -81,8 +82,8 @@ have a \eqn{1} in the \eqn{(1, 3)/ (3, 1)} positions.
 Observations in the second interval have 2 entries that vary as a linear
 function of their extraneous covariate. Let \eqn{\beta = 1/2}{beta = 1/2}.
 Then, the \eqn{(1, 2)/(2, 1)} positions for the \eqn{i}-th observation in the
-second interval are \eqn{\beta(1 - z_i)}{betabeta(1 - zi)}, while the
-\eqn{(1, 3)/ (3, 1)} entries are \eqn{\beta(1 + z_i)}{beta(1 + zi)}.
+second interval are \eqn{\beta\cdot(1 - z_i)}{betabeta(1 - zi)}, while the
+\eqn{(1, 3)/ (3, 1)} entries are \eqn{\beta\cdot(1 + z_i)}{beta(1 + zi)}.
 
 Thus, as \eqn{z_i}{zi} approaches \eqn{-1} from the right, the associated
 precision matrix becomes more similar to the matrix for observations in the

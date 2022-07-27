@@ -88,15 +88,15 @@
 #' be the least value in `ssq`. `1e-5` by default
 #'
 #' @param snr_upper positive numeric; upper bound on the signal-to-noise ratio.
-#' If `sbsq` is `NULL`, then for each variable \eqn{X_j}{Xj} fixed as the response:
+#' If `sbsq` is `NULL`, then for each variable \eqn{X_j}{Xj} fixed as the
+#' response:
 #'
 #' ```
 #' s2_sum <- sum(apply(X, 2, stats::var))
 #' sbsq_upper <- snr_upper / (pip_upper * s2_sum)
 #' ```
 #'
-#' Then, `sbsq_upper` will be the greatest value in `sbsq` for variable
-#' \eqn{X_j}{Xj}. `25` by default
+#' Then, `sbsq_upper` will be the greatest value in `sbsq`. `25` by default
 #'
 #' @param sbsq_lower positive numeric; if `sbsq` is `NULL`, then `sbsq_lower`
 #' will be the least value in `sbsq`. `1e-5` by default
@@ -255,7 +255,7 @@
 #'  \item `weights`: list with the following values:
 #'
 #'  \itemize{
-#'    \item `weights`: \eqn{n} `x` \eqn{n} numeric matrix. The \eqn{(i, j)}
+#'    \item `weights`: \eqn{n\times n}{n x n} numeric matrix. The \eqn{(i, j)}
 #'    entry is the similarity weight of the \eqn{i}-th observation with respect
 #'    to the \eqn{j}-th observation using the \eqn{j}-th observation's bandwidth
 #'    \item `bandwidths`: numeric vector of length \eqn{n}. The \eqn{i}-th entry
@@ -333,12 +333,12 @@
 #' two variables \eqn{X_j}{Xj} and \eqn{X_k}{Xk} if, and only if, \eqn{X_j}{Xj}
 #' and \eqn{X_k}{Xk} are conditionally dependent given the remaining variables.
 #' Two core components of this methodology are the weighted psuedo-likelihood
-#' framework in which inference is conducted via a block-mean variational
+#' framework in which inference is conducted via a block mean-field variational
 #' approximation.
 #'
 #' # Graph Estimation
 #'
-#' Graphs are constructed under the psuedo-likelihood paradigm by fixing each of
+#' Graphs are constructed using a psuedo-likelihood approach by fixing each of
 #' the columns \eqn{X_j}{Xj} of `X` as the response and performing a
 #' spike-and-slab regression using the remaining variables \eqn{X_k}{Xk} in `X`
 #' as predictors. To determine if an edge should be added between \eqn{X_j}{Xj}
@@ -360,13 +360,15 @@
 #'
 #' # Variational Inference
 #'
-#' Spike-and-slab posterior quantities are estimated using a block-mean
+#' Spike-and-slab posterior quantities are estimated using a block mean-field
 #' variational approximation. Coordinate Ascent Variational Inference (CAVI) is
 #' performed for each of the weighted regressions to select the variational
 #' parameters that maximize the ELBO. The parameters for each of the regression
 #' coefficients are the mean and variance of the slab (\eqn{\mu}{mu} and
 #' \eqn{\sigma^2_{\rm{var}}}{ssq_var}, respectively) and the probability that
-#' the coefficient is non-zero (\eqn{\alpha}{alpha}).
+#' the coefficient is non-zero (\eqn{\alpha}{alpha}). \eqn{\mu}{mu} and
+#' \eqn{\alpha}{alpha} for all coefficients are initialized as \eqn{0} and
+#' \eqn{0.2}, respectively.
 #'
 #' CAVI for the \eqn{n} regressions is performed simultaneously for variable
 #' \eqn{X_j}{Xj} fixed as the response. With each of the \eqn{n} sets of
@@ -434,7 +436,7 @@
 #' The candidate grids (`ssq`, `sbsq`, and `pip`) may be passed as arguments,
 #' however, by default, these grids are generated automatically. Each of the
 #' grids are spaced uniformly between an upper end point and a lower end point.
-#' The number of points in each grid is `5` by default. Grids include end
+#' The number of points in each grid is \eqn{5} by default. Grids include end
 #' points, and the number of points in each grid is controlled by the arguments
 #' `nssq`, `nsbsq`, and `npip`. The lower endpoints (`ssq_lower`, `sbsq_lower`,
 #' and `pip_lower`) are all `1e-5` by default. The upper endpoints are
@@ -447,9 +449,9 @@
 #' \eqn{X_j}{Xj} using LASSO. The shrinkage hyperparameter for LASSO is chosen
 #' to be `lambda.1se`. The number of non-zero coefficients estimated by LASSO is
 #' then divided by `p - 1` to calculate `pip_upper`. Note that if the LASSO
-#' estimate to the number of non-zero coefficients is \eqn{0} or \eqn{p - 1}, this
-#' estimate is changed to `1` or `p-2` (respectively) to ensure that `pip_upper`
-#' is greater than \eqn{0} and less than \eqn{1}.
+#' estimate to the number of non-zero coefficients is \eqn{0} or \eqn{p - 1},
+#' this estimate is changed to \eqn{1} or \eqn{p - 2} (respectively) to ensure
+#' that `pip_upper` is greater than \eqn{0} and less than \eqn{1}.
 #'
 #' Finally, an upper bound is induced on \eqn{\sigma_\beta^2}{sigma_beta^2} by
 #' deriving a rough upper bound for the signal-to-noise ratio that depends on
@@ -458,15 +460,11 @@
 #' the simplifying assumptions that the expected values of \eqn{X’} and the
 #' spike-and-slab regression coefficients \eqn{\beta}{beta} are \eqn{0} and that
 #' \eqn{X’} and \eqn{\beta}{beta} are independent, the variance of the dot
-#' product of \eqn{X’} with \eqn{\beta}{beta} is:
-#'
-#' \deqn{\pi\cdot \sigma^2 \cdot\sigma_\beta^2\cdot \Sigma s_j^2}{
-#' pi * sigma^2 * sigma_beta^2 * sum_s^2}
-#'
-#' Thus, the signal-to-noise ratio under these assumptions is given by:
-#'
-#' \deqn{\pi\cdot \sigma_\beta^2\cdot \Sigma s_j^2}{pi * sigma_beta^2 * sum_S^2}
-#'
+#' product of \eqn{X’} with \eqn{\beta}{beta} is
+#' \eqn{\pi\cdot \sigma^2 \cdot\sigma_\beta^2\cdot \Sigma s_j^2}{
+#' pi * sigma^2 * sigma_beta^2 * sum_s^2}. Thus, the signal-to-noise ratio under
+#' these assumptions is given by \eqn{
+#' \pi\cdot \sigma_\beta^2\cdot \Sigma s_j^2}{pi * sigma_beta^2 * sum_S^2}.
 #' Replacing \eqn{\pi}{pi} with `pip_upper` and
 #' \eqn{\sigma_\beta^2}{sigma_beta^2} with `sbsq_upper` gives an upper bound on
 #' the signal-to-noise ratio. Setting this bound equal to `snr_upper` gives an
@@ -475,17 +473,13 @@
 #' # Similarity Weights
 #'
 #' The similarity weight for observation \eqn{k} with respect to observation
-#' \eqn{l} is calculated as:
-#'
-#' \deqn{\phi_{\tau_l}(||z_l - z_k||)}{dnorm(||z_l - z_k||, tau_l)}
-#'
-#' Where \eqn{|| \cdot ||}{||.||} denotes the norm specified
-#' by the `norm` argument, \eqn{z_l}{zl} and \eqn{z_k}{zk} are the values of `Z`
-#' for the \eqn{l}-th and \eqn{k}-th observations,
-#' \eqn{\phi_{\tau l}}{dnorm(., tau_l)} is the univariate Gaussian desity with
-#' standard deviation \eqn{\tau_l}{tau_l} and \eqn{\tau_l}{tau_l} is the
-#' bandwidth for the \eqn{l}-th observation (the \eqn{l}-th observation in
-#' `tau`).
+#' \eqn{l} is \eqn{\phi_{\tau_l}(||z_l - z_k||)}{dnorm(||z_l - z_k||, tau_l)}.
+#' Here, \eqn{|| \cdot ||}{||.||} denotes the norm specified by the `norm`
+#' argument, \eqn{z_l}{zl} and \eqn{z_k}{zk} are the values of `Z` for the
+#' \eqn{l}-th and \eqn{k}-th observations, \eqn{\phi_{\tau_l}}{dnorm(., tau_l)}
+#' is the univariate Gaussian desity with standard deviation
+#' \eqn{\tau_l}{tau_l}, and \eqn{\tau_l}{tau_l} is the bandwidth for the
+#' \eqn{l}-th observation (the \eqn{l}-th observation in `tau`).
 #'
 #' `tau` may be passed as an argument, however, by default, it is estimated
 #' using the methodology given in (2). (2) describes a two-step approach for
