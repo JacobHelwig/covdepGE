@@ -209,7 +209,7 @@ cavi <- function(X, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq, npip,
                       alpha_tol, max_iter)
 
         # add the elbo and the converged iter to hp
-        hp[j, c("elbo", "iter")] <- unlist(out[c("elbo_vec", "iter")])
+        hp[j, c("elbo", "iter")] <- unlist(out[c("elbo", "iter")])
       }
 
       # save the variational parameters and elbo

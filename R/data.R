@@ -17,7 +17,7 @@
 #' `60` by default
 #'
 #' @param n3 positive integer; number of observations in the third interval.
-#' `60` by default. `NULL` by default
+#' `60` by default
 #'
 #' @param Z `NULL` or numeric vector of length `n1 + n2 + n3`; extraneous
 #' covariate values for each observation. If `NULL`, `Z` will be generated
@@ -75,11 +75,12 @@
 #' \eqn{(1, 2) / (1, 2)} positions, while observations in the third interval
 #' have a \eqn{1} in the \eqn{(1, 3)/ (3, 1)} positions.
 #'
-#' Observations in the second interval have 2 entries that vary as a linear
-#' function of their extraneous covariate. Let \eqn{\beta = 1/2}{beta = 1/2}.
-#' Then, the \eqn{(1, 2)/(2, 1)} positions for the \eqn{i}-th observation in the
-#' second interval are \eqn{\beta\cdot(1 - z_i)}{betabeta(1 - zi)}, while the
-#' \eqn{(1, 3)/ (3, 1)} entries are \eqn{\beta\cdot(1 + z_i)}{beta(1 + zi)}.
+#' Observations in the second interval have \eqn{2} entries that vary as a
+#' linear function of their extraneous covariate. Let
+#' \eqn{\beta = 1/2}{beta = 1/2}. Then, the \eqn{(1, 2)/(2, 1)} positions for
+#' the \eqn{i}-th observation in the second interval are
+#' \eqn{\beta\cdot(1 - z_i)}{beta(1 - zi)}, while the \eqn{(1, 3)/ (3, 1)}
+#' entries are \eqn{\beta\cdot(1 + z_i)}{beta(1 + zi)}.
 #'
 #' Thus, as \eqn{z_i}{zi} approaches \eqn{-1} from the right, the associated
 #' precision matrix becomes more similar to the matrix for observations in the

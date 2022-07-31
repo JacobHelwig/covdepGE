@@ -36,7 +36,8 @@ covdepGE(
 )
 }
 \arguments{
-\item{X}{\eqn{n \times p}{n x q} numeric matrix; data matrix}
+\item{X}{\eqn{n \times p}{n x p} numeric matrix; data matrix. For best
+results, \eqn{n} should be greater than \eqn{p}}
 
 \item{Z}{\eqn{n \times q}{n x q} numeric matrix; extraneous covariates}
 
@@ -176,7 +177,9 @@ of the \eqn{p} variables will be performed in parallel using \code{foreach}.
 Parallel backend may be registered prior to making a call to \code{covdepGE}. If
 no active parallel backend can be detected, then parallel backend will be
 automatically registered using:\preformatted{doParallel::registerDoParallel(num_workers)
-}}
+}
+
+\code{F} by default}
 
 \item{num_workers}{\code{NULL} OR positive integer less than or equal to
 \code{parallel::detectCores()}; argument to \code{doParallel::registerDoParallel} if
@@ -286,9 +289,9 @@ with mean \eqn{0} and precision matrix \eqn{\Omega(z_l)}{Omega(zl)}, where
 \eqn{z_l}{zl} is the \eqn{l}-th entry of \code{Z} and \eqn{\Omega}{Omega} is a
 continuous function mapping from the space of extraneous covariates to the
 space of \eqn{p \times p}{p x p} non-singular matrices. Then, for the
-\eqn{l}-th observation, the (\eqn{j},\eqn{k}) entry of
-\eqn{\Omega(z_l)}{Omega(zl)} is non-zero if, and only if, variable \eqn{j}
-and variable \eqn{k} are dependent given the remaining variables in \code{X}.
+\eqn{l}-th observation, the \eqn{(j,k)} entry of \eqn{\Omega(z_l)}{Omega(zl)}
+is non-zero if, and only if, variable \eqn{j} and variable \eqn{k} are
+dependent given the remaining variables in \code{X}.
 
 Given data satisfying these assumptions, the \code{covdepGE} function employs the
 algorithm described in (1) to estimate a graphical representation of the
@@ -296,7 +299,7 @@ structure of \eqn{\Omega}{Omega} for each of the observations in \code{X} as a
 continuous function of \code{Z}. This graph contains an undirected edge between
 two variables \eqn{X_j}{Xj} and \eqn{X_k}{Xk} if, and only if, \eqn{X_j}{Xj}
 and \eqn{X_k}{Xk} are conditionally dependent given the remaining variables.
-Two core components of this methodology are the weighted psuedo-likelihood
+Core components of this methodology are the weighted psuedo-likelihood
 framework in which inference is conducted via a block mean-field variational
 approximation.
 }
@@ -318,9 +321,10 @@ To model \eqn{\Omega}{Omega} as a function of \code{Z}, \eqn{n} weighted
 spike-and-slab regressions are performed for each variable \eqn{X_j}{Xj}
 fixed as the response. The similarity weights for the \eqn{l}-th regression
 are taken with respect to observation \eqn{l} such that observations having
-similar values of \code{Z} will have larger weights. These similarity weights in
-conjunction with the psuedo-likelihood framework comprise the weighted
-psuedo-likelihood approach introduced by (1).
+similar values of \code{Z} to \eqn{z_l}{zl} will have larger weights. These
+similarity weights in conjunction with the psuedo-likelihood framework
+comprise the weighted psuedo-likelihood approach introduced by (1). Note that
+model performance is best when \eqn{n} > \eqn{p}.
 }
 
 \section{Variational Inference}{
@@ -390,7 +394,7 @@ the unnormalized averaging weights.
 
 Note that in the search step of \code{grid_search} and \code{hybrid}, CAVI for each of
 the grid points is performed for at most \code{max_iter_grid} iterations. A second
-CAVI is then performed for \code{max_iter} iterations using the \eqn{n} models
+CAVI is then performed for \code{max_iter} iterations using the hyperparameters
 that maximized the total ELBO in the first step. Setting \code{max_iter_grid} to
 be less than \code{max_iter} (as is the default) will result in a more efficient
 search.
@@ -441,9 +445,9 @@ The similarity weight for observation \eqn{k} with respect to observation
 Here, \eqn{|| \cdot ||}{||.||} denotes the norm specified by the \code{norm}
 argument, \eqn{z_l}{zl} and \eqn{z_k}{zk} are the values of \code{Z} for the
 \eqn{l}-th and \eqn{k}-th observations, \eqn{\phi_{\tau_l}}{dnorm(., tau_l)}
-is the univariate Gaussian desity with standard deviation
+is the univariate Gaussian density with standard deviation
 \eqn{\tau_l}{tau_l}, and \eqn{\tau_l}{tau_l} is the bandwidth for the
-\eqn{l}-th observation (the \eqn{l}-th observation in \code{tau}).
+\eqn{l}-th observation.
 
 \code{tau} may be passed as an argument, however, by default, it is estimated
 using the methodology given in (2). (2) describes a two-step approach for

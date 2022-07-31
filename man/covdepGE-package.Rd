@@ -6,7 +6,24 @@
 \alias{_PACKAGE}
 \title{covdepGE: Covariate Dependent Graph Estimation}
 \description{
-A weighted psuedo-likelihood approach for modelling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block mean-field variational approximation
+A weighted psuedo-likelihood approach for modeling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block mean-field variational approximation.
+}
+\details{
+The core function, \code{covdepGE}, uses the weighted psuedo-likelihood
+approach to estimate the conditional dependence structure of the data as a
+function of an extraneous covariate. Inference is conducted efficiently via
+a parallelized block mean-field variational approximation. Three choices
+for hyperparameter specification are offered, the default being a hybrid
+between model averaging and grid search.
+
+Additionally, the function \code{generateData} returns covariate dependent data
+based on the data from the simulation study in (1). The functions
+\code{inclusionCurve}, \code{matViz}, and \code{plot.covdepGE} enable visualization of the
+estimates returned by the \code{covdepGE} function.
+}
+\references{
+(1) Dasgupta S., Zhao P., Ghosh P., Pati D., Mallick B., \emph{An approximate
+Bayesian approach to covariate dependent graphical modeling}, 2021
 }
 \author{
 \strong{Maintainer}: Jacob Helwig \email{jacob.a.helwig@tamu.edu}
@@ -14,8 +31,9 @@ A weighted psuedo-likelihood approach for modelling the conditional dependence s
 Authors:
 \itemize{
   \item Sutanoy Dasgupta \email{sutanoy@stat.tamu.edu}
+  \item Peng Zhao \email{pzhao@stat.tamu.edu}
+  \item Bani Mallick \email{bmallick@stat.tamu.edu}
   \item Debdeep Pati \email{debdeep@stat.tamu.edu}
 }
 
 }
-\keyword{internal}

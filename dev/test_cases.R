@@ -1,38 +1,53 @@
-# package
 library(covdepGE)
-
-# src the scripts
-if ("covdepGE" %in% .packages()) detach("package:covdepGE", unload = TRUE)
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/main.R")
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/cavi.R")
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/weights.R")
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/plots.R")
-source("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/R/data.R")
-Rcpp::sourceCpp("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/src/covdepGE_c.cpp")
-
 set.seed(1)
 
 # gen the data
-cont <- generate_continuous()
-X <- cont$data
-Z <- cont$covts
+cont <- generateData()
+X <- cont$X
+Z <- cont$Z
+
+# pass the covts
+Z[61, ] <- 0
+cont <- generateData(Z = Z)
+cont$true_precision[[61]]
+
+# pass the prec_mats
+cont$true_precision[[61]] <- diag(5) * 0.00001
+cont <- generateData(true_precision = cont$true_precision)
+cont$true_precision[[61]]
+cont$X[61, ]
+
+# weird dimensions
+cont <- generateData(p = 3, 4, 5, 6)
+
+# regen
+cont <- generateData()
+X <- cont$X
+Z <- cont$Z
 
 # vanilla
-out1 <- covdepGE(X, Z) # hybrid
-out2 <- covdepGE(X, Z, hp_method = "grid_search")
-out3 <- covdepGE(X, Z, hp_method = "model_average")
+out1 <- covdepGE(X, Z, parallel = T, num_workers = 5) # hybrid
+out1$hyperparameters$variable1$final
+out2 <- covdepGE(X, Z, hp_method = "grid_search", parallel = T, num_workers = 5)
+out2$hyperparameters$variable1$final
+out3 <- covdepGE(X, Z, hp_method = "model_average", parallel = T, num_workers = 5)
+out3$hyperparameters$variable1$grid[1:5, ]
 
 # increase the number of hyperparameters
-out <- covdepGE(X, Z, nssq = 7, nsbsq = 7, npip = 7)
+out <- covdepGE(X, Z, nssq = 7, nsbsq = 7, npip = 7, parallel = T, num_workers = 5)
+out$hyperparameters$variable5$final
 
 # increase ssq mult
-out <- covdepGE(X, Z, ssq_mult = 10)
+out <- covdepGE(X, Z, ssq_mult = 10, parallel = T, num_workers = 5)
+unique(out$hyperparameters$variable1$grid$ssq)
 
 # increase ssq lower
-out <- covdepGE(X, Z, ssq_lower = 0.1)
+out <- covdepGE(X, Z, ssq_lower = 0.1, parallel = T, num_workers = 5)
+unique(out$hyperparameters$variable1$grid$ssq)
 
 # increase snr_upper
-out <- covdepGE(X, Z, snr_upper = 50)
+out <- covdepGE(X, Z, snr_upper = 50, parallel = T, num_workers = 5)
+unique(out$hyperparameters$variable1$grid$sbsq)
 
 # increase sbsq lower
 out <- covdepGE(X, Z, sbsq_lower = .1)

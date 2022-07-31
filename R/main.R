@@ -6,7 +6,8 @@
 #' @description Model the conditional dependence structure of `X` as a function
 #' of `Z` as described in (1)
 ## -----------------------------ARGUMENTS---------------------------------------
-#' @param X \eqn{n \times p}{n x q} numeric matrix; data matrix
+#' @param X \eqn{n \times p}{n x p} numeric matrix; data matrix. For best
+#' results, \eqn{n} should be greater than \eqn{p}
 #'
 #' @param Z \eqn{n \times q}{n x q} numeric matrix; extraneous covariates
 #'
@@ -167,6 +168,8 @@
 #' doParallel::registerDoParallel(num_workers)
 #' ```
 #'
+#' `F` by default
+#'
 #' @param num_workers `NULL` OR positive integer less than or equal to
 #' `parallel::detectCores()`; argument to `doParallel::registerDoParallel` if
 #' `parallel = T` and no parallel backend is detected. If `NULL`, then:
@@ -322,9 +325,9 @@
 #' \eqn{z_l}{zl} is the \eqn{l}-th entry of `Z` and \eqn{\Omega}{Omega} is a
 #' continuous function mapping from the space of extraneous covariates to the
 #' space of \eqn{p \times p}{p x p} non-singular matrices. Then, for the
-#' \eqn{l}-th observation, the (\eqn{j},\eqn{k}) entry of
-#' \eqn{\Omega(z_l)}{Omega(zl)} is non-zero if, and only if, variable \eqn{j}
-#' and variable \eqn{k} are dependent given the remaining variables in `X`.
+#' \eqn{l}-th observation, the \eqn{(j,k)} entry of \eqn{\Omega(z_l)}{Omega(zl)}
+#' is non-zero if, and only if, variable \eqn{j} and variable \eqn{k} are
+#' dependent given the remaining variables in `X`.
 #'
 #' Given data satisfying these assumptions, the `covdepGE` function employs the
 #' algorithm described in (1) to estimate a graphical representation of the
@@ -332,7 +335,7 @@
 #' continuous function of `Z`. This graph contains an undirected edge between
 #' two variables \eqn{X_j}{Xj} and \eqn{X_k}{Xk} if, and only if, \eqn{X_j}{Xj}
 #' and \eqn{X_k}{Xk} are conditionally dependent given the remaining variables.
-#' Two core components of this methodology are the weighted psuedo-likelihood
+#' Core components of this methodology are the weighted psuedo-likelihood
 #' framework in which inference is conducted via a block mean-field variational
 #' approximation.
 #'
@@ -354,9 +357,10 @@
 #' spike-and-slab regressions are performed for each variable \eqn{X_j}{Xj}
 #' fixed as the response. The similarity weights for the \eqn{l}-th regression
 #' are taken with respect to observation \eqn{l} such that observations having
-#' similar values of `Z` will have larger weights. These similarity weights in
-#' conjunction with the psuedo-likelihood framework comprise the weighted
-#' psuedo-likelihood approach introduced by (1).
+#' similar values of `Z` to \eqn{z_l}{zl} will have larger weights. These
+#' similarity weights in conjunction with the psuedo-likelihood framework
+#' comprise the weighted psuedo-likelihood approach introduced by (1). Note that
+#' model performance is best when \eqn{n} > \eqn{p}.
 #'
 #' # Variational Inference
 #'
@@ -426,7 +430,7 @@
 #'
 #' Note that in the search step of `grid_search` and `hybrid`, CAVI for each of
 #' the grid points is performed for at most `max_iter_grid` iterations. A second
-#' CAVI is then performed for `max_iter` iterations using the \eqn{n} models
+#' CAVI is then performed for `max_iter` iterations using the hyperparameters
 #' that maximized the total ELBO in the first step. Setting `max_iter_grid` to
 #' be less than `max_iter` (as is the default) will result in a more efficient
 #' search.
@@ -477,9 +481,9 @@
 #' Here, \eqn{|| \cdot ||}{||.||} denotes the norm specified by the `norm`
 #' argument, \eqn{z_l}{zl} and \eqn{z_k}{zk} are the values of `Z` for the
 #' \eqn{l}-th and \eqn{k}-th observations, \eqn{\phi_{\tau_l}}{dnorm(., tau_l)}
-#' is the univariate Gaussian desity with standard deviation
+#' is the univariate Gaussian density with standard deviation
 #' \eqn{\tau_l}{tau_l}, and \eqn{\tau_l}{tau_l} is the bandwidth for the
-#' \eqn{l}-th observation (the \eqn{l}-th observation in `tau`).
+#' \eqn{l}-th observation.
 #'
 #' `tau` may be passed as an argument, however, by default, it is estimated
 #' using the methodology given in (2). (2) describes a two-step approach for

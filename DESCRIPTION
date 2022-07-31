@@ -3,9 +3,11 @@ Title: Covariate Dependent Graph Estimation
 Version: 1.0.0
 Authors@R: 
     c(person("Jacob", "Helwig", email = "jacob.a.helwig@tamu.edu", role = c("cre", "aut")),
-    person("Sutanoy", "Dasgupta", email = "sutanoy@stat.tamu.edu", role = c("aut")), 
+    person("Sutanoy", "Dasgupta", email = "sutanoy@stat.tamu.edu", role = c("aut")),
+    person("Peng", "Zhao", email = "pzhao@stat.tamu.edu", role = c("aut")),
+    person("Bani", "Mallick", email = "bmallick@stat.tamu.edu", role = c("aut")),
     person("Debdeep", "Pati", email = "debdeep@stat.tamu.edu", role = c("aut")))
-Description: A weighted psuedo-likelihood approach for modelling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block mean-field variational approximation
+Description: A weighted psuedo-likelihood approach for modeling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block mean-field variational approximation.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
@@ -20,6 +22,8 @@ Imports:
     ggplot2,
     glmnet,
     latex2exp,
+    MASS,
     parallel,
+    Rcpp,
     reshape2,
     stats
