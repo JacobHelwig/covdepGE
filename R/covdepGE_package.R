@@ -13,8 +13,9 @@
 #' estimates returned by the `covdepGE` function.
 #'
 #' @references
-#' (1) Dasgupta S., Zhao P., Ghosh P., Pati D., Mallick B., *An approximate
-#' Bayesian approach to covariate dependent graphical modeling*, 2021
+#' (1) Sutanoy Dasgupta, Peng Zhao, Prasenjit Ghosh, Debdeep Pati, and Bani
+#' Mallick. An approximate Bayesian approach to covariate-dependent graphical
+#' modeling. pages 1–59, 2022.
 #'
 "_PACKAGE"
 

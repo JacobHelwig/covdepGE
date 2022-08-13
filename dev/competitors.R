@@ -142,37 +142,29 @@ summary(covdepGE_times)
 summary(loggle_times)
 summary(hetGGM_times)
 
-# put everything into a table
+# table
 library(kableExtra)
 perf <- apply(cbind(covdepGE_sens, loggle_sens, hetGGM_sens,
                     covdepGE_spec, loggle_spec, hetGGM_spec,
                     covdepGE_times, loggle_times, hetGGM_times),
-              2, function(x) round(c(Mean = mean(x), SD = sd(x)), 3))
-labs <- c("covdepGE", "loggle", "HetGGM")
-perf_df <- data.frame(perf)
-colnames(perf_df) <- rep(labs, 3)
-kbl(perf_df, format = "latex", booktabs = T) %>%
-  add_header_above(c("", "Sensitivity" = 3, "Specificity" = 3, "Time(s)" = 3)) %>%
-  kable_styling(position = "center")
+              2, function(x) paste0(round(mean(x), 3), " (", round(sd(x), 3), ")"))
+perf_df <- data.frame(t(matrix(perf, 3, 3)))
+row.names(perf_df) <- c("Sensitivity", "Specificity", "Time(s)")
+colnames(perf_df) <- c("covdepGE", "loggle", "HeteroGGM")
+kbl(perf_df, format = "latex", booktabs = T)
 
-# plot
+library(ggpubr)
 library(ggplot2)
-library(ggsci)
-# sensitivity
-sens <- rbind.data.frame(
-  cbind.data.frame(Sensitivity = covdepGE_sens, Package = "covdepGE"),
-  cbind.data.frame(Sensitivity = loggle_sens, Package = "loggle"),
-  cbind.data.frame(Sensitivity = hetGGM_sens, Package = "HeteroGGM"))
-sens_meds <- aggregate(Sensitivity~Package, sens, function(x) round(median(x), 2))
-ggplot(sens, aes(Package, Sensitivity, fill = Package)) + geom_boxplot(color = "#a7a7a7", position = position_dodge(1.2)) +
-  coord_cartesian(ylim = c(0.7, 1)) +
-  geom_text(data = sens_meds, aes(label = Sensitivity), color = "#d1d1d1", vjust = 1) +
-  theme_classic() + scale_fill_manual(values = c("#500000", "#003C71", "#5B6236"))
+pred_graphs <- plot(covdepGE_models[[12]])
+true_graphs <- unique(lapply(lapply(lapply(
+  res$trial1$data$true_precision, `!=`, 0), `*`, 1), `-`, diag(p)))
+titles <- paste0("Graph ", 1:3, ", observations ", c(
+  "1,...,60", "61,...,120", "121,...,180"))
+true_graphs <- lapply(1:3, function(j) matViz(true_graphs[[j]], color2 = "#003C71") +
+                        ggtitle(titles[[j]]))
+path <- "C:/Users/jacob/OneDrive/Documents/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/dev/plots"
+pred_graphs <- ggarrange(plotlist = pred_graphs, nrow = 1, legend = F)
+true_graphs <- ggarrange(plotlist = true_graphs, nrow = 1, legend = F)
+ggsave(paste0(path, "/preds.pdf"), pred_graphs, height = 4, width = 11)
+ggsave(paste0(path, "/true.pdf"), true_graphs, height = 4, width = 11)
 
-
-p <- ggplot(data=mtcars, aes(x=factor(vs), y=mpg, fill=factor(am))) +
-  geom_boxplot(position = position_dodge(width=0.9))
-
-a <- aggregate(mpg ~ vs + am , mtcars, function(i) round(mean(i)))
-
-p +  geom_text(data = a, aes(label = mpg))

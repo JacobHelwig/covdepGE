@@ -30,24 +30,21 @@
 ## -----------------------------RETURNS-----------------------------------------
 #' @return Returns list with the following values:
 #'
-#'  \enumerate{
-#'    \item `X`: a `(n1 + n2 + n3)` \eqn{\times p}{x p} numeric matrix, where
+#'    \item{X}{a `(n1 + n2 + n3)` \eqn{\times p}{x p} numeric matrix, where
 #'    the \eqn{i}-th row is drawn from a \eqn{p}-dimensional Gaussian with mean
-#'    \eqn{0} and precision matrix `true_precision[[i]]`
+#'    \eqn{0} and precision matrix `true_precision[[i]]`}
 #'
-#'    \item `Z`: a `(n1 + n2 + n3)` \eqn{\times 1}{x 1} numeric matrix, where
+#'    \item{Z}{a `(n1 + n2 + n3)` \eqn{\times 1}{x 1} numeric matrix, where
 #'    the \eqn{i}-th entry is the extraneous covariate \eqn{z_i}{zi} for
-#'    observation \eqn{i}
+#'    observation \eqn{i}}
 #'
-#'    \item `true_precision`: list of `n1 + n2 + n3` matrices of dimension
+#'    \item{true_precision}{list of `n1 + n2 + n3` matrices of dimension
 #'    \eqn{p \times p}{p x p}; the \eqn{i}-th matrix is the precision matrix for
-#'    the \eqn{i}-th observation
+#'    the \eqn{i}-th observation}
 #'
-#'    \item `interval`: vector of length `n1 + n2 + n3`; interval assignments
+#'    \item{interval}{vector of length `n1 + n2 + n3`; interval assignments
 #'    for each of the observations, where the \eqn{i}-th entry is the interval
-#'    assignment for the \eqn{i}-th observation
-#' }
-#'
+#'    assignment for the \eqn{i}-th observation}
 ## -----------------------------DETAILS-----------------------------------------
 #' @details
 #' # Extraneous Covariate

@@ -193,11 +193,9 @@ denoting the number of remaining variables to fix as the response and perform
 CAVI. If \code{parallel}, no progress bar will be displayed. \code{T} by default}
 }
 \value{
-Returns list with the following values:
+Returns object of class \code{covdepGE} with the following values:
 
-\enumerate{
-
-\item \code{graphs}: list with the following values:
+\item{graphs}{list with the following values:
 
 \itemize{
 \item \code{graphs}: list of \eqn{n} numeric matrices of dimension
@@ -215,8 +213,9 @@ dimension \eqn{p \times p}{p x p}; the \eqn{l}-th matrix is the
 posterior inclusion probability matrix for the \eqn{l}-th observation
 prior to symmetrization
 }
+}
 
-\item \code{variational_params}: list with the following values:
+\item{variational_params}{list with the following values:
 
 \itemize{
 \item \code{alpha}: list of \eqn{p} numeric matrices of dimension
@@ -238,8 +237,9 @@ approximation to the posterior slab variance for the \eqn{j}-th variable
 in a weighted regression with variable \eqn{k} fixed as the response,
 where the weights are taken with respect to observation \eqn{i}
 }
+}
 
-\item \code{hyperparameters}: list of \eqn{p} lists; the \eqn{j}-th list has the
+\item{hyperparameters}{list of \eqn{p} lists; the \eqn{j}-th list has the
 following values for variable \eqn{j} fixed as the response:
 
 \itemize{
@@ -248,8 +248,9 @@ ELBO, and iterations to converge
 \item \code{final}: the final hyperparameters chosen by grid search and the
 ELBO and iterations to converge for these hyperparameters
 }
+}
 
-\item \code{model_details}: list with the following values:
+\item{model_details}{list with the following values:
 
 \itemize{
 \item \code{elapsed}: amount of time to fit the model
@@ -263,15 +264,17 @@ each variable
 \item \code{grid_size}: number of points in the hyperparameter grid
 \item \code{args}: list containing all passed arguments of length \eqn{1}
 }
+}
 
-\item \code{weights}: list with the following values:
+\item{weights}{list with the following values:
 
 \itemize{
 \item \code{weights}: \eqn{n\times n}{n x n} numeric matrix. The \eqn{(i, j)}
-entry is the similarity weight of the \eqn{i}-th observation with respect
-to the \eqn{j}-th observation using the \eqn{j}-th observation's bandwidth
-\item \code{bandwidths}: numeric vector of length \eqn{n}. The \eqn{i}-th entry
-is the bandwidth for the \eqn{i}-th observation
+entry is the similarity weight of the \eqn{i}-th observation with
+respect to the \eqn{j}-th observation using the \eqn{j}-th observation's
+bandwidth
+\item \code{bandwidths}: numeric vector of length \eqn{n}. The \eqn{i}-th
+entry is the bandwidth for the \eqn{i}-th observation
 }
 }
 }
@@ -506,9 +509,10 @@ inclusionCurve(out, 1, 2)
 inclusionCurve(out, 1, 3)
 }
 \references{
-(1) Dasgupta S., Zhao P., Ghosh P., Pati D., Mallick B., \emph{An approximate
-Bayesian approach to covariate dependent graphical modeling}, 2021
+(1) Sutanoy Dasgupta, Peng Zhao, Prasenjit Ghosh, Debdeep Pati, and Bani
+Mallick. An approximate Bayesian approach to covariate-dependent graphical
+modeling. pages 1–59, 2022.
 
-(2) Dasgupta S., Pati D., Srivastava A., \emph{A Two-Step Geometric Framework For
-Density Modeling}, Statistica Sinica, 2020
+(2) Sutanoy Dasgupta, Debdeep Pati, and Anuj Srivastava. A Two-Step Geometric
+Framework For Density Modeling. \emph{Statistica Sinica}, 30(4):2155–2177, 2020.
 }

@@ -17,7 +17,7 @@ default}
 \code{60} by default}
 
 \item{n3}{positive integer; number of observations in the third interval.
-\code{60} by default. \code{NULL} by default}
+\code{60} by default}
 
 \item{Z}{\code{NULL} or numeric vector of length \code{n1 + n2 + n3}; extraneous
 covariate values for each observation. If \code{NULL}, \code{Z} will be generated
@@ -31,23 +31,21 @@ from a uniform distribution on each of the intervals}
 \value{
 Returns list with the following values:
 
-\enumerate{
-\item \code{X}: a \code{(n1 + n2 + n3)} \eqn{\times p}{x p} numeric matrix, where
+\item{X}{a \code{(n1 + n2 + n3)} \eqn{\times p}{x p} numeric matrix, where
 the \eqn{i}-th row is drawn from a \eqn{p}-dimensional Gaussian with mean
-\eqn{0} and precision matrix \code{true_precision[[i]]}
+\eqn{0} and precision matrix \code{true_precision[[i]]}}
 
-\item \code{Z}: a \code{(n1 + n2 + n3)} \eqn{\times 1}{x 1} numeric matrix, where
+\item{Z}{a \code{(n1 + n2 + n3)} \eqn{\times 1}{x 1} numeric matrix, where
 the \eqn{i}-th entry is the extraneous covariate \eqn{z_i}{zi} for
-observation \eqn{i}
+observation \eqn{i}}
 
-\item \code{true_precision}: list of \code{n1 + n2 + n3} matrices of dimension
+\item{true_precision}{list of \code{n1 + n2 + n3} matrices of dimension
 \eqn{p \times p}{p x p}; the \eqn{i}-th matrix is the precision matrix for
-the \eqn{i}-th observation
+the \eqn{i}-th observation}
 
-\item \code{interval}: vector of length \code{n1 + n2 + n3}; interval assignments
+\item{interval}{vector of length \code{n1 + n2 + n3}; interval assignments
 for each of the observations, where the \eqn{i}-th entry is the interval
-assignment for the \eqn{i}-th observation
-}
+assignment for the \eqn{i}-th observation}
 }
 \description{
 Generate a \eqn{1}-dimensional extraneous covariate
@@ -79,11 +77,12 @@ Observations in the first interval have a \eqn{1} in the
 \eqn{(1, 2) / (1, 2)} positions, while observations in the third interval
 have a \eqn{1} in the \eqn{(1, 3)/ (3, 1)} positions.
 
-Observations in the second interval have 2 entries that vary as a linear
-function of their extraneous covariate. Let \eqn{\beta = 1/2}{beta = 1/2}.
-Then, the \eqn{(1, 2)/(2, 1)} positions for the \eqn{i}-th observation in the
-second interval are \eqn{\beta\cdot(1 - z_i)}{betabeta(1 - zi)}, while the
-\eqn{(1, 3)/ (3, 1)} entries are \eqn{\beta\cdot(1 + z_i)}{beta(1 + zi)}.
+Observations in the second interval have \eqn{2} entries that vary as a
+linear function of their extraneous covariate. Let
+\eqn{\beta = 1/2}{beta = 1/2}. Then, the \eqn{(1, 2)/(2, 1)} positions for
+the \eqn{i}-th observation in the second interval are
+\eqn{\beta\cdot(1 - z_i)}{beta(1 - zi)}, while the \eqn{(1, 3)/ (3, 1)}
+entries are \eqn{\beta\cdot(1 + z_i)}{beta(1 + zi)}.
 
 Thus, as \eqn{z_i}{zi} approaches \eqn{-1} from the right, the associated
 precision matrix becomes more similar to the matrix for observations in the

@@ -22,8 +22,9 @@ based on the data from the simulation study in (1). The functions
 estimates returned by the \code{covdepGE} function.
 }
 \references{
-(1) Dasgupta S., Zhao P., Ghosh P., Pati D., Mallick B., \emph{An approximate
-Bayesian approach to covariate dependent graphical modeling}, 2021
+(1) Sutanoy Dasgupta, Peng Zhao, Prasenjit Ghosh, Debdeep Pati, and Bani
+Mallick. An approximate Bayesian approach to covariate-dependent graphical
+modeling. pages 1–59, 2022.
 }
 \author{
 \strong{Maintainer}: Jacob Helwig \email{jacob.a.helwig@tamu.edu}
