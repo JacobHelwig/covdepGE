@@ -9,7 +9,7 @@
 ## -----------------------------RETURNS-----------------------------------------
 ## returns bandwidth estimate
 ## -----------------------------------------------------------------------------
-silverman <- function(x){
+silverman <- function(x) {
 
   # apply and return silverman's rule of thumb
   sigma <- (0.9 * min(stats::sd(x), stats::IQR(x) / 1.35) * length(x)^(-0.2))
@@ -31,7 +31,7 @@ silverman <- function(x){
 ## -----------------------------RETURNS-----------------------------------------
 ## returns density
 ## -----------------------------------------------------------------------------
-phi0_k.z <- function(z, mu, sigma){
+phi0_k.z <- function(z, mu, sigma) {
 
   # calculate and return the density of z
   return((1 / length(mu)) * sum(stats::dnorm(z, mu, sigma)))
@@ -53,7 +53,7 @@ phi0_k.z <- function(z, mu, sigma){
 ## -----------------------------RETURNS-----------------------------------------
 ## returns numeric vector of N densities
 ## -----------------------------------------------------------------------------
-phi0_k <- function(Z, mu, sigma){
+phi0_k <- function(Z, mu, sigma) {
   return(sapply(Z, phi0_k.z, mu = mu, sigma = sigma))
 }
 
@@ -68,7 +68,7 @@ phi0_k <- function(Z, mu, sigma){
 ## -----------------------------RETURNS-----------------------------------------
 ## returns vector of n bandwidths
 ## -----------------------------------------------------------------------------
-get_bandwidths <- function(X){
+get_bandwidths <- function(X) {
 
   # get dimensions of X
   n <- nrow(X)
@@ -78,13 +78,13 @@ get_bandwidths <- function(X){
   # also find silverman's rule of thumb for each of the columns of X
   densities <- matrix(NA, n, p)
   sigma <- rep(NA, p)
-  for (j in 1:p){
+  for (j in 1:p) {
 
     # find the value of sigma corresponding to the j-th predictor
-    sigma[j] <- silverman(X[ , j])
+    sigma[j] <- silverman(X[, j])
 
     # calculate the resulting densities
-    densities[ , j] <- phi0_k(X[ , j], X[ , j], sigma[j])
+    densities[, j] <- phi0_k(X[, j], X[, j], sigma[j])
   }
 
   # calculate the harmonic mean for the sigma^2
@@ -92,7 +92,7 @@ get_bandwidths <- function(X){
 
   # calculate the square root of the row-wise product of the densities
   rowProds_sqrt <- rep(NA, n)
-  for (l in 1:n){
+  for (l in 1:n) {
     rowProds_sqrt[l] <- prod(sqrt(densities[l, ]))
   }
 
@@ -119,15 +119,15 @@ get_bandwidths <- function(X){
 ##
 ## bandwidths: vector of length n; observation-specific bandwidths
 ## -----------------------------------------------------------------------------
-get_weights <- function(Z, norm, tau){
+get_weights <- function(Z, norm, tau) {
 
   # get n
   n <- nrow(Z)
 
   # if tau is null, use kde to get observation-specific bandwidths
-  if (is.null(tau)){
+  if (is.null(tau)) {
     tau <- get_bandwidths(Z)
-  }else if (length(tau) == 1){
+  } else if (length(tau) == 1) {
     tau <- rep(tau, n)
   }
 
@@ -141,15 +141,15 @@ get_weights <- function(Z, norm, tau){
       # take the p-norm
       diff_vec <- Z[i, ] - Z[j, ]
 
-      if (norm == 2){
+      if (norm == 2) {
 
         # take the 2-norm, use crossprod
         diff_norm <- sqrt(as.numeric(crossprod(diff_vec)))
-      }else if (is.infinite(norm)){
+      } else if (is.infinite(norm)) {
 
         # take the infinity norm
         diff_norm <- max(abs(diff_vec))
-      }else{
+      } else {
 
         # take the p-norm
         diff_norm <- (sum(abs(diff_vec)^norm))^(1 / norm)
