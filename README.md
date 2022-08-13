@@ -1,9 +1,12 @@
 
+<!-- Re-knit 'README.Rmd' with `devtools::build_readme()` -->
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 # covdepGE
 
 <!-- badges: start -->
+
+[![R-CMD-check](https://github.com/JacobHelwig/covdepGE/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JacobHelwig/covdepGE/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 The core function, `covdepGE`, uses the weighted pseudo-likelihood
@@ -114,7 +117,7 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
 #> 
 #> ELBO: -171501.68                                             # Unique Graphs: 3
 #> n: 180, variables: 5                       Hyperparameter grid size: 125 points
-#> Model fit completed in 6.121 secs
+#> Model fit completed in 6.02 secs
 plot(out)
 #> [[1]]
 ```

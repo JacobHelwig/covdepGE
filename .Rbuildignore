@@ -5,3 +5,4 @@
 ^README_files$
 ^README\.Rmd$
 ^README\.pdf$
+^\.github$
