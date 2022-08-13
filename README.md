@@ -1,13 +1,152 @@
 
-# `covdepGE:` Covariate Dependent Graph Estimation
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# covdepGE
+
+<!-- badges: start -->
+<!-- badges: end -->
+
+The core function, `covdepGE`, uses the weighted psuedo-likelihood
+approach to estimate the conditional dependence structure of the data as
+a function of an extraneous covariate. Inference is conducted
+efficiently via a parallelized block mean-field variational
+approximation. Three choices for hyperparameter specification are
+offered, the default being a hybrid between model averaging and grid
+search.
+
+Additionally, the function `generateData` returns covariate dependent
+data based on the data from the simulation study in (1). The functions
+`inclusionCurve`, `matViz`, and `plot.covdepGE` enable visualization of
+the estimates returned by the `covdepGE` function.
 
 ## Installation
 
-Run the following in `R`:
+You can install the released version of covdepGE from
+[CRAN](https://CRAN.R-project.org) with:
 
-`devtools::install_github("JacobHelwig/covdepGE")`
+``` r
+install.packages("covdepGE")
+```
 
-## Overview
+And the development version from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("JacobHelwig/covdepGE")
+```
+
+## Example
+
+``` r
+library(covdepGE)
+library(ggplot2)
+#> Warning: package 'ggplot2' was built under R version 4.1.3
+
+# get the data
+set.seed(12)
+data <- generateData()
+X <- data$X
+Z <- data$Z
+interval <- data$interval
+prec <- data$true_precision
+
+# get overall and within interval sample sizes
+n <- nrow(X)
+n1 <- sum(interval == 1)
+n2 <- sum(interval == 2)
+n3 <- sum(interval == 3)
+
+# visualize the distribution of the extraneous covariate
+ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
+  geom_histogram(aes(Z, fill = interval), color = "black", bins = n %/% 5)
+```
+
+<img src="man/figures/README-example-1.png" width="100%" />
+
+``` r
+# visualize the true precision matrices in each of the intervals
+
+# interval 1
+matViz(prec[[1]], incl_val = TRUE) +
+  ggtitle(paste0("True precision matrix, interval 1, observations 1,...,", n1))
+```
+
+<img src="man/figures/README-example-2.png" width="100%" />
+
+``` r
+# interval 2 (varies continuously with Z)
+cat("\nInterval 2, observations ", n1 + 1, ",...,", n1 + n2, sep = "")
+#> 
+#> Interval 2, observations 61,...,120
+int2_mats <- prec[interval == 2]
+int2_inds <- c(5, n2 %/% 2, n2 - 5)
+lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
+         ggtitle(paste("True precision matrix, interval 2, observation", j + n1)))
+#> [[1]]
+```
+
+<img src="man/figures/README-example-3.png" width="100%" />
+
+    #> 
+    #> [[2]]
+
+<img src="man/figures/README-example-4.png" width="100%" />
+
+    #> 
+    #> [[3]]
+
+<img src="man/figures/README-example-5.png" width="100%" />
+
+``` r
+# interval 3
+matViz(prec[[length(prec)]], incl_val = TRUE) +
+  ggtitle(paste0("True precision matrix, interval 3, observations ",
+                 n1 + n2 + 1, ",...,", n1 + n2 + n3))
+```
+
+<img src="man/figures/README-example-6.png" width="100%" />
+
+``` r
+# fit the model and visualize the estimated graphs
+(out <- covdepGE(X, Z))
+#>   |                                                                              |                                                                      |   0%  |                                                                              |==============                                                        |  20%  |                                                                              |============================                                          |  40%  |                                                                              |==========================================                            |  60%  |                                                                              |========================================================              |  80%  |                                                                              |======================================================================| 100%
+#>                       Covariate Dependent Graphical Model
+#> 
+#> ELBO: -171501.68                                             # Unique Graphs: 3
+#> n: 180, variables: 5                       Hyperparameter grid size: 125 points
+#> Model fit completed in 6.109 secs
+plot(out)
+#> [[1]]
+```
+
+<img src="man/figures/README-example-7.png" width="100%" />
+
+    #> 
+    #> [[2]]
+
+<img src="man/figures/README-example-8.png" width="100%" />
+
+    #> 
+    #> [[3]]
+
+<img src="man/figures/README-example-9.png" width="100%" />
+
+``` r
+# visualize the posterior inclusion probabilities for variables (1, 3) and (1, 2)
+inclusionCurve(out, 1, 2)
+```
+
+<img src="man/figures/README-example-10.png" width="100%" />
+
+``` r
+inclusionCurve(out, 1, 3)
+```
+
+<img src="man/figures/README-example-11.png" width="100%" />
+
+## Methods
+
+### Overview
 
 Suppose that `X` is a *p*-dimensional data matrix with *n* observations
 and that `Z` is a *q*-dimensional extraneous covariate, also with *n*
@@ -31,7 +170,7 @@ given the remaining variables. Core components of this methodology are
 the weighted psuedo-likelihood framework in which inference is conducted
 via a block mean-field variational approximation.
 
-## Graph Estimation
+### Graph Estimation
 
 Graphs are constructed using a psuedo-likelihood approach by fixing each
 of the columns *X*<sub>*j*</sub> of `X` as the response and performing a
@@ -57,7 +196,7 @@ conjunction with the psuedo-likelihood framework comprise the weighted
 psuedo-likelihood approach introduced by (1). Note that model
 performance is best when *n* \> *p*.
 
-## Variational Inference
+### Variational Inference
 
 Spike-and-slab posterior quantities are estimated using a block
 mean-field variational approximation. Coordinate Ascent Variational
@@ -82,7 +221,7 @@ Registering parallel backend with greater than *p* workers offers no
 benefit, since each worker takes on one variable to fix as the response
 and perform the *n* regressions.
 
-## Hyperparameter specification
+### Hyperparameter specification
 
 Each regression requires the specification of 3 hyperparameters: *π*
 (the prior probability of inclusion), *σ*<sup>2</sup> (the prior
@@ -129,7 +268,7 @@ using the *n* models that maximized the total ELBO in the first step.
 Setting `max_iter_grid` to be less than `max_iter` (as is the default)
 will result in a more efficient search.
 
-## Candidate grid generation
+### Candidate grid generation
 
 The candidate grids (`ssq`, `sbsq`, and `pip`) may be passed as
 arguments, however, by default, these grids are generated automatically.
@@ -167,7 +306,7 @@ Replacing *π* with `pip_upper` and *σ*<sub>*β*</sub><sup>2</sup> with
 `sbsq_upper` gives an upper bound on the signal-to-noise ratio. Setting
 this bound equal to `snr_upper` gives an expression for `sbsq_upper`.
 
-## Similarity Weights
+### Similarity Weights
 
 The similarity weight for observation *k* with respect to observation
 *l* is
@@ -187,133 +326,12 @@ bandwidth values. This methodology is used here to estimate the density
 of `Z`, and the updated bandwidths from the second step are used for
 `tau`.
 
-## Bibliography
+### Bibliography
 
-1.  Dasgupta S., Zhao P., Ghosh P., Pati D., Mallick B., *An approximate
-    Bayesian approach to covariate dependent graphical modeling*, 2021
+1.  Sutanoy Dasgupta, Peng Zhao, Prasenjit Ghosh, Debdeep Pati, and Bani
+    Mallick. An approximate Bayesian approach to covariate-dependent
+    graphical modeling. pages 1–59, 2022.
 
-2.  Dasgupta S., Pati D., Srivastava A., *A Two-Step Geometric Framework
-    For Density Modeling*, Statistica Sinica, 2020
-
-## Demo
-
-``` r
-library(covdepGE)
-library(ggplot2)
-```
-
-    ## Warning: package 'ggplot2' was built under R version 4.1.3
-
-``` r
-# get the data
-set.seed(12)
-data <- generateData()
-X <- data$X
-Z <- data$Z
-interval <- data$interval
-prec <- data$true_precision
-
-# get overall and within interval sample sizes
-n <- nrow(X)
-n1 <- sum(interval == 1)
-n2 <- sum(interval == 2)
-n3 <- sum(interval == 3)
-
-# visualize the distribution of the extraneous covariate
-ggplot(data.frame(Z = Z, interval = as.factor(interval))) +
-  geom_histogram(aes(Z, fill = interval), color = "black", bins = n %/% 5)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
-
-``` r
-# visualize the true precision matrices in each of the intervals
-
-# interval 1
-matViz(prec[[1]], incl_val = TRUE) +
-  ggtitle(paste0("True precision matrix, interval 1, observations 1,...,", n1))
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-2.png)<!-- -->
-
-``` r
-# interval 2 (varies continuously with Z)
-cat("\nInterval 2, observations ", n1 + 1, ",...,", n1 + n2, sep = "")
-```
-
-    ## 
-    ## Interval 2, observations 61,...,120
-
-``` r
-int2_mats <- prec[interval == 2]
-int2_inds <- c(5, n2 %/% 2, n2 - 5)
-lapply(int2_inds, function(j) matViz(int2_mats[[j]], incl_val = TRUE) +
-         ggtitle(paste("True precision matrix, interval 2, observation", j + n1)))
-```
-
-    ## [[1]]
-
-![](README_files/figure-gfm/unnamed-chunk-1-3.png)<!-- -->
-
-    ## 
-    ## [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-1-4.png)<!-- -->
-
-    ## 
-    ## [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-1-5.png)<!-- -->
-
-``` r
-# interval 3
-matViz(prec[[length(prec)]], incl_val = TRUE) +
-  ggtitle(paste0("True precision matrix, interval 3, observations ",
-                 n1 + n2 + 1, ",...,", n1 + n2 + n3))
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-6.png)<!-- -->
-
-``` r
-# fit the model and visualize the estimated graphs
-(out <- covdepGE(X, Z))
-```
-
-    ##   |                                                                              |                                                                      |   0%  |                                                                              |==============                                                        |  20%  |                                                                              |============================                                          |  40%  |                                                                              |==========================================                            |  60%  |                                                                              |========================================================              |  80%  |                                                                              |======================================================================| 100%
-
-    ##                       Covariate Dependent Graphical Model
-    ## 
-    ## ELBO: -171501.68                                             # Unique Graphs: 3
-    ## n: 180, variables: 5                       Hyperparameter grid size: 125 points
-    ## Model fit completed in 6.169 secs
-
-``` r
-plot(out)
-```
-
-    ## [[1]]
-
-![](README_files/figure-gfm/unnamed-chunk-1-7.png)<!-- -->
-
-    ## 
-    ## [[2]]
-
-![](README_files/figure-gfm/unnamed-chunk-1-8.png)<!-- -->
-
-    ## 
-    ## [[3]]
-
-![](README_files/figure-gfm/unnamed-chunk-1-9.png)<!-- -->
-
-``` r
-# visualize the posterior inclusion probabilities for variables (1, 3) and (1, 2)
-inclusionCurve(out, 1, 2)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-10.png)<!-- -->
-
-``` r
-inclusionCurve(out, 1, 3)
-```
-
-![](README_files/figure-gfm/unnamed-chunk-1-11.png)<!-- -->
+2.  Sutanoy Dasgupta, Debdeep Pati, and Anuj Srivastava. A Two-Step
+    Geometric Framework For Density Modeling. *Statistica Sinica*,
+    30(4):2155–2177, 2020.
