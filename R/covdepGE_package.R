@@ -1,6 +1,6 @@
 #' @aliases covdepGE-package
 #'
-#' @details The core function, `covdepGE`, uses the weighted psuedo-likelihood
+#' @details The core function, `covdepGE`, uses the weighted pseudo-likelihood
 #' approach to estimate the conditional dependence structure of the data as a
 #' function of an extraneous covariate. Inference is conducted efficiently via
 #' a parallelized block mean-field variational approximation. Three choices

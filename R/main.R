@@ -338,13 +338,13 @@
 #' continuous function of `Z`. This graph contains an undirected edge between
 #' two variables \eqn{X_j}{Xj} and \eqn{X_k}{Xk} if, and only if, \eqn{X_j}{Xj}
 #' and \eqn{X_k}{Xk} are conditionally dependent given the remaining variables.
-#' Core components of this methodology are the weighted psuedo-likelihood
+#' Core components of this methodology are the weighted pseudo-likelihood
 #' framework in which inference is conducted via a block mean-field variational
 #' approximation.
 #'
 #' # Graph Estimation
 #'
-#' Graphs are constructed using a psuedo-likelihood approach by fixing each of
+#' Graphs are constructed using a pseudo-likelihood approach by fixing each of
 #' the columns \eqn{X_j}{Xj} of `X` as the response and performing a
 #' spike-and-slab regression using the remaining variables \eqn{X_k}{Xk} in `X`
 #' as predictors. To determine if an edge should be added between \eqn{X_j}{Xj}
@@ -361,8 +361,8 @@
 #' fixed as the response. The similarity weights for the \eqn{l}-th regression
 #' are taken with respect to observation \eqn{l} such that observations having
 #' similar values of `Z` to \eqn{z_l}{zl} will have larger weights. These
-#' similarity weights in conjunction with the psuedo-likelihood framework
-#' comprise the weighted psuedo-likelihood approach introduced by (1). Note that
+#' similarity weights in conjunction with the pseudo-likelihood framework
+#' comprise the weighted pseudo-likelihood approach introduced by (1). Note that
 #' model performance is best when \eqn{n} > \eqn{p}.
 #'
 #' # Variational Inference

@@ -8,7 +8,8 @@ Authors@R:
     person("Bani", "Mallick", email = "bmallick@stat.tamu.edu", role = c("aut")),
     person("Debdeep", "Pati", email = "debdeep@stat.tamu.edu", role = c("aut")))
 Date: 2022
-Description: A weighted psuedo-likelihood approach for modeling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block mean-field variational approximation.
+Language: en-US
+Description: A weighted pseudo-likelihood approach for modeling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block mean-field variational approximation.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true

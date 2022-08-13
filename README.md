@@ -6,7 +6,7 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The core function, `covdepGE`, uses the weighted psuedo-likelihood
+The core function, `covdepGE`, uses the weighted pseudo-likelihood
 approach to estimate the conditional dependence structure of the data as
 a function of an extraneous covariate. Inference is conducted
 efficiently via a parallelized block mean-field variational
@@ -114,7 +114,7 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
 #> 
 #> ELBO: -171501.68                                             # Unique Graphs: 3
 #> n: 180, variables: 5                       Hyperparameter grid size: 125 points
-#> Model fit completed in 6.109 secs
+#> Model fit completed in 6.121 secs
 plot(out)
 #> [[1]]
 ```
@@ -167,12 +167,12 @@ function of `Z`. This graph contains an undirected edge between two
 variables *X*<sub>*j*</sub> and *X*<sub>*k*</sub> if, and only if,
 *X*<sub>*j*</sub> and *X*<sub>*k*</sub> are conditionally dependent
 given the remaining variables. Core components of this methodology are
-the weighted psuedo-likelihood framework in which inference is conducted
+the weighted pseudo-likelihood framework in which inference is conducted
 via a block mean-field variational approximation.
 
 ### Graph Estimation
 
-Graphs are constructed using a psuedo-likelihood approach by fixing each
+Graphs are constructed using a pseudo-likelihood approach by fixing each
 of the columns *X*<sub>*j*</sub> of `X` as the response and performing a
 spike-and-slab regression using the remaining variables
 *X*<sub>*k*</sub> in `X` as predictors. To determine if an edge should
@@ -192,8 +192,8 @@ regressions are performed for each variable *X*<sub>*j*</sub> fixed as
 the response. The similarity weights for the *l*-th regression are taken
 with respect to observation *l* such that observations having similar
 values of `Z` will have larger weights. These similarity weights in
-conjunction with the psuedo-likelihood framework comprise the weighted
-psuedo-likelihood approach introduced by (1). Note that model
+conjunction with the pseudo-likelihood framework comprise the weighted
+pseudo-likelihood approach introduced by (1). Note that model
 performance is best when *n* \> *p*.
 
 ### Variational Inference

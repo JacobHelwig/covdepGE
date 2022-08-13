@@ -6,10 +6,10 @@
 \alias{_PACKAGE}
 \title{covdepGE: Covariate Dependent Graph Estimation}
 \description{
-A weighted psuedo-likelihood approach for modeling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block mean-field variational approximation.
+A weighted pseudo-likelihood approach for modeling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block mean-field variational approximation.
 }
 \details{
-The core function, \code{covdepGE}, uses the weighted psuedo-likelihood
+The core function, \code{covdepGE}, uses the weighted pseudo-likelihood
 approach to estimate the conditional dependence structure of the data as a
 function of an extraneous covariate. Inference is conducted efficiently via
 a parallelized block mean-field variational approximation. Three choices
