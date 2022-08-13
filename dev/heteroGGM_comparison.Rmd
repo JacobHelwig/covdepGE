@@ -124,10 +124,11 @@ rm(list = c("pred_graphs", "predGraphs", "correct1", "correct0", "sens", "spec")
 
 ```{r}
 # HeteroGGM
-clust <- Mclust(data$Z)
-lambda <- genelambda.obo()
+clust <- Mclust(data$Z, verbose = F)
+lambda <- genelambda.obo(lambda1_min = 0.01, lambda2_min = 0.2,
+                         lambda3_min = 0.01)
 start <- Sys.time()
-out_hetGGM <- GGMPF(lambda, data$X + clust$classification * 100, clust$G)
+out_hetGGM <- GGMPF(lambda, data$X + clust$classification * 10, clust$G)
 elapsed <- round(Sys.time() - start, 3)
 cat("\nTime to fit HeteroGGM:", elapsed, attr(elapsed, "units"), "\n")
 out_hetGGM$Opt_lambda

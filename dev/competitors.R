@@ -99,3 +99,80 @@ for (j in 1:n_trials){
 # save the final time and the results
 results$time <- Sys.time() - results$time
 save(results, file = "competitor_res100.Rda")
+
+
+## Analysis
+load("dev/competitor_res100.Rda")
+
+# extract each of the models
+res <- results[setdiff(names(results), "time")]
+covdepGE_models <- lapply(res, `[[`, "covdepGE")
+loggle_models <- lapply(res, `[[`, "loggle")
+hetGGM_models <- lapply(res, `[[`, "HeteroGGM")
+
+# extract the sensitivties, specificities, and time
+covdepGE_sens <- sapply(covdepGE_models, `[[`, "sens")
+covdepGE_spec <- sapply(covdepGE_models, `[[`, "spec")
+covdepGE_times <- sapply(covdepGE_models, `[[`, "time")
+loggle_sens <- sapply(loggle_models, `[[`, "sens")
+loggle_spec <- sapply(loggle_models, `[[`, "spec")
+loggle_times <- sapply(loggle_models, `[[`, "time")
+hetGGM_sens <- sapply(hetGGM_models, `[[`, "sens")
+hetGGM_spec <- sapply(hetGGM_models, `[[`, "spec")
+hetGGM_times <- sapply(hetGGM_models, `[[`, "time")
+
+# sensitivity analysis
+summary(covdepGE_sens)
+summary(loggle_sens)
+summary(hetGGM_sens)
+
+summary(covdepGE_sens - loggle_sens)
+summary(covdepGE_sens - hetGGM_sens)
+
+# specificity analysis
+summary(covdepGE_spec)
+summary(loggle_spec)
+summary(hetGGM_spec)
+
+summary(covdepGE_spec - loggle_spec)
+summary(covdepGE_spec - hetGGM_spec)
+
+# time analysis
+summary(covdepGE_times)
+summary(loggle_times)
+summary(hetGGM_times)
+
+# put everything into a table
+library(kableExtra)
+perf <- apply(cbind(covdepGE_sens, loggle_sens, hetGGM_sens,
+                    covdepGE_spec, loggle_spec, hetGGM_spec,
+                    covdepGE_times, loggle_times, hetGGM_times),
+              2, function(x) round(c(Mean = mean(x), SD = sd(x)), 3))
+labs <- c("covdepGE", "loggle", "HetGGM")
+perf_df <- data.frame(perf)
+colnames(perf_df) <- rep(labs, 3)
+kbl(perf_df, format = "latex", booktabs = T) %>%
+  add_header_above(c("", "Sensitivity" = 3, "Specificity" = 3, "Time(s)" = 3)) %>%
+  kable_styling(position = "center")
+
+# plot
+library(ggplot2)
+library(ggsci)
+# sensitivity
+sens <- rbind.data.frame(
+  cbind.data.frame(Sensitivity = covdepGE_sens, Package = "covdepGE"),
+  cbind.data.frame(Sensitivity = loggle_sens, Package = "loggle"),
+  cbind.data.frame(Sensitivity = hetGGM_sens, Package = "HeteroGGM"))
+sens_meds <- aggregate(Sensitivity~Package, sens, function(x) round(median(x), 2))
+ggplot(sens, aes(Package, Sensitivity, fill = Package)) + geom_boxplot(color = "#a7a7a7", position = position_dodge(1.2)) +
+  coord_cartesian(ylim = c(0.7, 1)) +
+  geom_text(data = sens_meds, aes(label = Sensitivity), color = "#d1d1d1", vjust = 1) +
+  theme_classic() + scale_fill_manual(values = c("#500000", "#003C71", "#5B6236"))
+
+
+p <- ggplot(data=mtcars, aes(x=factor(vs), y=mpg, fill=factor(am))) +
+  geom_boxplot(position = position_dodge(width=0.9))
+
+a <- aggregate(mpg ~ vs + am , mtcars, function(i) round(mean(i)))
+
+p +  geom_text(data = a, aes(label = mpg))
