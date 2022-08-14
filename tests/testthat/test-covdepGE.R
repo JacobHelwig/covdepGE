@@ -1,6 +1,6 @@
-library(covdepGE)
-library(testthat)
-library(vdiffr)
+# library(covdepGE)
+# library(testthat)
+# library(vdiffr)
 
 set.seed(1)
 data <- generateData()
@@ -184,7 +184,8 @@ test_that("Greater max_iter and max_iter_grid gives slower convergence", {
                         max_iter_grid = 100, prog_bar = F)
   out_slow2 <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
                         max_iter = 500, prog_bar = F)
-  out_fast <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2)
+  out_fast <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
+                       prog_bar = F)
   expect_gt(out_slow1$model_details$elapsed, out_fast$model_details$elapsed)
   expect_gt(out_slow2$model_details$elapsed, out_fast$model_details$elapsed)
 })
@@ -246,7 +247,8 @@ test_that("The progress bar can be turned off", {
 
 test_that("print and summary give the same results", {
   out <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F)
-  expect_equal(print(out), summary(out))
+  expect_equal(capture_output(print(out)),
+               capture_output(summary(out)))
 })
 
 # generateData
@@ -338,30 +340,143 @@ test_that("Precision matrices control data", {
   expect_equal(graph, out$graphs$unique_graphs$graph1$graph)
 })
 
-
-# Example
-# library(ggplot2)
-# # inclusionCurve
-# test_that("ggplot2 histogram works", {
-#   expect_failure({
-#     p <- ggplot(mtcars) + geom_histogram(aes(disp), color = "blue")
-#     expect_doppelganger("default histogram", p)
-#   })
-# })
+# inclusionCurve
 
 out <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F)
 inc_curve <- inclusionCurve(out, 1, 2)
 
 test_that("Save the default inclusion curve plot", {
-  suppressWarnings(expect_doppelganger("inc_curve", inc_curve))
+  suppressWarnings(vdiffr::expect_doppelganger("inc_curve", inc_curve))
   expect_true(T)
 })
 
-test_that("Verify that expect_doppelganger is working", {
-  expect_doppelganger("inc_curve", inclusionCurve(out, 1, 2))
+test_that("Verify that vdiffr::expect_doppelganger is working", {
+  vdiffr::expect_doppelganger("inc_curve", inclusionCurve(out, 1, 2))
 })
 
 test_that("Different vertices give different plots", {
-  expect_failure(expect_doppelganger(
+  expect_failure(vdiffr::expect_doppelganger(
     "inc_curve", inclusionCurve(out, 1, 3)))
+})
+
+test_that("Different vertices give different plots", {
+  expect_failure(vdiffr::expect_doppelganger(
+    "inc_curve", inclusionCurve(out, 1, 3)))
+})
+
+test_that("Different line types", {
+  expect_failure(vdiffr::expect_doppelganger(
+    "inc_curve", inclusionCurve(out, 1, 2, line_type = "dotted")))
+})
+
+test_that("Different line size", {
+  expect_failure(vdiffr::expect_doppelganger(
+    "inc_curve", inclusionCurve(out, 1, 2, line_size = 1)))
+})
+
+test_that("Different line color", {
+  expect_failure(vdiffr::expect_doppelganger(
+    "inc_curve", inclusionCurve(out, 1, 2, line_color = "dodgerblue")))
+})
+
+test_that("Different line color", {
+  expect_failure(vdiffr::expect_doppelganger(
+    "inc_curve", inclusionCurve(out, 1, 2, line_color = "dodgerblue")))
+})
+
+test_that("Different point shape", {
+  expect_failure(vdiffr::expect_doppelganger(
+    "inc_curve", inclusionCurve(out, 1, 2, point_shape = 2)))
+})
+
+test_that("Different point size", {
+  expect_failure(vdiffr::expect_doppelganger(
+    "inc_curve", inclusionCurve(out, 1, 2, point_size = 2)))
+})
+
+test_that("Different point color", {
+  expect_failure(vdiffr::expect_doppelganger(
+    "inc_curve", inclusionCurve(out, 1, 2, point_color = "dodgerblue")))
+})
+
+test_that("Different point fill", {
+  expect_failure(vdiffr::expect_doppelganger(
+    "inc_curve", inclusionCurve(out, 1, 2, point_fill = "grey55")))
+})
+
+# matViz
+adj_mat <- out$graphs$graphs[[1]]
+a_viz <- matViz(adj_mat)
+prec_mat <- out$graphs$inclusion_probs_sym[[1]]
+p_viz <- matViz(prec_mat)
+
+test_that("Save the default matViz plots", {
+  suppressWarnings(vdiffr::expect_doppelganger("a", a_viz))
+  suppressWarnings(vdiffr::expect_doppelganger("p", p_viz))
+  expect_true(T)
+})
+
+test_that("Verify that vdiffr::expect_doppelganger is working", {
+  vdiffr::expect_doppelganger("a", matViz(adj_mat))
+  vdiffr::expect_doppelganger("p", matViz(prec_mat))
+})
+
+test_that("Different color 1", {
+  expect_failure(
+    vdiffr::expect_doppelganger("a", matViz(adj_mat, color1 = "grey90")))
+  expect_failure(
+    vdiffr::expect_doppelganger("p", matViz(prec_mat, color1 = "grey90")))
+})
+
+test_that("Different color 2", {
+  expect_failure(
+    vdiffr::expect_doppelganger("a", matViz(adj_mat, color2 = "dodgerblue")))
+  expect_failure(
+    vdiffr::expect_doppelganger("p", matViz(prec_mat, color2 = "dodgerblue")))
+})
+
+test_that("Different grid color", {
+  expect_failure(
+    vdiffr::expect_doppelganger("a", matViz(adj_mat, grid_color = "dodgerblue")))
+  expect_failure(
+    vdiffr::expect_doppelganger("p", matViz(prec_mat, grid_color = "dodgerblue")))
+})
+
+test_that("Include cell values", {
+  vdiffr::expect_doppelganger(
+    "a", matViz(adj_mat, incl_val = T, prec = 5, font_size = 7,
+                font_color1 = "forestgreen", font_color2 = "grey90",
+                font_thres = 0.2))
+  expect_failure(
+    vdiffr::expect_doppelganger("p", matViz(prec_mat, incl_val = T)))
+})
+
+test_that("Precision", {
+  expect_failure(
+    vdiffr::expect_doppelganger("p", matViz(prec_mat, incl_val = T,
+                                            prec = 4)))
+})
+
+test_that("Font size", {
+  expect_failure(
+    vdiffr::expect_doppelganger("p", matViz(prec_mat, incl_val = T,
+                                            font_size = 4)))
+})
+
+test_that("Font color 1", {
+  expect_failure(
+    vdiffr::expect_doppelganger("p", matViz(prec_mat, incl_val = T,
+                                            font_color1 = "dodgerblue")))
+})
+
+test_that("Font color 2", {
+  expect_failure(
+    vdiffr::expect_doppelganger("p", matViz(prec_mat, incl_val = T,
+                                            font_color2 = "dodgerblue")))
+})
+
+test_that("Font threshold", {
+  expect_failure(
+    vdiffr::expect_doppelganger("p", matViz(prec_mat, incl_val = T,
+                                            font_thres = 0.05)))
 })
