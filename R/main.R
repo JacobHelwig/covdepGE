@@ -534,7 +534,7 @@ covdepGE <- function(X, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
   if (scale_Z){
 
     # if there is only one unique value in Z, warn and do not scale
-    if (any(apply(Z, 2, sd) == 0)){
+    if (any(apply(Z, 2, stats::sd) == 0)){
       warning("Cannot scale constant Z")
       Z <- matrix(scale(Z, scale = F)[ , ], n)
     } else{
