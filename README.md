@@ -69,6 +69,7 @@ interval <- data$interval
 prec <- data$true_precision
 
 # get overall and within interval sample sizes
+p <- ncol(X)
 n <- nrow(X)
 n1 <- sum(interval == 1)
 n2 <- sum(interval == 2)
@@ -126,12 +127,14 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
 
 ``` r
 # fit the model and visualize the estimated graphs
-(out <- covdepGE(X, Z, prog_bar = F))
+(out <- covdepGE(X, Z, parallel = T, num_workers = p))
+#> Warning in covdepGE(X, Z, parallel = T, num_workers = p): No registered workers
+#> detected; registering doParallel with 5 workers
 #>                       Covariate Dependent Graphical Model
 #> 
 #> ELBO: -171501.68                                             # Unique Graphs: 3
 #> n: 180, variables: 5                       Hyperparameter grid size: 125 points
-#> Model fit completed in 30.437 secs
+#> Model fit completed in 3.113 secs
 plot(out)
 #> [[1]]
 ```
