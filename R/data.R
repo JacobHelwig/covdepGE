@@ -138,15 +138,16 @@ generateData <- function(p = 5, n1 = 60, n2 = 60, n3 = 60, Z = NULL,
   # create covariate for observations in each of the three intervals
 
   # define number of samples
-  n <- sum(n1, n2, n3)
+  n <- ifelse(is.null(true_precision), sum(n1, n2, n3), length(true_precision))
 
   # define the intervals
   limits1 <- c(-3, -1)
   limits2 <- c(-1, 1)
   limits3 <- c(1, 3)
 
-  # if Z is NULL, generate
-  if (is.null(Z)){
+  # if Z and true_precision have not been provided, generate Z
+  interval <- NULL
+  if (is.null(Z) & is.null(true_precision)){
 
     # define the interval labels
     interval <- c(rep(1, n1), rep(2, n2), rep(3, n3))
@@ -156,9 +157,10 @@ generateData <- function(p = 5, n1 = 60, n2 = 60, n3 = 60, Z = NULL,
     z2 <- sort(stats::runif(n2, limits2[1], limits2[2]))
     z3 <- sort(stats::runif(n3, limits3[1], limits3[2]))
     Z <- matrix(c(z1, z2, z3), n, 1)
-  }else{
+  }else if(!is.null(Z) & is.null(true_precision)){
 
-    # otherwise, divide the provided covariates into the 3 intervals
+    # Z has been provided and true_precision has not
+    # divide Z into the 3 intervals
     interval <- as.integer(cut(Z, c(-Inf, -1, 1, Inf), labels = 1:3))
     z1 <- Z[interval == 1]
     z2 <- Z[interval == 2]
@@ -168,6 +170,10 @@ generateData <- function(p = 5, n1 = 60, n2 = 60, n3 = 60, Z = NULL,
     n1 <- length(z1)
     n2 <- length(z2)
     n3 <- length(z3)
+  }else if(!is.null(Z) & !is.null(true_precision)){
+
+    # Z and true_precision have been provided
+    stop("Z and true_precision cannot both be provided")
   }
 
   # if they have not been provided, create the precision matrices

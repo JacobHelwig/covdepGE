@@ -9,7 +9,9 @@
 #' @param X \eqn{n \times p}{n x p} numeric matrix; data matrix. For best
 #' results, \eqn{n} should be greater than \eqn{p}
 #'
-#' @param Z \eqn{n \times q}{n x q} numeric matrix; extraneous covariates
+#' @param Z \eqn{n \times q}{n x q} numeric matrix; extraneous covariates. If
+#' constant, the precision matrix will be considered to be homogeneous
+#' throughout the data. `rep(0, ncol(X))` by default
 #'
 #' @param hp_method `character` in `c("grid_search","model_average","hybrid")`;
 #' method for selecting hyperparameters from the the hyperparameter grid. The
@@ -504,14 +506,14 @@
 #' (2) Sutanoy Dasgupta, Debdeep Pati, and Anuj Srivastava. A Two-Step Geometric
 #' Framework For Density Modeling. *Statistica Sinica*, 30(4):2155–2177, 2020.
 ## -----------------------------------------------------------------------------
-covdepGE <- function(X, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
-                     pip = NULL, nssq = 5, nsbsq = 5, npip = 5, ssq_mult = 1.5,
-                     ssq_lower = 1e-5, snr_upper = 25, sbsq_lower = 1e-5,
-                     pip_lower = 1e-5, pip_upper = NULL, tau = NULL, norm = 2,
-                     center_X = T, scale_Z = T, alpha_tol = 1e-5,
-                     max_iter_grid = 10, max_iter = 100, edge_threshold = 0.5,
-                     sym_method = "mean", parallel = F, num_workers = NULL,
-                     prog_bar = T){
+covdepGE <- function(X, Z = rep(0, nrow(X)), hp_method = "hybrid", ssq = NULL,
+                     sbsq = NULL, pip = NULL, nssq = 5, nsbsq = 5, npip = 5,
+                     ssq_mult = 1.5, ssq_lower = 1e-5, snr_upper = 25,
+                     sbsq_lower = 1e-5, pip_lower = 1e-5, pip_upper = NULL,
+                     tau = NULL, norm = 2, center_X = T, scale_Z = T,
+                     alpha_tol = 1e-5, max_iter_grid = 10, max_iter = 100,
+                     edge_threshold = 0.5, sym_method = "mean", parallel = F,
+                     num_workers = NULL, prog_bar = T){
 
   start_time <- Sys.time()
 

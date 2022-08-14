@@ -1,5 +1,5 @@
-# library(covdepGE)
-# library(testthat)
+library(covdepGE)
+library(testthat)
 
 set.seed(1)
 data <- generateData()
@@ -7,20 +7,21 @@ data <- generateData()
 test_that("Runtime is reasonable", {
   out <- covdepGE(data$X, data$Z, prog_bar = F)
   expect_lt(out$model_details$elapsed, 15)
+  expect_equal(attr(out$model_details$elapsed, "units"), "secs")
 })
 
 test_that("Wrong size X and Z", {
-  expect_error(covdepGE(data$X, data$Z[-1]))
+  expect_error(covdepGE(data$X, data$Z[-1], prog_bar = F))
 })
 
 test_that("Constant Z gives 2 warnings", {
   expect_equal(2,length(capture_warnings(covdepGE(
-    data$X, (data$Z > -5) * 1, ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F))))
+    data$X, ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F))))
 })
 
 test_that("Constant Z gives 1 graph", {
-  out <- covdepGE(data$X, (data$Z > -5) * 1, ssq = 0.5, sbsq = 0.5, pip = 0.1,
-                  tau = 0.5, scale_Z = F, prog_bar = F)
+  out <- covdepGE(data$X, ssq = 0.5, sbsq = 0.5, pip = 0.1, tau = 0.5,
+                  scale_Z = F, prog_bar = F)
   expect_equal(out$model_details$num_unique, 1)
 })
 
@@ -207,6 +208,9 @@ test_that("sym_method affects sparsity", {
             sum(unlist(out_full$graphs$graphs)))
 })
 
+# the following gives coverage to the parallel parts of the code, however,
+# takes too long to run for R CMD checks on Ubuntu
+
 # test_that("parallelization and num_workers speeds up inference", {
 #   n_hp <- 10
 #   out_seq <- covdepGE(data$X, data$Z, nssq = n_hp, nsbsq = n_hp, npip = n_hp,
@@ -244,9 +248,92 @@ test_that("print and summary give the same results", {
   expect_equal(print(out), summary(out))
 })
 
-# data
+# generateData
+
 test_that("p controls the size of the data", {
   p <- 9
   data <- generateData(p = p)
   expect_equal(p, ncol(data$X))
+})
+
+test_that("n1, n2, n3 control the sample size", {
+  n1 <- 1
+  n2 <- 2
+  n3 <- 3
+  data <- generateData(n1 = n1, n2 = n2, n3 = n3)
+  expect_equal(data$interval, c(rep(1, n1), rep(2, n2), rep(3, n3)))
+})
+
+test_that("NULL Z and provided true_precision returns ")
+
+test_that("Z controls interval", {
+  int1 <- c(-3, -1)
+  int2 <- c(-1, 1)
+  int3 <- c(1, 3)
+  n1 <- 1
+  n2 <- 2
+  n3 <- 3
+  Z <- c(runif(n1, int1[1], int1[2]), runif(n2, int2[1], int2[2]),
+         runif(n3, int3[1], int3[2]))
+  data <- generateData(Z = Z) # !NULL Z, NULL true_precision
+  expect_equal(data$interval, c(rep(1, n1), rep(2, n2), rep(3, n3)))
+  expect_equal(Z, data$Z)
+})
+
+test_that("Passing both Z and true_precision gives an error", {
+  expect_error(generateData(Z = data$Z, true_precision = data$true_precision))
+})
+
+test_that("Passing true_precision leaves Z null", {
+  expect_null(generateData(true_precision = data$true_precision)$Z)
+})
+
+test_that("Z controls precision matrices, precision matrices from Z control data", {
+
+  # interval 1
+  int1 <- c(-3, -1)
+  n1 <- 100
+  Z <- c(runif(n1, int1[1], int1[2]))
+  data_2 <- generateData(Z = Z)
+  expect_equal(1, length(unique(data_2$true_precision)))
+  expect_equal(data$true_precision[[1]], data_2$true_precision[[1]])
+  out <- covdepGE(data_2$X, data_2$Z, tau = 1e5, prog_bar = F)
+  expect_equal(1, out$model_details$num_unique)
+  graph <- (data_2$true_precision[[1]] != 0) * 1 - diag(ncol(data_2$X))
+  expect_equal(graph, out$graphs$unique_graphs$graph1$graph)
+
+  # interval 3
+  int1 <- c(1, 3)
+  Z <- c(runif(n1, int1[1], int1[2]))
+  data_2 <- generateData(Z = Z)
+  expect_equal(1, length(unique(data_2$true_precision)))
+  expect_equal(data$true_precision[[nrow(data$X)]], data_2$true_precision[[1]])
+  out <- covdepGE(data_2$X, data_2$Z, tau = 1e5, prog_bar = F)
+  expect_equal(1, out$model_details$num_unique)
+  graph <- (data_2$true_precision[[1]] != 0) * 1 - diag(ncol(data_2$X))
+  expect_equal(graph, out$graphs$unique_graphs$graph1$graph)
+})
+
+test_that("Precision matrices control data", {
+
+  # interval 1
+  n1 <- 100
+  prec <- rep(list(data$true_precision[[1]]), n1)
+  data_2 <- generateData(true_precision = prec)
+  expect_equal(1, length(unique(data_2$true_precision)))
+  expect_equal(data$true_precision[[1]], data_2$true_precision[[1]])
+  out <- suppressWarnings(covdepGE(data_2$X, prog_bar = F))
+  expect_equal(1, out$model_details$num_unique)
+  graph <- (data_2$true_precision[[1]] != 0) * 1 - diag(ncol(data_2$X))
+  expect_equal(graph, out$graphs$unique_graphs$graph1$graph)
+
+  # interval 3
+  prec <- rep(list(data$true_precision[[nrow(data$X)]]), n1)
+  data_2 <- generateData(true_precision = prec)
+  expect_equal(1, length(unique(data_2$true_precision)))
+  expect_equal(data$true_precision[[nrow(data$X)]], data_2$true_precision[[1]])
+  out <- suppressWarnings(covdepGE(data_2$X, prog_bar = F))
+  expect_equal(1, out$model_details$num_unique)
+  graph <- (data_2$true_precision[[1]] != 0) * 1 - diag(ncol(data_2$X))
+  expect_equal(graph, out$graphs$unique_graphs$graph1$graph)
 })
