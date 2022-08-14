@@ -211,23 +211,23 @@ test_that("sym_method affects sparsity", {
 # the following gives coverage to the parallel parts of the code, however,
 # takes too long to run for R CMD checks on Ubuntu
 #
-test_that("parallelization and num_workers speeds up inference", {
-  n_hp <- 10
-  out_seq <- covdepGE(data$X, data$Z, nssq = n_hp, nsbsq = n_hp, npip = n_hp,
-                      prog_bar = F)
-  out_par2 <- suppressWarnings(covdepGE(data$X, data$Z, parallel = T,
-                                        num_workers = 2,
-                                        nssq = n_hp, nsbsq = n_hp, npip = n_hp,
-                                        prog_bar = F))
-  out_par <- suppressWarnings(covdepGE(data$X, data$Z, parallel = T,
-                                       num_workers = 5,
-                                       nssq = n_hp, nsbsq = n_hp, npip = n_hp,
-                                       prog_bar = F))
-  expect_gt(out_seq$model_details$elapsed,
-            out_par2$model_details$elapsed)
-  expect_gt(out_par2$model_details$elapsed,
-            out_par$model_details$elapsed)
-})
+# test_that("parallelization and num_workers speeds up inference", {
+#   n_hp <- 10
+#   out_seq <- covdepGE(data$X, data$Z, nssq = n_hp, nsbsq = n_hp, npip = n_hp,
+#                       prog_bar = F)
+#   out_par2 <- suppressWarnings(covdepGE(data$X, data$Z, parallel = T,
+#                                         num_workers = 2,
+#                                         nssq = n_hp, nsbsq = n_hp, npip = n_hp,
+#                                         prog_bar = F))
+#   out_par <- suppressWarnings(covdepGE(data$X, data$Z, parallel = T,
+#                                        num_workers = 5,
+#                                        nssq = n_hp, nsbsq = n_hp, npip = n_hp,
+#                                        prog_bar = F))
+#   expect_gt(out_seq$model_details$elapsed,
+#             out_par2$model_details$elapsed)
+#   expect_gt(out_par2$model_details$elapsed,
+#             out_par$model_details$elapsed)
+# })
 
 test_that("parallel warns when registering and searching for workers", {
   expect_warning(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
