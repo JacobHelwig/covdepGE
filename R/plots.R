@@ -358,6 +358,10 @@ plot.covdepGE <- function(x, graph_colors = NULL, title_sum = T, ...){
   # if no colors have been provided, set to default
   if(is.null(graph_colors)){
     graph_colors <- rep("#500000", length(x$graphs$unique_graphs))
+  }else if(length(graph_colors) < x$model_details$num_unique){
+
+    # otherwise, ensure that enough colors have been provided
+    graph_colors <- c(matrix(graph_colors, x$model_details$num_unique, 1))
   }
 
   # create the titles for the plots

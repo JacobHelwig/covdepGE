@@ -1,18 +1,15 @@
-# library(covdepGE)
-# library(testthat)
-# library(vdiffr)
-
+library(covdepGE)
+library(testthat)
 set.seed(1)
 data <- generateData()
 
-test_that("Runtime is reasonable", {
-  out <- covdepGE(data$X, data$Z, prog_bar = F)
-  expect_lt(out$model_details$elapsed, 15)
-  expect_equal(attr(out$model_details$elapsed, "units"), "secs")
-})
-
 test_that("Wrong size X and Z", {
   expect_error(covdepGE(data$X, data$Z[-1], prog_bar = F))
+})
+
+test_that("Runtime is reasonable", {
+  out <- covdepGE(data$X, data$Z, prog_bar = F)
+  expect_lt(as.numeric(out$model_details$elapsed, units = "secs"), 15)
 })
 
 test_that("Constant Z gives 2 warnings", {
@@ -405,6 +402,7 @@ test_that("Different point fill", {
 })
 
 # matViz
+
 adj_mat <- out$graphs$graphs[[1]]
 a_viz <- matViz(adj_mat)
 prec_mat <- out$graphs$inclusion_probs_sym[[1]]
@@ -479,4 +477,35 @@ test_that("Font threshold", {
   expect_failure(
     vdiffr::expect_doppelganger("p", matViz(prec_mat, incl_val = T,
                                             font_thres = 0.05)))
+})
+
+# plot.covdepGE
+
+plots <- plot(out)
+plots2 <- plot(out, c("dodgerblue", "forestgreen"))
+
+test_that("Save the default plot lists", {
+  suppressWarnings(vdiffr::expect_doppelganger("plots_1", plots[[1]]))
+  suppressWarnings(vdiffr::expect_doppelganger("plots_2", plots[[2]]))
+  suppressWarnings(vdiffr::expect_doppelganger("plots2_1", plots2[[1]]))
+  suppressWarnings(vdiffr::expect_doppelganger("plots2_2", plots2[[2]]))
+  expect_true(T)
+})
+
+test_that("Verify that vdiffr::expect_doppelganger is working and that colors are recycled", {
+  vdiffr::expect_doppelganger("plots_1", plot(out)[[1]])
+  vdiffr::expect_doppelganger(
+    "plots2_1", plot(out, c("dodgerblue", "forestgreen"))[[1]])
+  vdiffr::expect_doppelganger(
+    "plots2_2", plot(out, c("dodgerblue", "forestgreen"))[[2]])
+})
+
+test_that("Different graph_colors", {
+  expect_failure(vdiffr::expect_doppelganger(
+    "plots_2", plot(out, graph_colors = "dodgerblue")[[2]]))
+})
+
+test_that("No title summary", {
+  expect_failure(vdiffr::expect_doppelganger(
+    "plots_1", plot(out, title_sum = F)[[1]]))
 })
