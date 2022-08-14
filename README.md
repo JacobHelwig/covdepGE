@@ -6,9 +6,9 @@
 
 <!-- badges: start -->
 
-[![R-CMD-check](https://github.com/JacobHelwig/covdepGE/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JacobHelwig/covdepGE/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/JacobHelwig/covdepGE/branch/master/graph/badge.svg)](https://app.codecov.io/gh/JacobHelwig/covdepGE?branch=master)
+[![R-CMD-check](https://github.com/JacobHelwig/covdepGE/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JacobHelwig/covdepGE/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 The core function, `covdepGE`, uses the weighted pseudo-likelihood
@@ -119,7 +119,7 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
 #> 
 #> ELBO: -171501.68                                             # Unique Graphs: 3
 #> n: 180, variables: 5                       Hyperparameter grid size: 125 points
-#> Model fit completed in 6.252 secs
+#> Model fit completed in 5.908 secs
 plot(out)
 #> [[1]]
 ```
