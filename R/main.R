@@ -531,10 +531,21 @@ covdepGE <- function(X, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
   }
 
   # if the covariates should be centered and scaled, do so ([ , ] for attributes)
-  if (scale_Z) Z <- matrix(scale(Z)[ , ], n)
+  if (scale_Z){
+
+    # if there is only one unique value in Z, warn and do not scale
+    if (any(apply(Z, 2, sd) == 0)){
+      warning("Cannot scale constant Z")
+      Z <- matrix(scale(Z, scale = F)[ , ], n)
+    } else{
+
+      # otherwise, center and scale Z
+      Z <- matrix(scale(Z)[ , ], n)
+    }
+  }
 
   # if X should be centered, do so
-  if (center_X) X <- matrix(scale(X, T, F)[ , ], n)
+  if (center_X) X <- matrix(scale(X, scale = F)[ , ], n)
 
   # get weights
   D <- get_weights(Z, norm, tau)
@@ -542,7 +553,7 @@ covdepGE <- function(X, Z, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
   D <- D$D
 
   # create list for the weights and bandwidths
-  weights = list(weights = D, bandwidths = bandwidths)
+  weights <- list(weights = D, bandwidths = bandwidths)
 
   # main loop over the predictors
 

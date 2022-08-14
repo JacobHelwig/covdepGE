@@ -13,6 +13,13 @@ silverman <- function(x) {
 
   # apply and return silverman's rule of thumb
   sigma <- (0.9 * min(stats::sd(x), stats::IQR(x) / 1.35) * length(x)^(-0.2))
+
+  # ensure that sigma is greater than 0
+  if (sigma == 0){
+    warning("Cannot calculate Silverman's rule of thumb for constant Z; returning 1")
+    sigma <- 1
+  }
+
   return(sigma)
 }
 

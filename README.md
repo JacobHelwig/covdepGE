@@ -13,12 +13,12 @@ coverage](https://codecov.io/gh/JacobHelwig/covdepGE/branch/master/graph/badge.s
 
 The conditional dependence structure (CDS) of a data matrix with *p*
 variables can be modeled as an undirected graph with *p* vertices, where
-two variables are connected if, and only if, the variables are dependent
-given the remaining variables. Gaussian graphical modeling (GGM) seeks
-to capture the CDS of the data under the assumption that the data are
-normally distributed. This distributional assumption is convenient for
-inference, as the CDS is given by the sparsity structure of the
-precision matrix.
+two variables are connected if, and only if, the two variables are
+dependent given the remaining variables. Gaussian graphical modeling
+(GGM) seeks to capture the CDS of the data under the assumption that the
+data are normally distributed. This distributional assumption is
+convenient for inference, as the CDS is given by the sparsity structure
+of the precision matrix.
 
 There is extensive GGM literature and many R packages for GGM, however,
 all make the restrictive assumption that the precision matrix is
@@ -126,13 +126,12 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
 
 ``` r
 # fit the model and visualize the estimated graphs
-(out <- covdepGE(X, Z))
-#>   |                                                                              |                                                                      |   0%  |                                                                              |==============                                                        |  20%  |                                                                              |============================                                          |  40%  |                                                                              |==========================================                            |  60%  |                                                                              |========================================================              |  80%  |                                                                              |======================================================================| 100%
+(out <- covdepGE(X, Z, prog_bar = F))
 #>                       Covariate Dependent Graphical Model
 #> 
 #> ELBO: -171501.68                                             # Unique Graphs: 3
 #> n: 180, variables: 5                       Hyperparameter grid size: 125 points
-#> Model fit completed in 6.071 secs
+#> Model fit completed in 30.437 secs
 plot(out)
 #> [[1]]
 ```
