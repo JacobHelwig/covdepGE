@@ -14,11 +14,12 @@ coverage](https://codecov.io/gh/JacobHelwig/covdepGE/branch/master/graph/badge.s
 The conditional dependence structure (CDS) of a data matrix with *p*
 variables can be modeled as an undirected graph with *p* vertices, where
 two variables are connected if, and only if, the two variables are
-dependent given the remaining variables. Gaussian graphical modeling
-(GGM) seeks to capture the CDS of the data under the assumption that the
-data are normally distributed. This distributional assumption is
-convenient for inference, as the CDS is given by the sparsity structure
-of the precision matrix.
+dependent given the remaining variables in the data. Gaussian graphical
+modeling (GGM) seeks to capture the CDS of the data under the assumption
+that the data are normally distributed. This distributional assumption
+is convenient for inference, as the CDS is given by the sparsity
+structure of the precision matrix, where the precision matrix is defined
+as the inverse covariance matrix of the data.
 
 There is extensive GGM literature and many R packages for GGM, however,
 all make the restrictive assumption that the precision matrix is
@@ -134,7 +135,7 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
 #> 
 #> ELBO: -171501.68                                             # Unique Graphs: 3
 #> n: 180, variables: 5                       Hyperparameter grid size: 125 points
-#> Model fit completed in 2.704 secs
+#> Model fit completed in 2.741 secs
 plot(out)
 #> [[1]]
 ```
@@ -168,22 +169,22 @@ inclusionCurve(out, 1, 3)
 
 ### Overview
 
-Suppose that `X` is a *p*-dimensional data matrix with *n* observations
-and that `Z` is a *q*-dimensional extraneous covariate, also with *n*
-observations, where the *l*-th observation in `Z` is associated with the
-*l*-th observation in `X`. Further suppose that the *l*-th row of `X`
+Suppose that *X* is a *p*-dimensional data matrix with *n* observations
+and that *Z* is a *q*-dimensional extraneous covariate, also with *n*
+observations, where the *l*-th observation in *Z* is associated with the
+*l*-th observation in *X*. Further suppose that the *l*-th row of *X*
 follows a *p*-dimensional Gaussian distribution with mean 0 and
 precision matrix *Ω*(*z*<sub>*l*</sub>), where *z*<sub>*l*</sub> is the
-*l*-th entry of `Z` and *Ω* is a continuous function mapping from the
+*l*-th entry of *Z* and *Ω* is a continuous function mapping from the
 space of extraneous covariates to the space of *p* × *p* non-singular
 matrices. Then, for the *l*-th observation, the (*j*,*k*) entry of
 *Ω*(*z*<sub>*l*</sub>) is non-zero if, and only if, variable *j* and
-variable *k* are dependent given the remaining variables in `X`.
+variable *k* are dependent given the remaining variables in *X*.
 
 Given data satisfying these assumptions, the `covdepGE` function employs
 the algorithm described in (1) to estimate a graphical representation of
-the structure of *Ω* for each of the observations in `X` as a continuous
-function of `Z`. This graph contains an undirected edge between two
+the structure of *Ω* for each of the observations in *X* as a continuous
+function of *Z*. This graph contains an undirected edge between two
 variables *X*<sub>*j*</sub> and *X*<sub>*k*</sub> if, and only if,
 *X*<sub>*j*</sub> and *X*<sub>*k*</sub> are conditionally dependent
 given the remaining variables. Core components of this methodology are
@@ -193,9 +194,9 @@ via a block mean-field variational approximation.
 ### Graph Estimation
 
 Graphs are constructed using a pseudo-likelihood approach by fixing each
-of the columns *X*<sub>*j*</sub> of `X` as the response and performing a
+of the columns *X*<sub>*j*</sub> of *X* as the response and performing a
 spike-and-slab regression using the remaining variables
-*X*<sub>*k*</sub> in `X` as predictors. To determine if an edge should
+*X*<sub>*k*</sub> in *X* as predictors. To determine if an edge should
 be added between *X*<sub>*j*</sub> and *X*<sub>*k*</sub>, the posterior
 inclusion probability of *X*<sub>*k*</sub> in a regression with
 *X*<sub>*j*</sub> fixed as the response
@@ -207,11 +208,11 @@ to `sym_method` (e.g., by taking the mean of
 *P**I**P* is greater than `edge_threshold`, an edge will be included
 between *X*<sub>*j*</sub> and *X*<sub>*k*</sub>.
 
-To model *Ω* as a function of `Z`, *n* weighted spike-and-slab
+To model *Ω* as a function of *Z*, *n* weighted spike-and-slab
 regressions are performed for each variable *X*<sub>*j*</sub> fixed as
 the response. The similarity weights for the *l*-th regression are taken
 with respect to observation *l* such that observations having similar
-values of `Z` will have larger weights. These similarity weights in
+values of *Z* will have larger weights. These similarity weights in
 conjunction with the pseudo-likelihood framework comprise the weighted
 pseudo-likelihood approach introduced by (1). Note that model
 performance is best when *n* \> *p*.
@@ -313,18 +314,17 @@ ensure that `pip_upper` is greater than 0 and less than 1.
 
 Finally, an upper bound is induced on *σ*<sub>*β*</sub><sup>2</sup> by
 deriving a rough upper bound for the signal-to-noise ratio that depends
-on *σ*<sub>*β*</sub><sup>2</sup>. Let *Σ**s*<sub>*j*</sub><sup>2</sup>
-be the sum of the sample variances of the columns of the predictors
-*X*’. Under the simplifying assumptions that the expected values of *X*’
-and the spike-and-slab regression coefficients *β* are 0 and that *X*’
-and *β* are independent, the variance of the dot product of *X*’ with
-*β* is
-*π* ⋅ *σ*<sup>2</sup> ⋅ *σ*<sub>*β*</sub><sup>2</sup> ⋅ *Σ**s*<sub>*j*</sub><sup>2</sup>.
+on *σ*<sub>*β*</sub><sup>2</sup>. Let *S*<sup>2</sup> be the sum of the
+sample variances of the columns of the predictors *X*’. Under the
+simplifying assumptions that the expected values of *X*’ and the
+spike-and-slab regression coefficients *β* are 0 and that *X*’ and *β*
+are independent, the variance of the dot product of *X*’ with *β* is
+*π* ⋅ *σ*<sup>2</sup> ⋅ *σ*<sub>*β*</sub><sup>2</sup> ⋅ *S*<sup>2</sup>.
 Thus, the signal-to-noise ratio under these assumptions is given by
-*π* ⋅ *σ*<sub>*β*</sub><sup>2</sup> ⋅ *Σ**s*<sub>*j*</sub><sup>2</sup>.
-Replacing *π* with `pip_upper` and *σ*<sub>*β*</sub><sup>2</sup> with
-`sbsq_upper` gives an upper bound on the signal-to-noise ratio. Setting
-this bound equal to `snr_upper` gives an expression for `sbsq_upper`.
+*π* ⋅ *σ*<sub>*β*</sub><sup>2</sup> ⋅ *S*<sup>2</sup>. Replacing *π*
+with `pip_upper` and *σ*<sub>*β*</sub><sup>2</sup> with `sbsq_upper`
+gives an upper bound on the signal-to-noise ratio. Setting this bound
+equal to `snr_upper` gives an expression for `sbsq_upper`.
 
 ### Similarity Weights
 
@@ -332,7 +332,7 @@ The similarity weight for observation *k* with respect to observation
 *l* is
 *ϕ*<sub>*τ*<sub>*l*</sub></sub>(\|\|*z*<sub>*l*</sub>−*z*<sub>*k*</sub>\|\|).
 Here, \|\| ⋅ \|\| denotes the norm specified by the `norm` argument,
-*z*<sub>*l*</sub> and *z*<sub>*k*</sub> are the values of `Z` for the
+*z*<sub>*l*</sub> and *z*<sub>*k*</sub> are the values of *Z* for the
 *l*-th and *k*-th observations, *ϕ*<sub>*τ*<sub>*l*</sub></sub> is the
 univariate Gaussian density with standard deviation *τ*<sub>*l*</sub>,
 and *τ*<sub>*l*</sub> is the bandwidth for the *l*-th observation.
@@ -343,7 +343,7 @@ for density estimation, where in the first step, an initial estimate is
 calculated using Silverman’s rule of thumb for initializing bandwidth
 values, and in the second step, the density is refined by updating the
 bandwidth values. This methodology is used here to estimate the density
-of `Z`, and the updated bandwidths from the second step are used for
+of *Z*, and the updated bandwidths from the second step are used for
 `tau`.
 
 ### Bibliography

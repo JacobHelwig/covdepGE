@@ -9,7 +9,7 @@ test_that("Wrong size X and Z", {
 
 test_that("Runtime is reasonable", {
   out <- covdepGE(data$X, data$Z, prog_bar = F)
-  expect_lt(as.numeric(out$model_details$elapsed, units = "secs"), 15)
+  expect_lt(as.numeric(out$model_details$elapsed, units = "mins"), 10)
 })
 
 test_that("Constant Z gives 2 warnings", {
