@@ -7,7 +7,7 @@
 \usage{
 covdepGE(
   X,
-  Z,
+  Z = rep(0, nrow(X)),
   hp_method = "hybrid",
   ssq = NULL,
   sbsq = NULL,
@@ -39,7 +39,9 @@ covdepGE(
 \item{X}{\eqn{n \times p}{n x p} numeric matrix; data matrix. For best
 results, \eqn{n} should be greater than \eqn{p}}
 
-\item{Z}{\eqn{n \times q}{n x q} numeric matrix; extraneous covariates}
+\item{Z}{\eqn{n \times q}{n x q} numeric matrix; extraneous covariates. If
+constant, the precision matrix will be considered to be homogeneous
+throughout the data. \code{rep(0, ncol(X))} by default}
 
 \item{hp_method}{\code{character} in \code{c("grid_search","model_average","hybrid")};
 method for selecting hyperparameters from the the hyperparameter grid. The
