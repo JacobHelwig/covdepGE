@@ -328,7 +328,7 @@ test_that("Error is thrown when out is not of class covdepGE", {
 })
 
 test_that("Save the default inclusion curve plot", {
-  suppressWarnings(vdiffr::expect_doppelganger("inc_curve_2", inc_curve))
+  suppressWarnings(vdiffr::expect_doppelganger("inc_curve", inc_curve))
   expect_true(T)
 })
 
