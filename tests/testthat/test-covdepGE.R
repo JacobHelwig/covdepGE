@@ -3,13 +3,14 @@ library(testthat)
 set.seed(1)
 data <- generateData()
 
-test_that("Wrong size X and Z", {
-  expect_error(covdepGE(data$X, data$Z[-1], prog_bar = F))
-})
-
 test_that("Runtime is reasonable", {
   out <- covdepGE(data$X, data$Z, prog_bar = F)
+  print(out$model_details$elapsed)
   expect_lt(as.numeric(out$model_details$elapsed, units = "mins"), 10)
+})
+
+test_that("Wrong size X and Z", {
+  expect_error(covdepGE(data$X, data$Z[-1], prog_bar = F))
 })
 
 test_that("Constant Z gives 2 warnings", {
@@ -210,30 +211,31 @@ test_that("sym_method affects sparsity", {
 # the following gives coverage to the parallel parts of the code, however,
 # takes too long to run for R CMD checks on Ubuntu
 #
-# test_that("parallelization and num_workers speeds up inference", {
-#   n_hp <- 10
-#   out_seq <- covdepGE(data$X, data$Z, nssq = n_hp, nsbsq = n_hp, npip = n_hp,
-#                       prog_bar = F)
-#   out_par2 <- suppressWarnings(covdepGE(data$X, data$Z, parallel = T,
-#                                         num_workers = 2,
-#                                         nssq = n_hp, nsbsq = n_hp, npip = n_hp,
-#                                         prog_bar = F))
-#   out_par <- suppressWarnings(covdepGE(data$X, data$Z, parallel = T,
-#                                        nssq = n_hp, nsbsq = n_hp, npip = n_hp,
-#                                        prog_bar = F))
-#   expect_gt(out_seq$model_details$elapsed,
-#             out_par2$model_details$elapsed)
-#   expect_gt(out_par2$model_details$elapsed,
-#             out_par$model_details$elapsed)
-# })
+test_that("parallelization and num_workers speeds up inference", {
+  n_hp <- 10
+  out_seq <- covdepGE(data$X, data$Z, nssq = n_hp, nsbsq = n_hp, npip = n_hp,
+                      prog_bar = F)
+  out_par2 <- suppressWarnings(covdepGE(data$X, data$Z, parallel = T,
+                                        num_workers = 2,
+                                        nssq = n_hp, nsbsq = n_hp, npip = n_hp,
+                                        prog_bar = F))
+  out_par <- suppressWarnings(covdepGE(data$X, data$Z, parallel = T,
+                                       num_workers = 5,
+                                       nssq = n_hp, nsbsq = n_hp, npip = n_hp,
+                                       prog_bar = F))
+  expect_gt(out_seq$model_details$elapsed,
+            out_par2$model_details$elapsed)
+  expect_gt(out_par2$model_details$elapsed,
+            out_par$model_details$elapsed)
+})
 
-# test_that("parallel warns when registering and searching for workers", {
-#   expect_warning(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
-#                           parallel = T))
-#   doParallel::registerDoParallel(5)
-#   expect_message(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
-#                           parallel = T))
-# })
+test_that("parallel warns when registering and searching for workers", {
+  expect_warning(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
+                          parallel = T))
+  doParallel::registerDoParallel(5)
+  expect_message(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
+                          parallel = T))
+})
 
 test_that("The progress bar can be turned off", {
   expect_false(0 == nchar(capture_output(covdepGE(
@@ -342,6 +344,10 @@ test_that("Precision matrices control data", {
 out <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F)
 inc_curve <- inclusionCurve(out, 1, 2)
 
+test_that("Error is thrown when out is not of class covdepGE", {
+  expect_error(inclusionCurve(NULL, 1, 2))
+})
+
 test_that("Save the default inclusion curve plot", {
   suppressWarnings(vdiffr::expect_doppelganger("inc_curve", inc_curve))
   expect_true(T)
@@ -407,6 +413,12 @@ adj_mat <- out$graphs$graphs[[1]]
 a_viz <- matViz(adj_mat)
 prec_mat <- out$graphs$inclusion_probs_sym[[1]]
 p_viz <- matViz(prec_mat)
+rcname_mat <- prec_mat
+rownames(rcname_mat) <- colnames(rcname_mat) <- paste0("V", 1:ncol(rcname_mat))
+
+test_that("Error is thrown when x is not of class matrix", {
+  expect_error(matViz(1))
+})
 
 test_that("Save the default matViz plots", {
   suppressWarnings(vdiffr::expect_doppelganger("a", a_viz))
@@ -417,6 +429,11 @@ test_that("Save the default matViz plots", {
 test_that("Verify that vdiffr::expect_doppelganger is working", {
   vdiffr::expect_doppelganger("a", matViz(adj_mat))
   vdiffr::expect_doppelganger("p", matViz(prec_mat))
+})
+
+test_that("Row and column names are added back", {
+  expect_failure(
+    vdiffr::expect_doppelganger("p", matViz(rcname_mat)))
 })
 
 test_that("Different color 1", {

@@ -350,11 +350,6 @@ inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 ## -----------------------------------------------------------------------------
 plot.covdepGE <- function(x, graph_colors = NULL, title_sum = T, ...){
 
-  # verify that out is of class covdepGE
-  if (class(x)[1] != "covdepGE"){
-    stop(paste0("x is of class ", class(x)[1], "; expected covdepGE"))
-  }
-
   # if no colors have been provided, set to default
   if(is.null(graph_colors)){
     graph_colors <- rep("#500000", length(x$graphs$unique_graphs))
