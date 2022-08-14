@@ -4,41 +4,46 @@
 set.seed(1)
 data <- generateData()
 
+test_that("Runtime is reasonable", {
+  out <- covdepGE(data$X, data$Z, prog_bar = F)
+  expect_lt(out$model_details$elapsed, 10)
+})
+
 test_that("Wrong size X and Z", {
   expect_error(covdepGE(data$X, data$Z[-1]))
 })
 
 test_that("Constant Z gives 2 warnings", {
   expect_equal(2,length(capture_warnings(covdepGE(
-    data$X, (data$Z > -5) * 1, ssq = 0.5, sbsq = 0.5, pip = 0.1))))
+    data$X, (data$Z > -5) * 1, ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F))))
 })
 
 test_that("Constant Z gives 1 graph", {
   out <- covdepGE(data$X, (data$Z > -5) * 1, ssq = 0.5, sbsq = 0.5, pip = 0.1,
-                  tau = 0.5, scale_Z = F)
+                  tau = 0.5, scale_Z = F, prog_bar = F)
   expect_equal(out$model_details$num_unique, 1)
 })
 
 test_that("With 1 HP candidate, all hp_methods give the same results", {
   out_hyb <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
-                      max_iter = 0, max_iter_grid = 100)
+                      max_iter = 0, max_iter_grid = 100, prog_bar = F)
   out_grid <- covdepGE(data$X, data$Z, hp_method = "grid_search",
                        ssq = 0.5, sbsq = 0.5, pip = 0.1,
-                       max_iter = 0, max_iter_grid = 100)
+                       max_iter = 0, max_iter_grid = 100, prog_bar = F)
   out_avg <- covdepGE(data$X, data$Z, hp_method = "model_average",
-                       ssq = 0.5, sbsq = 0.5, pip = 0.1)
+                       ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F)
   expect_equal(out_hyb$variational_params, out_grid$variational_params)
   expect_equal(out_grid$variational_params, out_avg$variational_params)
 })
 
 test_that("With 8 HP candidates, all hp_methods give different results", {
   out_hyb <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
-                      max_iter = 0, max_iter_grid = 100)
+                      max_iter = 0, max_iter_grid = 100, prog_bar = F)
   out_grid <- covdepGE(data$X, data$Z, hp_method = "grid_search",
                        nssq = 2, nsbsq = 2, npip = 2,
-                       max_iter = 0, max_iter_grid = 100)
+                       max_iter = 0, max_iter_grid = 100, prog_bar = F)
   out_avg <- covdepGE(data$X, data$Z, hp_method = "model_average",
-                      nssq = 2, nsbsq = 2, npip = 2)
+                      nssq = 2, nsbsq = 2, npip = 2, prog_bar = F)
   expect_false(isTRUE(all.equal(
     out_hyb$variational_params, out_grid$variational_params)))
   expect_false(isTRUE(all.equal(
@@ -51,7 +56,8 @@ test_that("HP grid may be specified directly", {
   ssq <- c(0.1, 0.5)
   sbsq <- c(0.1, 0.5)
   pip <- c(0.01, 0.1)
-  out <- covdepGE(data$X, data$Z, ssq = ssq, sbsq = sbsq, pip = pip)
+  out <- covdepGE(data$X, data$Z, ssq = ssq, sbsq = sbsq, pip = pip,
+                  prog_bar = F)
   expect_equal(0,
                sum(
                  out$hyperparameters$variable1$grid[, c("pip", "ssq", "sbsq")] -
@@ -62,39 +68,46 @@ test_that("HP grid may be specified by count", {
   nssq <- 2
   nsbsq <- 3
   npip <- 4
-  out <- covdepGE(data$X, data$Z, nssq = nssq, nsbsq = nsbsq, npip = npip)
+  out <- covdepGE(data$X, data$Z, nssq = nssq, nsbsq = nsbsq, npip = npip,
+                  prog_bar = F)
   expect_equal(out$model_details$grid_size,
                prod(nssq, nsbsq, npip))
 })
 
 test_that("Small pip results in sparser estimates", {
-  out_small <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.01)
-  out_large <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1)
+  out_small <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.01,
+                        prog_bar = F)
+  out_large <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
+                        prog_bar = F)
   expect_lt(sum(unlist(out_small$graphs$graphs)),
             sum(unlist(out_large$graphs$graphs)))
 })
 
 test_that("Larger ssq_mult gives larger ssq candidates", {
-  out_small <- covdepGE(data$X, data$Z, nssq = 2, sbsq = 0.5, pip = 0.1)
-  out_large <- covdepGE(data$X, data$Z, ssq_mult = 2, nssq = 2, sbsq = 0.5, pip = 0.1)
+  out_small <- covdepGE(data$X, data$Z, nssq = 2, sbsq = 0.5, pip = 0.1,
+                        prog_bar = F)
+  out_large <- covdepGE(data$X, data$Z, ssq_mult = 2, nssq = 2, sbsq = 0.5,
+                        pip = 0.1, prog_bar = F)
   expect_true(all(
     sort(unique(out_small$hyperparameters$variable1$grid$ssq)) <=
       sort(unique(out_large$hyperparameters$variable1$grid$ssq))))
 })
 
 test_that("Larger snr_upper gives larger sbsq candidates", {
-  out_small <- covdepGE(data$X, data$Z, ssq = 0.5, nsbsq = 2, pip = 0.1)
+  out_small <- covdepGE(data$X, data$Z, ssq = 0.5, nsbsq = 2, pip = 0.1,
+                        prog_bar = F)
   out_large <- covdepGE(data$X, data$Z, ssq = 0.5, nsbsq = 2, pip = 0.1,
-                        snr_upper = 35)
+                        snr_upper = 35, prog_bar = F)
   expect_true(all(
     sort(unique(out_small$hyperparameters$variable1$grid$sbsq)) <=
       sort(unique(out_large$hyperparameters$variable1$grid$sbsq))))
 })
 
 test_that("Larger pip_upper gives larger pip candidates", {
-  out_small <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, npip = 2)
+  out_small <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, npip = 2,
+                        prog_bar = F)
   out_large <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, npip = 2,
-                        pip_upper = 0.9)
+                        pip_upper = 0.9, prog_bar = F)
   expect_true(all(
     sort(unique(out_small$hyperparameters$variable1$grid$pip)) <=
       sort(unique(out_large$hyperparameters$variable1$grid$pip))))
@@ -103,61 +116,72 @@ test_that("Larger pip_upper gives larger pip candidates", {
 test_that("The lower bound controls the lower endpoint of the HP candidates", {
   lower <- 0.1
   out <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
-                  ssq_lower = lower, sbsq_lower = lower, pip_lower = lower)
+                  ssq_lower = lower, sbsq_lower = lower, pip_lower = lower,
+                  prog_bar = F)
   expect_true(all(
     rep(lower, 3) == apply(
       out$hyperparameters$variable1$grid[ , c("pip", "ssq", "sbsq")], 2, min)))
 })
 
 test_that("Large tau produces 1 graph", {
-  out <- covdepGE(data$X, data$Z, tau = 1e5, ssq = 0.5, sbsq = 0.5, pip = 0.1)
+  out <- covdepGE(data$X, data$Z, tau = 1e5, ssq = 0.5, sbsq = 0.5, pip = 0.1,
+                  prog_bar = F)
   expect_equal(1, out$model_details$num_unique)
 })
 
 test_that("Choice of norm does not change weights when Z is 1D", {
-  out_inf <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1, norm = Inf)
-  out_2 <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1)
+  out_inf <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
+                      norm = Inf, prog_bar = F)
+  out_2 <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
+                    prog_bar = F)
   expect_equal(out_inf$weights$weights, out_2$weights$weights)
 })
 
 test_that("Choice of norm changes weights when Z is 2D", {
   Z2 <- cbind(data$Z, rnorm(length(data$Z)))
-  out_3 <- covdepGE(data$X, Z2, ssq = 0.5, sbsq = 0.5, pip = 0.1, norm = 3)
-  out_2 <- covdepGE(data$X, Z2, ssq = 0.5, sbsq = 0.5, pip = 0.1)
+  out_3 <- covdepGE(data$X, Z2, ssq = 0.5, sbsq = 0.5, pip = 0.1, norm = 3,
+                    prog_bar = F)
+  out_2 <- covdepGE(data$X, Z2, ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F)
   expect_false(isTRUE(all.equal(out_3$weights$weights, out_2$weights$weights)))
 })
 
 test_that("center_X is working", {
-  out_cent <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, npip = 0.1)
+  out_cent <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, npip = 0.1,
+                       prog_bar = F)
   out_nocent <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, npip = 0.1,
-                       center_X = F)
+                       center_X = F, prog_bar = F)
   out_mancent <- covdepGE(scale(data$X, scale = F), data$Z, ssq = 0.5, sbsq = 0.5, npip = 0.1,
-                         center_X = F)
+                         center_X = F, prog_bar = F)
   expect_false(isTRUE(all.equal(out_cent$variational_params,
                                 out_nocent$variational_params)))
   expect_equal(out_cent$variational_params, out_mancent$variational_params)
 })
 
 test_that("scale_Z is working", {
-  out_scale <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, npip = 0.1)
+  out_scale <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, npip = 0.1,
+                        prog_bar = F)
   out_noscale <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, npip = 0.1,
-                         scale_Z = F)
+                         scale_Z = F, prog_bar = F)
   out_manscale <- covdepGE(data$X, scale(data$Z), ssq = 0.5, sbsq = 0.5, npip = 0.1,
-                            scale_Z = F)
+                            scale_Z = F, prog_bar = F)
   expect_false(isTRUE(all.equal(out_scale$variational_params,
                                 out_noscale$variational_params)))
   expect_equal(out_scale$variational_params, out_manscale$variational_params)
 })
 
 test_that("Greater alpha_tol gives faster convergence", {
-  out_slow <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2, alpha_tol = 1e-10)
-  out_fast <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2)
+  out_slow <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
+                       alpha_tol = 1e-10, prog_bar = F)
+  out_fast <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
+                       prog_bar = F)
   expect_gt(out_slow$model_details$elapsed, out_fast$model_details$elapsed)
 })
 
 test_that("Greater max_iter and max_iter_grid gives slower convergence", {
-  out_slow1 <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2, max_iter_grid = 100)
-  out_slow2 <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2, max_iter = 500)
+  out_slow1 <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
+                        max_iter_grid = 100, prog_bar = F)
+  out_slow2 <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
+                        max_iter = 500, prog_bar = F)
   out_fast <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2)
   expect_gt(out_slow1$model_details$elapsed, out_fast$model_details$elapsed)
   expect_gt(out_slow2$model_details$elapsed, out_fast$model_details$elapsed)
@@ -165,18 +189,18 @@ test_that("Greater max_iter and max_iter_grid gives slower convergence", {
 
 test_that("Greater edge_threshold gives more sparse estimates", {
   out_sparse <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
-                         edge_threshold = 0.75)
-  out <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1)
+                         edge_threshold = 0.75, prog_bar = F)
+  out <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F)
   expect_lt(sum(unlist(out_sparse$graphs$graphs)),
             sum(unlist(out$graphs$graphs)))
 })
 
 test_that("sym_method affects sparsity", {
   out_sparse <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
-                         sym_method = "min")
-  out <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1)
+                         sym_method = "min", prog_bar = F)
+  out <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F)
   out_full <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
-                       sym_method = "max")
+                       sym_method = "max", prog_bar = F)
   expect_lt(sum(unlist(out_sparse$graphs$graphs)),
             sum(unlist(out$graphs$graphs)))
   expect_lt(sum(unlist(out$graphs$graphs)),
@@ -184,30 +208,45 @@ test_that("sym_method affects sparsity", {
 })
 
 test_that("parallelization and num_workers speeds up inference", {
-  out_seq <- covdepGE(data$X, data$Z)
+  n_hp <- 10
+  out_seq <- covdepGE(data$X, data$Z, nssq = n_hp, nsbsq = n_hp, npip = n_hp,
+                      prog_bar = F)
   out_par2 <- suppressWarnings(covdepGE(data$X, data$Z, parallel = T,
-                                        num_workers = 2))
-  out_par <- suppressWarnings(covdepGE(data$X, data$Z, parallel = T))
+                                        num_workers = 2,
+                                        nssq = n_hp, nsbsq = n_hp, npip = n_hp,
+                                        prog_bar = F))
+  out_par <- suppressWarnings(covdepGE(data$X, data$Z, parallel = T,
+                                       nssq = n_hp, nsbsq = n_hp, npip = n_hp,
+                                       prog_bar = F))
   expect_gt(out_seq$model_details$elapsed,
             out_par2$model_details$elapsed)
   expect_gt(out_par2$model_details$elapsed,
             out_par$model_details$elapsed)
 })
 
-test_that("parallel warns when registering and searching for workers", {
-  expect_warning(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
-                          parallel = T))
-  doParallel::registerDoParallel(5)
-  expect_message(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
-                          parallel = T))
-})
+# test_that("parallel warns when registering and searching for workers", {
+#   expect_warning(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
+#                           parallel = T))
+#   doParallel::registerDoParallel(5)
+#   expect_message(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
+#                           parallel = T))
+# })
 
 test_that("The progress bar can be turned off", {
+  expect_false(0 == nchar(capture_output(covdepGE(
+    data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1))))
   expect_equal(0, nchar(capture_output(covdepGE(
     data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F))))
 })
 
 test_that("print and summary give the same results", {
-  out <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1)
+  out <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1, prog_bar = F)
   expect_equal(print(out), summary(out))
+})
+
+# data
+test_that("p controls the size of the data", {
+  p <- 10
+  data <- generateData(p = p)
+  expect_equal(p, ncol(data$X))
 })

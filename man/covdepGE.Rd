@@ -67,24 +67,30 @@ product of \code{ssq} and \code{sbsq} as in \code{"grid_search"}
 \item{ssq}{\code{NULL} OR numeric vector with positive entries; candidate values
 of the hyperparameter \eqn{\sigma^2}{sigma^2} (prior residual variance). If
 \code{NULL}, \code{ssq} will be generated for each variable \eqn{X_j}{Xj} fixed as the
-response as:\preformatted{ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)
-}
+response as:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{ssq <- seq(ssq_lower, ssq_upper, length.out = nssq)
+}\if{html}{\out{</div>}}
 
 \code{NULL} by default}
 
 \item{sbsq}{\code{NULL} OR numeric vector with positive entries; candidate values
 of the hyperparameter \eqn{\sigma_\beta^2}{sigma_beta^2} (prior slab
 variance). If \code{NULL}, \code{sbsq} will be generated for each variable \eqn{X_j}{Xj}
-fixed as the response as:\preformatted{sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)
-}
+fixed as the response as:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)
+}\if{html}{\out{</div>}}
 
 \code{NULL} by default}
 
 \item{pip}{\code{NULL} OR numeric vector with entries in \eqn{(0, 1)}; candidate
 values of the hyperparameter \eqn{\pi}{pi} (prior inclusion probability). If
 \code{NULL}, \code{pip} will be generated for each variable \eqn{X_j}{Xj} fixed as the
-response as:\preformatted{pip <- seq(pip_lower, pi_upper, length.out = npip)
-}
+response as:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{pip <- seq(pip_lower, pi_upper, length.out = npip)
+}\if{html}{\out{</div>}}
 
 \code{NULL} by default}
 
@@ -98,8 +104,10 @@ response as:\preformatted{pip <- seq(pip_lower, pi_upper, length.out = npip)
 is \code{NULL}. \code{5} by default}
 
 \item{ssq_mult}{positive numeric; if \code{ssq} is \code{NULL}, then for each variable
-\eqn{X_j}{Xj} fixed as the response:\preformatted{ssq_upper <- ssq_mult * stats::var(X_j)
-}
+\eqn{X_j}{Xj} fixed as the response:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{ssq_upper <- ssq_mult * stats::var(X_j)
+}\if{html}{\out{</div>}}
 
 Then, \code{ssq_upper} will be the greatest value in \code{ssq} for variable \eqn{X_j}{Xj}.
 \code{1.5} by default}
@@ -109,9 +117,11 @@ be the least value in \code{ssq}. \code{1e-5} by default}
 
 \item{snr_upper}{positive numeric; upper bound on the signal-to-noise ratio.
 If \code{sbsq} is \code{NULL}, then for each variable \eqn{X_j}{Xj} fixed as the
-response:\preformatted{s2_sum <- sum(apply(X, 2, stats::var))
+response:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{s2_sum <- sum(apply(X, 2, stats::var))
 sbsq_upper <- snr_upper / (pip_upper * s2_sum)
-}
+}\if{html}{\out{</div>}}
 
 Then, \code{sbsq_upper} will be the greatest value in \code{sbsq}. \code{25} by default}
 
@@ -124,11 +134,13 @@ will be the least value in \code{sbsq}. \code{1e-5} by default}
 \item{pip_upper}{\code{NULL} OR  numeric in \eqn{(0, 1)}; if \code{pip} is \code{NULL}, then
 \code{pip_upper} will be the greatest value in \code{pip}. If \code{sbsq} is \code{NULL},
 \code{pip_upper} will be used to calculate \code{sbsq_upper}. If \code{NULL}, \code{pip_upper}
-will be calculated for each variable \eqn{X_j}{Xj} fixed as the response as:\preformatted{lasso <- glmnet::cv.glmnet(X, X_j)
+will be calculated for each variable \eqn{X_j}{Xj} fixed as the response as:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{lasso <- glmnet::cv.glmnet(X, X_j)
 non0 <- sum(glmnet::coef.glmnet(lasso, s = "lambda.1se")[-1] != 0)
 non0 <- min(max(non0, 1), p - 1)
 pip_upper <- non0 / p
-}
+}\if{html}{\out{</div>}}
 
 \code{NULL} by default}
 
@@ -176,15 +188,19 @@ applied to the \eqn{(i, j)} and \eqn{(j, i)} entries. \code{"mean"} by default}
 of the \eqn{p} variables will be performed in parallel using \code{foreach}.
 Parallel backend may be registered prior to making a call to \code{covdepGE}. If
 no active parallel backend can be detected, then parallel backend will be
-automatically registered using:\preformatted{doParallel::registerDoParallel(num_workers)
-}
+automatically registered using:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{doParallel::registerDoParallel(num_workers)
+}\if{html}{\out{</div>}}
 
 \code{F} by default}
 
 \item{num_workers}{\code{NULL} OR positive integer less than or equal to
 \code{parallel::detectCores()}; argument to \code{doParallel::registerDoParallel} if
-\code{parallel = T} and no parallel backend is detected. If \code{NULL}, then:\preformatted{num_workers <- floor(parallel::detectCores() / 2)
-}
+\code{parallel = T} and no parallel backend is detected. If \code{NULL}, then:
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{num_workers <- floor(parallel::detectCores() / 2)
+}\if{html}{\out{</div>}}
 
 \code{NULL} by default}
 
