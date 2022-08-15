@@ -73,7 +73,7 @@
 #'                  n1 + n2 + 1, ",...,", n1 + n2 + n3))
 #'
 #' # fit the model and visualize the estimated graphs
-#' (out <- covdepGE(X, Z))
+#' (out <- covdepGE(X, Z, nssq = 2, nsbsq = 2, npip = 2))
 #' plot(out)
 #'
 #' # visualize the posterior inclusion probabilities for variables (1, 3) and (1, 2)
@@ -236,7 +236,7 @@ matViz <- function(x, color1 = "white", color2 = "#500000",
 #'                  n1 + n2 + 1, ",...,", n1 + n2 + n3))
 #'
 #' # fit the model and visualize the estimated graphs
-#' (out <- covdepGE(X, Z))
+#' (out <- covdepGE(X, Z, nssq = 2, nsbsq = 2, npip = 2))
 #' plot(out)
 #'
 #' # visualize the posterior inclusion probabilities for variables (1, 3) and (1, 2)
@@ -341,7 +341,7 @@ inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 #'                  n1 + n2 + 1, ",...,", n1 + n2 + n3))
 #'
 #' # fit the model and visualize the estimated graphs
-#' (out <- covdepGE(X, Z))
+#' (out <- covdepGE(X, Z, nssq = 2, nsbsq = 2, npip = 2))
 #' plot(out)
 #'
 #' # visualize the posterior inclusion probabilities for variables (1, 3) and (1, 2)
