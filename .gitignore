@@ -9,3 +9,5 @@
 *.toc
 *.tex.bak
 .Rhistory
+tests/testthat/_snaps
+nul
