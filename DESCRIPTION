@@ -7,9 +7,11 @@ Authors@R:
     person("Peng", "Zhao", email = "pzhao@stat.tamu.edu", role = c("aut")),
     person("Bani", "Mallick", email = "bmallick@stat.tamu.edu", role = c("aut")),
     person("Debdeep", "Pati", email = "debdeep@stat.tamu.edu", role = c("aut")))
-Date: 2022
+Date: 2022-08-14
 Language: en-US
-Description: A weighted pseudo-likelihood approach for modeling the conditional dependence structure of data as a function of an extraneous covariate. Inference is conducted via a block mean-field variational approximation.
+BugReports: https://github.com/JacobHelwig/covdepGE/issues 
+URL: https://github.com/JacobHelwig/covdepGE
+Description: A covariate-dependent approach to Gaussian graphical modeling as described in Dasgupta et al. (2022). Employs a novel weighted pseudo-likelihood approach to model the conditional dependence structure of data as a continuous function of an extraneous covariate. The main function, covdepGE::covdepGE(), estimates a graphical representation of the conditional dependence structure via a block mean-field variational approximation, while several auxiliary functions (inclusionCurve(), matViz(), and plot.covdepGE()) are included for visualizing the resulting estimates. 
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true

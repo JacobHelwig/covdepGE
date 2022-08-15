@@ -19,11 +19,11 @@ default}
 \item{n3}{positive integer; number of observations in the third interval.
 \code{60} by default}
 
-\item{Z}{\code{NULL} or numeric vector of length \code{n1 + n2 + n3}; extraneous
-covariate values for each observation. If \code{NULL}, \code{Z} will be generated
-from a uniform distribution on each of the intervals}
+\item{Z}{\code{NULL} or numeric vector; extraneous covariate values for each
+observation. If \code{NULL}, \code{Z} will be generated from a uniform distribution on
+each of the intervals}
 
-\item{true_precision}{\code{NULL} OR list of \code{n1 + n2 + n3} matrices of dimension
+\item{true_precision}{\code{NULL} OR list of matrices of dimension
 \eqn{p \times p}{p x p}; true precision matrix for each observation. If
 \code{NULL}, the true precision matrices will be generated dependent on \code{Z}.
 \code{NULL} by default}
@@ -54,7 +54,7 @@ a continuous function of the extraneous covariate. This data is distributed
 similar to that used in the simulation study from (1)
 }
 \section{Extraneous Covariate}{
-If \code{Z = NULL}, then the generation of the \code{Z} is as follows:
+If \code{Z = NULL}, then the generation of \code{Z} is as follows:
 
 The first \code{n1} observations have \eqn{z_i}{zi} from from a uniform
 distribution on the interval \eqn{(-3, -1)} (the first interval).

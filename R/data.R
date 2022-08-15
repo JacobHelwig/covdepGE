@@ -19,11 +19,11 @@
 #' @param n3 positive integer; number of observations in the third interval.
 #' `60` by default
 #'
-#' @param Z `NULL` or numeric vector of length `n1 + n2 + n3`; extraneous
-#' covariate values for each observation. If `NULL`, `Z` will be generated
-#' from a uniform distribution on each of the intervals
+#' @param Z `NULL` or numeric vector; extraneous covariate values for each
+#' observation. If `NULL`, `Z` will be generated from a uniform distribution on
+#' each of the intervals
 #'
-#' @param true_precision `NULL` OR list of `n1 + n2 + n3` matrices of dimension
+#' @param true_precision `NULL` OR list of matrices of dimension
 #' \eqn{p \times p}{p x p}; true precision matrix for each observation. If
 #' `NULL`, the true precision matrices will be generated dependent on `Z`.
 #' `NULL` by default
@@ -49,7 +49,7 @@
 #' @details
 #' # Extraneous Covariate
 #'
-#' If `Z = NULL`, then the generation of the `Z` is as follows:
+#' If `Z = NULL`, then the generation of `Z` is as follows:
 #'
 #' The first `n1` observations have \eqn{z_i}{zi} from from a uniform
 #' distribution on the interval \eqn{(-3, -1)} (the first interval).
