@@ -209,12 +209,16 @@ test_that("sym_method affects sparsity", {
 })
 
 test_that("parallel gives same results as sequential", {
+  out_par1 <- suppressMessages(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5,
+                                        pip = 0.1, parallel = T,
+                                        num_workers = 1))
   doParallel::registerDoParallel(1)
-  out_par <- suppressMessages(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5,
+  out_par2 <- suppressMessages(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5,
                                        pip = 0.1, parallel = T))
   out_seq <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
                       prog_bar = F)
-  expect_equal(out_par$variational_params, out_seq$variational_params)
+  expect_equal(out_par1$variational_params, out_seq$variational_params)
+  expect_equal(out_par2$variational_params, out_seq$variational_params)
 })
 
 test_that("The progress bar can be turned off", {
