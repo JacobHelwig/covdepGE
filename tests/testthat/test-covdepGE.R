@@ -6,7 +6,7 @@ data <- generateData()
 test_that("Runtime is reasonable", {
   out <- covdepGE(data$X, data$Z, prog_bar = F)
   print(out$model_details$elapsed)
-  expect_lt(as.numeric(out$model_details$elapsed, units = "mins"), 10)
+  expect_lt(as.numeric(out$model_details$elapsed, units = "mins"), 12)
 })
 
 test_that("Wrong size X and Z", {

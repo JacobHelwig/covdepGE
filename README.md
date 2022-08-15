@@ -135,7 +135,7 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
 #> 
 #> ELBO: -171501.68                                             # Unique Graphs: 3
 #> n: 180, variables: 5                       Hyperparameter grid size: 125 points
-#> Model fit completed in 2.741 secs
+#> Model fit completed in 2.998 secs
 plot(out)
 #> [[1]]
 ```

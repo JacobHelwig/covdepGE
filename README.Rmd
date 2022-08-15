@@ -2,7 +2,7 @@
 output: github_document
 ---
 
-<!-- Re-knit 'README.Rmd' with `devtools::build_readme()` --> 
+<!-- Re-knit 'README.Rmd' with `devtools::build_readme()` -->
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
