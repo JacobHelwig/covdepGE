@@ -211,8 +211,8 @@ test_that("sym_method affects sparsity", {
 test_that("parallel gives same results as sequential", {
   out_par1 <- suppressMessages(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5,
                                         pip = 0.1, parallel = T,
-                                        num_workers = 1))
-  doParallel::registerDoParallel(1)
+                                        num_workers = 2))
+  doParallel::registerDoParallel(2)
   out_par2 <- suppressMessages(covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5,
                                        pip = 0.1, parallel = T))
   out_seq <- covdepGE(data$X, data$Z, ssq = 0.5, sbsq = 0.5, pip = 0.1,
