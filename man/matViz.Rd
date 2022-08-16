@@ -9,7 +9,7 @@ matViz(
   color1 = "white",
   color2 = "#500000",
   grid_color = "black",
-  incl_val = F,
+  incl_val = FALSE,
   prec = 2,
   font_size = 3,
   font_color1 = "black",
@@ -26,23 +26,23 @@ matViz(
 
 \item{grid_color}{color; color of grid lines. \code{"black"} by default}
 
-\item{incl_val}{logical; if \code{T}, the value for each entry will be displayed.
-\code{F} by default}
+\item{incl_val}{logical; if \code{TRUE}, the value for each entry will be
+displayed. \code{FALSE} by default}
 
 \item{prec}{positive integer; number of decimal places to round entries to if
-\code{incl_val} is \code{T}. \code{2} by default}
+\code{incl_val} is \code{TRUE}. \code{2} by default}
 
-\item{font_size}{positive numeric; size of font if \code{incl_val} is \code{T}. \code{3}
+\item{font_size}{positive numeric; size of font if \code{incl_val} is \code{TRUE}. \code{3}
 by default}
 
-\item{font_color1}{color; color of font for low entries if \code{incl_val} is \code{T}.
-\code{"black"} by default}
+\item{font_color1}{color; color of font for low entries if \code{incl_val} is
+\code{TRUE}. \code{"black"} by default}
 
 \item{font_color2}{color; color of font for high entries if \code{incl_val} is
-\code{T}. \code{"white"} by default}
+\code{TRUE}. \code{"white"} by default}
 
 \item{font_thres}{numeric; values less than \code{font_thres} will be displayed
-in \code{font_color1} if \code{incl_val} is \code{T}. \code{mean(x)} by default}
+in \code{font_color1} if \code{incl_val} is \code{TRUE}. \code{mean(x)} by default}
 }
 \value{
 Returns \code{ggplot2} visualization of matrix

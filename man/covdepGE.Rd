@@ -23,16 +23,16 @@ covdepGE(
   pip_upper = NULL,
   tau = NULL,
   norm = 2,
-  center_X = T,
-  scale_Z = T,
+  center_X = TRUE,
+  scale_Z = TRUE,
   alpha_tol = 1e-05,
   max_iter_grid = 10,
   max_iter = 100,
   edge_threshold = 0.5,
   sym_method = "mean",
-  parallel = F,
+  parallel = FALSE,
   num_workers = NULL,
-  prog_bar = T
+  prog_bar = TRUE
 )
 }
 \arguments{
@@ -78,8 +78,8 @@ response as:
 
 \item{sbsq}{\code{NULL} OR numeric vector with positive entries; candidate values
 of the hyperparameter \eqn{\sigma_\beta^2}{sigma_beta^2} (prior slab
-variance). If \code{NULL}, \code{sbsq} will be generated for each variable \eqn{X_j}{Xj}
-fixed as the response as:
+variance). If \code{NULL}, \code{sbsq} will be generated for each variable
+\eqn{X_j}{Xj} fixed as the response as:
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)
 }\if{html}{\out{</div>}}
@@ -111,8 +111,8 @@ is \code{NULL}. \code{5} by default}
 \if{html}{\out{<div class="sourceCode">}}\preformatted{ssq_upper <- ssq_mult * stats::var(X_j)
 }\if{html}{\out{</div>}}
 
-Then, \code{ssq_upper} will be the greatest value in \code{ssq} for variable \eqn{X_j}{Xj}.
-\code{1.5} by default}
+Then, \code{ssq_upper} will be the greatest value in \code{ssq} for variable
+\eqn{X_j}{Xj}. \code{1.5} by default}
 
 \item{ssq_lower}{positive numeric; if \code{ssq} is \code{NULL}, then \code{ssq_lower} will
 be the least value in \code{ssq}. \code{1e-5} by default}
@@ -156,12 +156,12 @@ default}
 \item{norm}{numeric in \eqn{[1, \infty]}{[1, Inf]}; norm to use when
 calculating weights. \code{Inf} results in infinity norm. \code{2} by default}
 
-\item{center_X}{logical; if \code{T}, center \code{X} column-wise to mean \eqn{0}.
-\code{T} by default}
+\item{center_X}{logical; if \code{TRUE}, center \code{X} column-wise to mean \eqn{0}.
+\code{TRUE} by default}
 
-\item{scale_Z}{logical; if \code{T}, center and scale \code{Z} column-wise to mean
-\eqn{0}, standard deviation \eqn{1} prior to calculating the weights. \code{T} by
-default}
+\item{scale_Z}{logical; if \code{TRUE}, center and scale \code{Z} column-wise to mean
+\eqn{0}, standard deviation \eqn{1} prior to calculating the weights. \code{TRUE}
+by default}
 
 \item{alpha_tol}{positive numeric; end CAVI when the Frobenius norm of the
 change in the alpha matrix is within \code{alpha_tol}. \code{1e-5} by default}
@@ -186,8 +186,8 @@ the posterior inclusion probability matrix for each observation, the
 \eqn{(i, j)} and \eqn{(j, i)} entries will be post-processed as \code{sym_method}
 applied to the \eqn{(i, j)} and \eqn{(j, i)} entries. \code{"mean"} by default}
 
-\item{parallel}{logical; if \code{T}, hyperparameter selection and CAVI for each
-of the \eqn{p} variables will be performed in parallel using \code{foreach}.
+\item{parallel}{logical; if \code{TRUE}, hyperparameter selection and CAVI for
+each of the \eqn{p} variables will be performed in parallel using \code{foreach}.
 Parallel backend may be registered prior to making a call to \code{covdepGE}. If
 no active parallel backend can be detected, then parallel backend will be
 automatically registered using:
@@ -195,20 +195,20 @@ automatically registered using:
 \if{html}{\out{<div class="sourceCode">}}\preformatted{doParallel::registerDoParallel(num_workers)
 }\if{html}{\out{</div>}}
 
-\code{F} by default}
+\code{FALSE} by default}
 
 \item{num_workers}{\code{NULL} OR positive integer less than or equal to
 \code{parallel::detectCores()}; argument to \code{doParallel::registerDoParallel} if
-\code{parallel = T} and no parallel backend is detected. If \code{NULL}, then:
+\code{parallel = TRUE} and no parallel backend is detected. If \code{NULL}, then:
 
 \if{html}{\out{<div class="sourceCode">}}\preformatted{num_workers <- floor(parallel::detectCores() / 2)
 }\if{html}{\out{</div>}}
 
 \code{NULL} by default}
 
-\item{prog_bar}{logical; if \code{T}, then a progress bar will be displayed
+\item{prog_bar}{logical; if \code{TRUE}, then a progress bar will be displayed
 denoting the number of remaining variables to fix as the response and perform
-CAVI. If \code{parallel}, no progress bar will be displayed. \code{T} by default}
+CAVI. If \code{parallel}, no progress bar will be displayed. \code{TRUE} by default}
 }
 \value{
 Returns object of class \code{covdepGE} with the following values:
@@ -369,7 +369,7 @@ been performed.
 
 Note that since the regressions performed for variable \eqn{X_j}{Xj} and
 \eqn{X_k}{Xk} fixed as the response are independent of each other, they may
-be performed in parallel by setting \code{parallel = T}. Registering parallel
+be performed in parallel by setting \code{parallel = TRUE}. Registering parallel
 backend with greater than \eqn{p} workers offers no benefit, since each
 worker takes on one variable to fix as the response and perform the \eqn{n}
 regressions.

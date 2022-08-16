@@ -42,6 +42,11 @@ To facilitate information sharing while managing complexity, `covdepGE` uses an 
 # install.packages("devtools")
 devtools::install_github("JacobHelwig/covdepGE")
 ```
+
+## Contributing
+
+If you have an idea to improve `covdepGE`, considering [forking the repo](https://github.com/JacobHelwig/covdepGE/fork) and creating a pull request or [opening an issue](https://github.com/JacobHelwig/covdepGE/issues). 
+
 ## Example
 
 ```{r example}

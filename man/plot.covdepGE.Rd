@@ -4,7 +4,7 @@
 \alias{plot.covdepGE}
 \title{Plot the Graphs Estimated by \code{covdepGE}}
 \usage{
-\method{plot}{covdepGE}(x, graph_colors = NULL, title_sum = T, ...)
+\method{plot}{covdepGE}(x, graph_colors = NULL, title_sum = TRUE, ...)
 }
 \arguments{
 \item{x}{object of class \code{covdepGE}; return of \code{covdepGE} function}
@@ -13,8 +13,8 @@
 the \eqn{j}-th graph. If \code{NULL}, all graphs will be colored with \code{"#500000"}.
 \code{NULL} by default}
 
-\item{title_sum}{logical; if \code{T} the indices of the observations
-corresponding to the graph will be included in the title. \code{T} by default}
+\item{title_sum}{logical; if \code{TRUE} the indices of the observations
+corresponding to the graph will be included in the title. \code{TRUE} by default}
 
 \item{...}{additional arguments will be ignored}
 }

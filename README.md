@@ -41,10 +41,6 @@ perform inference. Finally, `covdepGE` offers several wrappers around
 `ggplot2` for seamless visualization of resulting estimates, such as
 `matViz`, `inclusionCurve`, and the S3 method `plot.covdepGE`.
 
-## Contributing
-
-If you have an idea to improve `covdepGE`, considering [forking the repo](https://github.com/JacobHelwig/covdepGE/fork) and creating a pull request or [opening an issue](https://github.com/JacobHelwig/covdepGE/issues). 
-
 ## Installation
 
 <!-- You can install the released version of covdepGE from [CRAN](https://CRAN.R-project.org) with: -->
@@ -57,6 +53,13 @@ If you have an idea to improve `covdepGE`, considering [forking the repo](https:
 # install.packages("devtools")
 devtools::install_github("JacobHelwig/covdepGE")
 ```
+
+## Contributing
+
+If you have an idea to improve `covdepGE`, considering [forking the
+repo](https://github.com/JacobHelwig/covdepGE/fork) and creating a pull
+request or [opening an
+issue](https://github.com/JacobHelwig/covdepGE/issues).
 
 ## Example
 
@@ -139,7 +142,7 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
 #> 
 #> ELBO: -171501.68                                             # Unique Graphs: 3
 #> n: 180, variables: 5                       Hyperparameter grid size: 125 points
-#> Model fit completed in 2.998 secs
+#> Model fit completed in 3.056 secs
 plot(out)
 #> [[1]]
 ```
