@@ -13,23 +13,23 @@
 #'
 #' @param grid_color color; color of grid lines. `"black"` by default
 #'
-#' @param incl_val logical; if `T`, the value for each entry will be displayed.
-#' `F` by default
+#' @param incl_val logical; if `TRUE`, the value for each entry will be
+#' displayed. `FALSE` by default
 #'
 #' @param prec positive integer; number of decimal places to round entries to if
-#' `incl_val` is `T`. `2` by default
+#' `incl_val` is `TRUE`. `2` by default
 #'
-#' @param font_size positive numeric; size of font if `incl_val` is `T`. `3`
+#' @param font_size positive numeric; size of font if `incl_val` is `TRUE`. `3`
 #' by default
 #'
-#' @param font_color1 color; color of font for low entries if `incl_val` is `T`.
-#' `"black"` by default
+#' @param font_color1 color; color of font for low entries if `incl_val` is
+#' `TRUE`. `"black"` by default
 #'
 #' @param font_color2 color; color of font for high entries if `incl_val` is
-#'  `T`. `"white"` by default
+#' `TRUE`. `"white"` by default
 #'
 #' @param font_thres numeric; values less than `font_thres` will be displayed
-#' in `font_color1` if `incl_val` is `T`. `mean(x)` by default
+#' in `font_color1` if `incl_val` is `TRUE`. `mean(x)` by default
 ## -----------------------------RETURNS-----------------------------------------
 #' @return Returns `ggplot2` visualization of matrix
 ## -----------------------------EXAMPLES----------------------------------------
@@ -81,8 +81,8 @@
 #' inclusionCurve(out, 1, 3)
 ## -----------------------------------------------------------------------------
 matViz <- function(x, color1 = "white", color2 = "#500000",
-                   grid_color = "black", incl_val = F, prec = 2, font_size = 3,
-                   font_color1 = "black", font_color2 = "white",
+                   grid_color = "black", incl_val = FALSE, prec = 2,
+                   font_size = 3, font_color1 = "black", font_color2 = "white",
                    font_thres = mean(x)){
 
   # verify that `x` is a matrix
@@ -126,7 +126,7 @@ matViz <- function(x, color1 = "white", color2 = "#500000",
     # if probabilities are to be displayed, add them
     if (incl_val){
       vis <- (vis + ggplot2::geom_text(ggplot2::aes(label = round(
-        value, prec), color = graph), show.legend = F, size = font_size) +
+        value, prec), color = graph), show.legend = FALSE, size = font_size) +
           ggplot2::scale_color_manual(values = c(font_color1, font_color2)))
     }
 
@@ -293,8 +293,8 @@ inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 #' the \eqn{j}-th graph. If `NULL`, all graphs will be colored with `"#500000"`.
 #' `NULL` by default
 #'
-#' @param title_sum logical; if `T` the indices of the observations
-#' corresponding to the graph will be included in the title. `T` by default
+#' @param title_sum logical; if `TRUE` the indices of the observations
+#' corresponding to the graph will be included in the title. `TRUE` by default
 #'
 #' @param ... additional arguments will be ignored
 ## -----------------------------RETURNS-----------------------------------------
@@ -348,7 +348,7 @@ inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 #' inclusionCurve(out, 1, 2)
 #' inclusionCurve(out, 1, 3)
 ## -----------------------------------------------------------------------------
-plot.covdepGE <- function(x, graph_colors = NULL, title_sum = T, ...){
+plot.covdepGE <- function(x, graph_colors = NULL, title_sum = TRUE, ...){
 
   # if no colors have been provided, set to default
   if(is.null(graph_colors)){

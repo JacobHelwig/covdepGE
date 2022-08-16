@@ -172,7 +172,7 @@ get_weights <- function(Z, norm, tau) {
   }
 
   # Scale weights to sum to n down the columns
-  D <- n * (D) * matrix(1 / colSums(D), n, n, T)
+  D <- n * (D) * matrix(1 / colSums(D), n, n, TRUE)
 
   return(list(D = D, bandwidths = tau))
 }

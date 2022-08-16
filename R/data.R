@@ -203,8 +203,8 @@ generateData <- function(p = 5, n1 = 60, n2 = 60, n3 = 60, Z = NULL,
     int1_str12 <- int3_str13 <- matrix(0, p, p)
     int1_str12[1, 2] <- int3_str13[1, 3] <- 1
 
-    # define the precision matrices for each of the observations in interval 1 and
-    # interval 3
+    # define the precision matrices for each of the observations in interval 1
+    # and interval 3
     int1_prec <- rep(list(common_str + int1_str12), n1)
     int3_prec <- rep(list(common_str + int3_str13), n3)
 

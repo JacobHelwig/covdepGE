@@ -49,8 +49,8 @@
 #'
 #' @param sbsq `NULL` OR numeric vector with positive entries; candidate values
 #' of the hyperparameter \eqn{\sigma_\beta^2}{sigma_beta^2} (prior slab
-#' variance). If `NULL`, `sbsq` will be generated for each variable \eqn{X_j}{Xj}
-#' fixed as the response as:
+#' variance). If `NULL`, `sbsq` will be generated for each variable
+#' \eqn{X_j}{Xj} fixed as the response as:
 #'
 #' ```
 #' sbsq <- seq(sbsq_lower, sbsq_upper, length.out = nsbsq)
@@ -84,8 +84,8 @@
 #' ssq_upper <- ssq_mult * stats::var(X_j)
 #' ```
 #'
-#' Then, `ssq_upper` will be the greatest value in `ssq` for variable \eqn{X_j}{Xj}.
-#' `1.5` by default
+#' Then, `ssq_upper` will be the greatest value in `ssq` for variable
+#' \eqn{X_j}{Xj}. `1.5` by default
 #'
 #' @param ssq_lower positive numeric; if `ssq` is `NULL`, then `ssq_lower` will
 #' be the least value in `ssq`. `1e-5` by default
@@ -130,12 +130,12 @@
 #' @param norm numeric in \eqn{[1, \infty]}{[1, Inf]}; norm to use when
 #' calculating weights. `Inf` results in infinity norm. `2` by default
 #'
-#' @param center_X logical; if `T`, center `X` column-wise to mean \eqn{0}.
-#' `T` by default
+#' @param center_X logical; if `TRUE`, center `X` column-wise to mean \eqn{0}.
+#' `TRUE` by default
 #'
-#' @param scale_Z logical; if `T`, center and scale `Z` column-wise to mean
-#' \eqn{0}, standard deviation \eqn{1} prior to calculating the weights. `T` by
-#' default
+#' @param scale_Z logical; if `TRUE`, center and scale `Z` column-wise to mean
+#' \eqn{0}, standard deviation \eqn{1} prior to calculating the weights. `TRUE`
+#' by default
 #'
 #' @param alpha_tol positive numeric; end CAVI when the Frobenius norm of the
 #' change in the alpha matrix is within `alpha_tol`. `1e-5` by default
@@ -160,8 +160,8 @@
 #' \eqn{(i, j)} and \eqn{(j, i)} entries will be post-processed as `sym_method`
 #' applied to the \eqn{(i, j)} and \eqn{(j, i)} entries. `"mean"` by default
 #'
-#' @param parallel logical; if `T`, hyperparameter selection and CAVI for each
-#' of the \eqn{p} variables will be performed in parallel using `foreach`.
+#' @param parallel logical; if `TRUE`, hyperparameter selection and CAVI for
+#' each of the \eqn{p} variables will be performed in parallel using `foreach`.
 #' Parallel backend may be registered prior to making a call to `covdepGE`. If
 #' no active parallel backend can be detected, then parallel backend will be
 #' automatically registered using:
@@ -170,11 +170,11 @@
 #' doParallel::registerDoParallel(num_workers)
 #' ```
 #'
-#' `F` by default
+#' `FALSE` by default
 #'
 #' @param num_workers `NULL` OR positive integer less than or equal to
 #' `parallel::detectCores()`; argument to `doParallel::registerDoParallel` if
-#' `parallel = T` and no parallel backend is detected. If `NULL`, then:
+#' `parallel = TRUE` and no parallel backend is detected. If `NULL`, then:
 #'
 #' ```
 #' num_workers <- floor(parallel::detectCores() / 2)
@@ -182,9 +182,9 @@
 #'
 #' `NULL` by default
 #'
-#' @param prog_bar logical; if `T`, then a progress bar will be displayed
+#' @param prog_bar logical; if `TRUE`, then a progress bar will be displayed
 #' denoting the number of remaining variables to fix as the response and perform
-#' CAVI. If `parallel`, no progress bar will be displayed. `T` by default
+#' CAVI. If `parallel`, no progress bar will be displayed. `TRUE` by default
 ## -----------------------------RETURNS-----------------------------------------
 #' @return Returns object of class `covdepGE` with the following values:
 #'
@@ -389,7 +389,7 @@
 #'
 #' Note that since the regressions performed for variable \eqn{X_j}{Xj} and
 #' \eqn{X_k}{Xk} fixed as the response are independent of each other, they may
-#' be performed in parallel by setting `parallel = T`. Registering parallel
+#' be performed in parallel by setting `parallel = TRUE`. Registering parallel
 #' backend with greater than \eqn{p} workers offers no benefit, since each
 #' worker takes on one variable to fix as the response and perform the \eqn{n}
 #' regressions.
@@ -510,10 +510,10 @@ covdepGE <- function(X, Z = rep(0, nrow(X)), hp_method = "hybrid", ssq = NULL,
                      sbsq = NULL, pip = NULL, nssq = 5, nsbsq = 5, npip = 5,
                      ssq_mult = 1.5, ssq_lower = 1e-5, snr_upper = 25,
                      sbsq_lower = 1e-5, pip_lower = 1e-5, pip_upper = NULL,
-                     tau = NULL, norm = 2, center_X = T, scale_Z = T,
+                     tau = NULL, norm = 2, center_X = TRUE, scale_Z = TRUE,
                      alpha_tol = 1e-5, max_iter_grid = 10, max_iter = 100,
-                     edge_threshold = 0.5, sym_method = "mean", parallel = F,
-                     num_workers = NULL, prog_bar = T){
+                     edge_threshold = 0.5, sym_method = "mean",
+                     parallel = FALSE, num_workers = NULL, prog_bar = TRUE){
 
   start_time <- Sys.time()
 
@@ -538,7 +538,7 @@ covdepGE <- function(X, Z = rep(0, nrow(X)), hp_method = "hybrid", ssq = NULL,
     # if there is only one unique value in Z, warn and do not scale
     if (any(apply(Z, 2, stats::sd) == 0)){
       warning("Cannot scale constant Z")
-      Z <- matrix(scale(Z, scale = F)[ , ], n)
+      Z <- matrix(scale(Z, scale = FALSE)[ , ], n)
     } else{
 
       # otherwise, center and scale Z
@@ -547,7 +547,7 @@ covdepGE <- function(X, Z = rep(0, nrow(X)), hp_method = "hybrid", ssq = NULL,
   }
 
   # if X should be centered, do so
-  if (center_X) X <- matrix(scale(X, scale = F)[ , ], n)
+  if (center_X) X <- matrix(scale(X, scale = FALSE)[ , ], n)
 
   # get weights
   D <- get_weights(Z, norm, tau)
@@ -571,10 +571,10 @@ covdepGE <- function(X, Z = rep(0, nrow(X)), hp_method = "hybrid", ssq = NULL,
       },
 
       # return false if error
-      error = function(msg) F,
+      error = function(msg) FALSE,
 
       # return false if warning
-      warning = function(msg) F)
+      warning = function(msg) FALSE)
 
     # display a message that registered workers have been detected
     if (registered){
@@ -606,7 +606,7 @@ covdepGE <- function(X, Z = rep(0, nrow(X)), hp_method = "hybrid", ssq = NULL,
             y <- X[, j]
 
             # Set the remaining p variables as predictors
-            X_j <- X[, -j, drop = F]
+            X_j <- X[, -j, drop = FALSE]
 
             # perform CAVI and save results to res
             cavi(X_j, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq, npip,
@@ -640,7 +640,7 @@ covdepGE <- function(X, Z = rep(0, nrow(X)), hp_method = "hybrid", ssq = NULL,
       y <- X[, j]
 
       # Set the remaining p variables as predictors
-      X_j <- X[, -j, drop = F]
+      X_j <- X[, -j, drop = FALSE]
 
       # perform CAVI and save results to res
       res[[j]] <- cavi(X_j, Z, D, y, hp_method, ssq, sbsq, pip, nssq, nsbsq,
@@ -682,7 +682,7 @@ covdepGE <- function(X, Z = rep(0, nrow(X)), hp_method = "hybrid", ssq = NULL,
   # transform p n by n matrices to n p by p matrices using alpha_matrices
   # the j, k entry in the l-th matrix is the probability of inclusion of an edge
   # between the j, k variables for the l-th observation
-  incl_probs <- replicate(n, matrix(0, p, p), simplify = F)
+  incl_probs <- replicate(n, matrix(0, p, p), simplify = FALSE)
 
   # iterate over the p matrices
   for (j in 1:p){
