@@ -170,10 +170,8 @@ test_that("scale_Z is working", {
 })
 
 test_that("Greater alpha_tol gives faster convergence", {
-  out_slow <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
-                       alpha_tol = 1e-10, prog_bar = F)
-  out_fast <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
-                       prog_bar = F)
+  out_slow <- covdepGE(data$X, data$Z, alpha_tol = 1e-12, prog_bar = F)
+  out_fast <- covdepGE(data$X, data$Z, alpha_tol = 1e-1, prog_bar = F)
   expect_gt(out_slow$model_details$elapsed, out_fast$model_details$elapsed)
 })
 
