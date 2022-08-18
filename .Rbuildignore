@@ -1,6 +1,7 @@
 ^covdepGE\.Rproj$
 ^\.Rproj\.user$
 ^dev$
+^simulation_study$
 ^LICENSE\.md$
 ^README_files$
 ^README\.Rmd$

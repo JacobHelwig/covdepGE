@@ -208,12 +208,16 @@ Rcpp::List cavi_c(const arma::colvec& y, const arma::mat& D,
                   const arma::mat& alpha0, double ssq, double sbsq, double pip,
                   double alpha_tol, int max_iter) {
 
+  // get sample size and number of parameters
+  int n = X.n_rows;
+  int p = X.n_cols;
+
   // matrices and vectors for updated variational parameters and hyperparameters
   arma::mat mu = mu0;
   arma::mat alpha = alpha0;
 
   // matrices for tracking the convergence of alpha parameters
-  arma::mat alpha_last, change_alpha;
+  arma::mat alpha_last(n, p), change_alpha(n, p);
 
   // variational variance of regression coefficients update
   arma::mat ssq_var = ssq / ((arma::pow(X, 2).t() * D).t() + 1 / sbsq);
@@ -304,6 +308,10 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
                          const arma::colvec& sbsq, const arma::colvec& pip,
                          double alpha_tol, int max_iter){
 
+  // get sample size and number of parameters
+  int n = X.n_rows;
+  int p = X.n_cols;
+
   // get number of grid points
   int n_param = pip.n_elem;
 
@@ -313,11 +321,11 @@ Rcpp::List grid_search_c(const arma::colvec& y, const arma::mat& D,
 
   // storage for the hyperparameters and variational parameters corresponding to
   // the current best ELBO
-  arma::mat mu_best, alpha_best, ssqv_best;
+  arma::mat mu_best(n, p), alpha_best(n, p), ssqv_best(n, p);
   double ssq_best, sbsq_best, pip_best;
 
   // instantiate a list to store the result of cavi_c
-  Rcpp::List out;
+  Rcpp::List out(5);
 
   // vector to store ELBOs and converged iter
   arma::colvec elbo_store(n_param), iter_store(n_param);
