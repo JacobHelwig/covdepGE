@@ -1,9 +1,13 @@
 ---
 output: pdf_document
+header-includes:
+   - \usepackage{booktabs}
 ---
 
-```{r}
+```{r, error=TRUE}
 rm(list = ls())
+sessionInfo()
+
 library(covdepGE)
 library(loggle)
 library(HeteroGGM)
@@ -16,7 +20,7 @@ now <- format(Sys.time(), "%Y%m%d_%H%M%S")
 
 # initialize storage for results, time, and progress tracking
 set.seed(1)
-n_trials <- 2
+n_trials <- 100
 results <- vector("list", n_trials + 1)
 names(results) <- c(paste0("trial", 1:n_trials), "time")
 results$time <- Sys.time()
@@ -52,16 +56,19 @@ eval_est <- function(est, true){
 
   list(sens = sens, spec = spec)
 }
+#```
+
+#```{r, eval = F}
 
 # perform trials
 for (j in 1:n_trials){
 
   # generate the data and create storage for the models
   data <- generateData(p, nj, nj, nj)
-  trial <- vector("list", 4)
-  names(trial) <- c("data", "covdepGE", "loggle", "HeteroGGM")
+  trial <- vector("list", 3)
+  names(trial) <- c("covdepGE", "loggle", "HeteroGGM")
   prec_arr_dim <- c(p, p, n)
-  trial$data <- data
+  # trial$data <- data
 
   # convert the true precision to an array and then to a graph; mask diagonal
   prec <- array(unlist(data$true_precision), prec_arr_dim)
@@ -70,38 +77,56 @@ for (j in 1:n_trials){
   # fit each method, save details about results, time, etc.
 
   # covdepGE
-  out_covdepGE <- suppressWarnings(suppressMessages(
-    covdepGE(data$X, data$Z, parallel = T, num_workers = num_workers)))
-  out_covdepGE$time <- as.numeric(out_covdepGE$model_details$elapsed, units = "secs")
-  out_covdepGE$str <- array(unlist(out_covdepGE$graphs$graphs), dim = prec_arr_dim)
-  out_covdepGE[c("sens", "spec")] <- eval_est(out_covdepGE$str, graph)[c("sens", "spec")]
+  out_covdepGE <- tryCatch(suppressWarnings(covdepGE(
+    data$X, data$Z, parallel = T, num_workers = num_workers)),
+    error = function(e) list(error = e))
+  if (names(out_covdepGE)[[1]] == "error"){
+    out_covdepGE <- out_covdepGE$error
+  }else{
+    out_covdepGE$time <- as.numeric(out_covdepGE$model_details$elapsed, units = "secs")
+    out_covdepGE$str <- array(unlist(out_covdepGE$graphs$graphs), dim = prec_arr_dim)
+    out_covdepGE[c("sens", "spec")] <- eval_est(out_covdepGE$str, graph)[c("sens", "spec")]
+  }
   trial$covdepGE <- out_covdepGE
   rm(list = "out_covdepGE")
   gc()
   
   # loggle
   start <- Sys.time()
-  out_loggle <- quiet(loggle.cv(t(data$X), num.thread = num_workers))
-  out_loggle <- out_loggle$cv.select.result
-  out_loggle$time <- as.numeric(Sys.time() - start, units = "secs")
-  out_loggle$str <- array(unlist(lapply(lapply(
-    out_loggle$adj.mat.opt, `-`, diag(p)), as.matrix)), dim = prec_arr_dim)
-  out_loggle[c("sens", "spec")] <- eval_est(out_loggle$str, graph)[c("sens", "spec")]
+  out_loggle <- tryCatch(quiet(loggle.cv(t(data$X), num.thread = num_workers)),
+                         error = function(e) list(error = e))
+  if (names(out_loggle)[[1]] == "error"){
+    out_loggle <- out_loggle$error
+  }else{
+    out_loggle <- out_loggle$cv.select.result
+    out_loggle$time <- as.numeric(Sys.time() - start, units = "secs")
+    out_loggle$str <- array(unlist(lapply(lapply(
+      out_loggle$adj.mat.opt, `-`, diag(p)), as.matrix)), dim = prec_arr_dim)
+    out_loggle[c("sens", "spec")] <- eval_est(out_loggle$str, graph)[c("sens", "spec")]    
+  }
   trial$loggle <- out_loggle
   rm(list = "out_loggle")
   gc()
-  print("log_done")
 
   # HeteroGGM
   clust <- Mclust(data$Z, verbose = F)
   lambda <- genelambda.obo(lambda2_min = 0.15)
   start <- Sys.time()
-  out_hetGGM <- GGMPF(lambda, data$X + clust$classification * 10, clust$G)
-  out_hetGGM$time <- as.numeric(Sys.time() - start, units = "secs")
-  out_hetGGM$str <- (out_hetGGM$Theta_hat.list[[out_hetGGM$Opt_num]] != 0) * 1
-  out_hetGGM$str <- out_hetGGM$str - replicate(dim(out_hetGGM$str)[3], diag(p))
-  out_hetGGM$str <- out_hetGGM$str[ , , out_hetGGM$member.list[[out_hetGGM$Opt_num]]]
-
+  out_hetGGM <- tryCatch(GGMPF(lambda, data$X + clust$classification * 10, clust$G),
+                         error = function(e) list(error = e))
+  if (names(out_hetGGM)[[1]] == "error"){
+    out_hetGGM <- out_hetGGM$error
+  }else{
+    out_hetGGM$time <- as.numeric(Sys.time() - start, units = "secs")
+    out_hetGGM$str <- (out_hetGGM$Theta_hat.list[[out_hetGGM$Opt_num]] != 0) * 1
+    out_hetGGM$str <- out_hetGGM$str - replicate(dim(out_hetGGM$str)[3], diag(p))
+    out_hetGGM$str <- out_hetGGM$str[ , , out_hetGGM$member.list[[out_hetGGM$Opt_num]]]
+    out_hetGGM[c("sens", "spec")] <- eval_est(out_hetGGM$str, graph)[c("sens", "spec")]
+  }
+  trial$HeteroGGM <- out_hetGGM
+  rm(list = "out_hetGGM")
+  gc()
+  
   # for hp tuning lambda grid
   # het_gr <- vector("list", n)
   # for (l in 1:n){
@@ -147,23 +172,23 @@ for (j in 1:n_trials){
   # out_hetGGM$Opt_lambda
   # lambda
 
-  out_hetGGM[c("sens", "spec")] <- eval_est(out_hetGGM$str, graph)[c("sens", "spec")]
-  trial$HeteroGGM <- out_hetGGM
-  rm(list = "out_hetGGM")
-  gc()
-
   # save the trial and update the progress bar
+  trial$elapsed <- sum(unlist(sapply(trial, `[[`, "time")))
+  results$time <- c(results$time, Sys.time())
   results[[j]] <- trial
   setTxtProgressBar(pb, j)
+  save(results, file = paste0("results_", now, ".Rda"))
 }
 
-# save the final time and the results
-(results$time <- Sys.time() - results$time)
+# save the results
 save(results, file = paste0("results_", now, ".Rda"))
+```
 
+```{r, error=TRUE}
 ## Analysis
 
 #load("simulation_study/results.Rda")
+#load("/home/jacob.a.helwig/covdepGE/simulation_study/results_20220817_150045.Rda")
 
 # extract each of the models
 results <- results[setdiff(names(results), "time")]
@@ -236,6 +261,7 @@ true_graphs <- lapply(1:3, function(j)
 
 # pred_graphs <- ggarrange(plotlist = pred_graphs, nrow = 1, legend = F)
 true_graphs <- ggarrange(plotlist = true_graphs, nrow = 1, legend = F)
+true_graphs
 # ggsave("simulation_study/plots/preds.pdf", pred_graphs, height = 4, width = 11)
-ggsave("simulation_study/plots/true.pdf", true_graphs, height = 4, width = 11)
+# ggsave("simulation_study/plots/true.pdf", true_graphs, height = 4, width = 11)
 ```
