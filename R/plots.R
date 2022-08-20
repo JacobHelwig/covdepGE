@@ -121,7 +121,7 @@ matViz <- function(x, color1 = "white", color2 = "#500000",
               ggplot2::theme(legend.title = ggplot2::element_blank(),
                              plot.title = ggplot2::element_text(hjust = 0.5)) +
               ggplot2::scale_x_continuous(breaks = 1:nrow(x)) +
-              ggplot2::scale_y_continuous(breaks = 1:nrow(x), trans = "reverse"))
+              ggplot2::scale_y_continuous(breaks = 1:nrow(x)))
 
     # if probabilities are to be displayed, add them
     if (incl_val){
@@ -145,7 +145,7 @@ matViz <- function(x, color1 = "white", color2 = "#500000",
               ggplot2::theme(legend.title = ggplot2::element_blank(),
                              plot.title = ggplot2::element_text(hjust = 0.5)) +
               ggplot2::scale_x_continuous(breaks = 1:nrow(x)) +
-              ggplot2::scale_y_continuous(breaks = 1:nrow(x), trans = "reverse"))
+              ggplot2::scale_y_continuous(breaks = 1:nrow(x)))
   }
 
   # check to see if there are col names or row names to be added back

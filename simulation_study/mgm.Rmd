@@ -135,17 +135,17 @@ z01 <- z01 / max(z01)
 
 # select the optimal bandwidth
 start <- Sys.time()
-# bw_tvmgm <- bwSelect(data = data$X,
-#                      type = rep("g", p),
-#                      level = rep(1, p),
-#                      bwSeq = seq(0.1, 0.4, 0.05),
-#                      bwFolds = 1,
-#                      bwFoldsize = 3,
-#                      modeltype = "mgm",
-#                      k = 2,
-#                      timepoints = z01)
-# cat("\nBW time:", as.numeric(Sys.time() - start, units = "secs"))
-# bw <- as.numeric(names(which.min(bw_tvmgm$meanError)))
+bw_tvmgm <- bwSelect(data = data$X,
+                     type = rep("g", p),
+                     level = rep(1, p),
+                     bwSeq = seq(0.1, 0.4, 0.1),
+                     bwFolds = 1,
+                     bwFoldsize = 3,
+                     modeltype = "mgm",
+                     k = 2,
+                     timepoints = z01)
+cat("\nBW time:", as.numeric(Sys.time() - start, units = "secs"))
+bw <- as.numeric(names(which.min(bw_tvmgm$meanError)))
 out_mgm <- tvmgm(data = data$X, 
                  type = rep("g", p), 
                  level = rep(1, p),
