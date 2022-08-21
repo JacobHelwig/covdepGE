@@ -1,27 +1,24 @@
 rm(list = ls())
 library(covdepGE)
 library(JGL)
-library(mgm)
 library(kableExtra)
+library(mgm)
 
 # p = 25, n = 150
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p25_n150_20220820_205707.Rda")
+load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p25_n150_20220821_004616.Rda")
 results25_150 <- results
 
 # p = 50, n = 150
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p50_n150_20220820_205746.Rda")
+load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p50_n150_20220821_004636.Rda")
 results50_150 <- results
 
 # p = 100, n = 300
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n300_20220820_210016.Rda")
+load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n300_20220821_120647.Rda")
 results100_300 <- results
 
 # p = 100, n = 600
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n600_20220820_205829.Rda")
+load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n600_20220821_120702.Rda")
 results100_600 <- results
-
-# delete this
-results100_600 <- results100_300 <- results50_150
 
 # remove NULLS
 results25_150 <- results25_150[!sapply(results25_150, is.null)]
@@ -55,14 +52,15 @@ FP <- lapply(mods, lapply, sapply, `[[`, "FP_n")
 # FN <- lapply(mods, lapply, sapply, `[[`, "FN_n")
 
 # function to get the mean and standard deviation at a specified precision
-mean_sd <- function(x, prec = 2, mean_format = "f", sd_format = "f") paste0(
-  formatC(mean(x), prec, format = mean_format), "(",
-  formatC(sd(x), prec, format = sd_format), ")")
+mean_sd <- function(x, prec = 2, mean_format = "f", sd_format = "f") {
+  paste0("$", formatC(mean(x), prec, format = mean_format), "(",
+         formatC(sd(x), prec, format = sd_format), ")$")
+}
 
 # get summary stats for each
 times_sum <- lapply(times, lapply, mean_sd)
 sens_sum <- lapply(sens, lapply, mean_sd)
-spec_sum <- lapply(spec, lapply, mean_sd, sd_format = "g")
+spec_sum <- lapply(spec, lapply, mean_sd)
 TP_sum <- lapply(TP, lapply, mean_sd)
 FP_sum <- lapply(FP, lapply, mean_sd)
 
@@ -81,7 +79,7 @@ names(times_exp) <- names(sens_exp) <- names(spec_exp) <- names(TP_exp) <-
   names(FP_exp) <- names(results)
 
 # create a matrix for each experiment
-exp_sum <- list(Sensitivity = sens_exp, Specificity = spec_exp,
+exp_sum <- list(Sensitivity = sens_exp, #Specificity = spec_exp,
                 `TP/graph` = TP_exp, `FP/graph` = FP_exp,
                 `Time(s)` = times_exp)
 p25_n150df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p25_n150")))
@@ -90,26 +88,13 @@ p100_n300df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p100_n300")))
 p100_n600df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p100_n600")))
 
 # combine all of the matrices
+exp_names <- c("$p=25, n=150$", "$p=50, n=150$", "$p=100, n=300$", "$p=100, n=600$")
+exp_names <- rep(exp_names, each = 3)
+method_names <- rep(paste0("\\texttt{", row.names(p25_n150df), "}"), 4)
 res_mat <- rbind(p25_n150df, p50_n150df, p100_n300df, p100_n600df)
-row.names(res_mat) <- rep(row.names(p25_n150df), 4)
-colnames(res_mat) <- names(exp_sum)
+res_mat <- cbind(Experiment = exp_names, Method = method_names, res_mat)
+colnames(res_mat) <- c("", "", names(exp_sum))
+rownames(res_mat) <- NULL
 
-kbl(res_mat, format = "latex", booktabs = T)
-
-times_df <- data.frame(lapply(times_sum, unlist))
-sens_df <- data.frame(lapply(sens_sum, unlist))
-
-list(times = times_df, sens = sens_df)
-
-
-unlist(times_sum$covdepGE)
-
-perf_df <- cbind.data.frame(
-  Sensitivity = sapply(sens, mean_sd),
-  Specificity = sapply(spec, function(x)
-    paste0(round(mean(x), 4), "(", formatC(sd(x), 2, format = "e"), ")")),
-  `FP per graph` = sapply(FP, mean_sd),
-  `FN per graph` = sapply(FN, mean_sd))
-library(kableExtra)
-kbl(perf_df, format = "latex", booktabs = T)
-
+kbl(res_mat, format = "latex", booktabs = T, escape = FALSE) %>%
+  collapse_rows(columns = 1, latex_hline = "major", valign = "middle")

@@ -1,14 +1,17 @@
+library(covdepGE)
+library(JGL)
+library(mgm)
 # p = 25, n = 150
-# load("/home/jacob.a.helwig/covdepGE/simulation_study/res_p25_n150_20220821_002921.Rda")
+# load("/home/jacob.a.helwig/covdepGE/simulation_study/res_p25_n150_20220821_004616.Rda")
 
 # p = 50, n = 150
-# load("/home/jacob.a.helwig/covdepGE/simulation_study/")
+# load("/home/jacob.a.helwig/covdepGE/simulation_study/res_p50_n150_20220821_004636.Rda")
 
 # p = 100, n = 300
-# load("/home/jacob.a.helwig/covdepGE/simulation_study/")
+# load("/home/jacob.a.helwig/covdepGE/simulation_study/res_p100_n300_20220821_004700.Rda")
 
 # p = 100, n = 600
-# load("/home/jacob.a.helwig/covdepGE/simulation_study/")
+# load("/home/jacob.a.helwig/covdepGE/simulation_study/res_p100_n600_20220821_004728.Rda")
 
 # extract models
 covdepGE_mods <- lapply(results, `[[`, "covdepGE")

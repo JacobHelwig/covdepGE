@@ -108,14 +108,14 @@ covdepGE.eval <- function(X, Z, true){
   perf <- eval_est(out$str, true)
   out[names(perf)] <- perf
   out$str <- sp.array(out$str, n)
-  message("covdepGE complete")
+  message("\ncovdepGE complete ", Sys.time(), "\n")
   out
 }
 
 # function to perform clustering, cross-validation and evaluation for JGL
 JGL.eval <- function(X, Z, true){
 
-  start <- Sys.time()
+  start0 <- Sys.time()
 
   # cluster the data based on Z
   clust <- Mclust(Z, verbose = F)
@@ -127,14 +127,15 @@ JGL.eval <- function(X, Z, true){
   lambda1_max <- 0.4
   lambda2_max <- 0.01
   lambda1 <- seq(lambda1_min, lambda1_max, 0.005)
-  lambda2 <- exp(seq(log(lambda2_min), log(lambda2_max), length = length(lambda1) %/% 2))
+  lambda2 <- exp(seq(log(lambda2_min), log(lambda2_max),
+                     length = length(lambda1) %/% 2))
 
   # optimize lambda1 with lambda2 fixed as the smallest value
   aic_lambda1 <- vector("list", length(lambda1))
-  for (k in 1:length(lambda1)){
+  for(k in 1:length(lambda1)){
 
     # fit the model and return lambda, AIC, and time to fit
-    start0 <- Sys.time()
+    start <- Sys.time()
     out <- JGL(Y = X_k,
                lambda1 = lambda1[k],
                lambda2 = lambda2_min,
@@ -148,7 +149,7 @@ JGL.eval <- function(X, Z, true){
   lambda1_opt <- sapply(aic_lambda1, `[[`, "aic")
   lambda1_opt <- lambda1[which.min(lambda1_opt)]
   aic_lambda2 <- vector("list", length(lambda2))
-  for (k in 1:length(lambda2)){
+  for(k in 1:length(lambda2)){
 
     # fit the model and return lambda, AIC, and time to fit
     start <- Sys.time()
@@ -156,6 +157,7 @@ JGL.eval <- function(X, Z, true){
                lambda1 = lambda1_opt,
                lambda2 = lambda2[k],
                return.whole.theta = T)
+    time <- as.numeric(Sys.time() - start, units = "secs")
     aic_lambda2[[k]] <- list(lambda = lambda2[k], aic = aic_JGL(X_k, out$theta),
                              time = time)
   }
@@ -188,7 +190,7 @@ JGL.eval <- function(X, Z, true){
   perf <- eval_est(out$str, true)
   out[names(perf)] <- perf
   out$str <- sp.array(out$str, n)
-  message("JGL complete")
+  message("\nJGL complete ", Sys.time(), "\n")
   out
 }
 
@@ -240,7 +242,7 @@ tvmgm.eval <- function(X, Z, true){
   perf <- eval_est(out$str, true)
   out[names(perf)] <- perf
   out$str <- sp.array(out$str, n)
-  message("mgm complete")
+  message("\nmgm complete ", Sys.time(), "\n")
   out
 }
 
@@ -253,7 +255,7 @@ for (j in 1:n_trials){
   # record the time the trial started
   trial_start <- Sys.time()
 
-  # get the data and create storage for the models
+  # get the data and create storage for the models (j=1)
   data <- data_list[[j]]
   trial <- vector("list", 3)
   names(trial) <- c("covdepGE", "mgm", "JGL")
@@ -302,3 +304,4 @@ for (j in 1:n_trials){
   # stop cluster
   doParallel::stopImplicitCluster()
 }
+
