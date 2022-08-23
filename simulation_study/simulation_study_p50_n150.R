@@ -77,7 +77,7 @@ aic_JGL <- function(X, prec){
 }
 
 # function to fit and evaluate results for covdepGE
-covdepGE.eval <- function(X, Z, true){
+covdepGE.eval <- function(X, Z, true, n_workers){
 
   start <- Sys.time()
 
@@ -86,7 +86,8 @@ covdepGE.eval <- function(X, Z, true){
   p <- ncol(X)
   out <- covdepGE(X = X,
                   Z = Z,
-                  parallel = T)
+                  parallel = T,
+                  num_workers = n_workers)
 
   # record time and get the array of graphs
   out$time <- as.numeric(Sys.time() - start, units = "secs")
@@ -249,9 +250,6 @@ tvmgm.eval <- function(X, Z, true){
 # perform trials
 for (j in 1:n_trials){
 
-  # spin up parallel backend
-  doParallel::registerDoParallel(num_workers)
-
   # record the time the trial started
   trial_start <- Sys.time()
 
@@ -271,7 +269,10 @@ for (j in 1:n_trials){
                                  Z = data$Z,
                                  true = graph),
                       error = function(e) list(error = e))
-  if (!is.null(out_mgm$error)) message(out_mgm$error)
+  if (!is.null(out_mgm$error)){
+    message(out_mgm$error)
+    next
+  }
   trial$mgm <- out_mgm
   rm(list = "out_mgm")
   gc()
@@ -281,7 +282,10 @@ for (j in 1:n_trials){
                                Z = data$Z,
                                true = graph),
                       error = function(e) list(error = e))
-  if (!is.null(out_JGL$error)) message(out_JGL$error)
+  if (!is.null(out_JGL$error)){
+    message(out_JGL$error)
+    next
+  }
   trial$JGL <- out_JGL
   rm(list = "out_JGL")
   gc()
@@ -289,7 +293,8 @@ for (j in 1:n_trials){
   # covdepGE
   out_covdepGE <- tryCatch(covdepGE.eval(X = data$X,
                                          Z = data$Z,
-                                         true = graph),
+                                         true = graph,
+                                         n_workers = num_workers),
                            error = function(e) list(error = e))
   if (!is.null(out_covdepGE$error)) message(out_covdepGE$error)
   trial$covdepGE <- out_covdepGE
@@ -300,7 +305,4 @@ for (j in 1:n_trials){
   results[[j]] <- trial
   setTxtProgressBar(pb, j)
   save(results, file = paste0("res_p", p, "_n", n, "_", now, ".Rda"))
-
-  # stop cluster
-  doParallel::stopImplicitCluster()
 }

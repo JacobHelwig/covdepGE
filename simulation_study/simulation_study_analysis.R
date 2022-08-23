@@ -5,19 +5,19 @@ library(kableExtra)
 library(mgm)
 
 # p = 25, n = 150
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p25_n150_20220821_004616.Rda")
+load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p25_n150_20220822_140118.Rda")
 results25_150 <- results
 
 # p = 50, n = 150
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p50_n150_20220821_004636.Rda")
+load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p50_n150_20220822_140137.Rda")
 results50_150 <- results
 
 # p = 100, n = 300
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n300_20220821_120647.Rda")
+load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n300_20220822_140357.Rda")
 results100_300 <- results
 
 # p = 100, n = 600
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n600_20220821_120702.Rda")
+load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n600_20220822_140507.Rda")
 results100_600 <- results
 
 # remove NULLS
@@ -33,6 +33,7 @@ results <- list(
   p100_n300 = results100_300,
   p100_n600 = results100_600
 )
+sapply(results, length)
 
 # aggregate results by model and put into a models list
 covdepGE_mods <- lapply(results, lapply, `[[`, "covdepGE")
@@ -79,9 +80,10 @@ names(times_exp) <- names(sens_exp) <- names(spec_exp) <- names(TP_exp) <-
   names(FP_exp) <- names(results)
 
 # create a matrix for each experiment
-exp_sum <- list(Sensitivity = sens_exp, #Specificity = spec_exp,
-                `TP/graph` = TP_exp, `FP/graph` = FP_exp,
-                `Time(s)` = times_exp)
+exp_sum <- list("Sensitivity$(\\uparrow)$" = sens_exp, #Specificity = spec_exp,
+                "TP/graph$(\\uparrow)$" = TP_exp,
+                "FP/graph$(\\downarrow)$" = FP_exp,
+                "Time(s)$(\\downarrow)$" = times_exp)
 p25_n150df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p25_n150")))
 p50_n150df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p50_n150")))
 p100_n300df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p100_n300")))
@@ -96,5 +98,6 @@ res_mat <- cbind(Experiment = exp_names, Method = method_names, res_mat)
 colnames(res_mat) <- c("", "", names(exp_sum))
 rownames(res_mat) <- NULL
 
+# gsub(".*\\$(.*)\\(.*", "\\1", p25_n150df)
 kbl(res_mat, format = "latex", booktabs = T, escape = FALSE) %>%
   collapse_rows(columns = 1, latex_hline = "major", valign = "middle")
