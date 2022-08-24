@@ -30,13 +30,13 @@ To facilitate information sharing while managing complexity, `covdepGE` uses an 
 
 ## Installation
 
-<!-- You can install the released version of covdepGE from [CRAN](https://CRAN.R-project.org) with: -->
+You can install the released version of covdepGE from [CRAN](https://CRAN.R-project.org) with:
 
-<!-- ``` r -->
-<!-- install.packages("covdepGE") -->
-<!-- ``` -->
+``` r
+install.packages("covdepGE")
+```
 
-<!-- And the development version from [GitHub](https://github.com/) with: -->
+And the development version from [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("devtools")
