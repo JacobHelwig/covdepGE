@@ -4,20 +4,38 @@ library(JGL)
 library(kableExtra)
 library(mgm)
 
+# function to add covdepGE results to reuslts from JGM and mgm
+add_res <- function(covdepGE_res_path, JGM_mgm_res_path){
+
+  # load the JGM and mgm results and save; do the same for covdepGE
+  load(JGM_mgm_res_path)
+  results_final <- results
+  load(covdepGE_res_path)
+  names(results_final) <- names(results)
+
+  # add covdepGE results to JGM and mgm results and return
+  for(j in 1:length(results)){
+    results_final[[j]]$covdepGE <- results[[j]]
+  }
+  results_final
+}
+
+
 # p = 25, n = 150
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p25_n150_20220822_140118.Rda")
-results25_150 <- results
+results25_150 <- add_res(
+  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p25_n150_covdepGE_20220823_145128.Rda",
+  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p25_n150_JGL_mgm_20220823_101913.Rda")
+
+# delete
+results <- results25_150
 
 # p = 50, n = 150
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p50_n150_20220822_140137.Rda")
 results50_150 <- results
 
 # p = 100, n = 300
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n300_20220822_140357.Rda")
 results100_300 <- results
 
 # p = 100, n = 600
-load("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n600_20220822_140507.Rda")
 results100_600 <- results
 
 # remove NULLS
