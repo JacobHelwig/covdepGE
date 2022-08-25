@@ -41,24 +41,16 @@ results100_300 <- add_res(
 # DELETE
 results100_300 <- results100_300[1:82]
 
-# p = 100, n = 600
-results100_600 <- add_res(
-  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p100_n600/res_p100_n600_covdepGE_20220823_145733.Rda",
-  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p100_n600/res_p100_n600_JGL_mgm_20220823_102059.Rda"
-)
-
 # remove NULLS
 results25_150 <- results25_150[!sapply(results25_150, is.null)]
 results50_150 <- results50_150[!sapply(results50_150, is.null)]
 results100_300 <- results100_300[!sapply(results100_300, is.null)]
-results100_600 <- results100_600[!sapply(results100_600, is.null)]
 
 # put all results together
 results <- list(
   p25_n150 = results25_150,
   p50_n150 = results50_150,
-  p100_n300 = results100_300,
-  p100_n600 = results100_600
+  p100_n300 = results100_300
 )
 sapply(results, length)
 
@@ -114,17 +106,15 @@ exp_sum <- list("Sensitivity$(\\uparrow)$" = sens_exp, #Specificity = spec_exp,
 p25_n150df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p25_n150")))
 p50_n150df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p50_n150")))
 p100_n300df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p100_n300")))
-p100_n600df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p100_n600")))
 
 # combine all of the matrices
-exp_names <- c("$p=25, n=150$", "$p=50, n=150$", "$p=100, n=300$", "$p=100, n=600$")
+exp_names <- c("$p=25, n=150$", "$p=50, n=150$", "$p=100, n=300$")
 exp_names <- rep(exp_names, each = 3)
 method_names <- rep(paste0("\\texttt{", row.names(p25_n150df), "}"), 4)
-res_mat <- rbind(p25_n150df, p50_n150df, p100_n300df, p100_n600df)
+res_mat <- rbind(p25_n150df, p50_n150df, p100_n300df)
 res_mat <- cbind(Experiment = exp_names, Method = method_names, res_mat)
 colnames(res_mat) <- c("", "", names(exp_sum))
 rownames(res_mat) <- NULL
 
-# gsub(".*\\$(.*)\\(.*", "\\1", p25_n150df)
 kbl(res_mat, format = "latex", booktabs = T, escape = FALSE) %>%
   collapse_rows(columns = 1, latex_hline = "major", valign = "middle")

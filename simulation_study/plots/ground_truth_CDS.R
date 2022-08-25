@@ -18,7 +18,4 @@ true_list <- lapply(1:length(true_graphs), function(k)
           axis.text = element_text(size = 18),
           text = element_text(family = "Times")))
 true_graph <- ggarrange(plotlist = true_list, nrow = 1, common.legend = T)
-# true_graph <- ggarrange(true_list[[1]], NULL,
-#                         true_list[[2]], NULL,
-#                         true_list[[3]], nrow = 1, common.legend = T, widths = c(1, 0.5, 1, 0.5, 1))
-ggsave("plots/true.pdf", true_graph, height = 4, width = 11)
+ggsave("ground_truth_CDS.pdf", true_graph, height = 4, width = 11)
