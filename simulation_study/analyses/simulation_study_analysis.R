@@ -29,7 +29,7 @@ results25_150 <- add_res(
 # p = 50, n = 150
 results50_150 <- add_res(
   "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p50_n150/res_p50_n150_covdepGE_20220825_090326.Rda",
-  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p50_n150/res_p50_n150_JGL_mgm_20220823_101952.Rda"
+  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p50_n150/res_p50_n150_JGL_mgm_20220825_090205.Rda"
 )
 
 # p = 100, n = 300
@@ -37,11 +37,6 @@ results100_300 <- add_res(
   "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p100_n300/res_p100_n300_covdepGE_20220824_084919.Rda",
   "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p100_n300/res_p100_n300_JGL_mgm_20220823_102037.Rda"
 )
-
-# remove NULLS
-# results25_150 <- results25_150[!sapply(results25_150, is.null)]
-# results50_150 <- results50_150[!sapply(results50_150, is.null)]
-# results100_300 <- results100_300[!sapply(results100_300, is.null)]
 
 # put all results together
 results <- list(
@@ -105,13 +100,15 @@ p50_n150df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p50_n150")))
 p100_n300df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p100_n300")))
 
 # combine all of the matrices
+n <- rep(c(150, "150_", 300), each = 3)
+p <- rep(c(25, 50, 100), each = 3)
 exp_names <- c("$p=25, n=150$", "$p=50, n=150$", "$p=100, n=300$")
 exp_names <- rep(exp_names, each = 3)
-method_names <- rep(paste0("\\texttt{", row.names(p25_n150df), "}"), 4)
+pkg_names <- rep(paste0("\\texttt{", row.names(p25_n150df), "}"), 3)
 res_mat <- rbind(p25_n150df, p50_n150df, p100_n300df)
-res_mat <- cbind(Experiment = exp_names, Method = method_names, res_mat)
-colnames(res_mat) <- c("", "", names(exp_sum))
+res_mat <- cbind(p = p, n = n, pkg = pkg_names, res_mat)
+colnames(res_mat) <- c("$p$", "$n$", "Package", names(exp_sum))
 rownames(res_mat) <- NULL
 
 kbl(res_mat, format = "latex", booktabs = T, escape = FALSE) %>%
-  collapse_rows(columns = 1, latex_hline = "major", valign = "middle")
+  collapse_rows(columns = c(1, 2), latex_hline = "major", valign = "middle")

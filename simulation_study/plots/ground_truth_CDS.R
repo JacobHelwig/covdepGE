@@ -1,11 +1,3 @@
----
-title: "Simulation Study: Ground-truth CDS"
-output: pdf_document
----
-
-Upper-left $3\times3$ block of the ground truth CDS for all settings visualized using \texttt{covdepGE::matViz}. The remaining entries are all $0$. $n_0$ is $50$ or $100$, depending on the setting.
-
-```{r, echo = F, warning = F, message = F, fig.height = 4, fig.width = 11}
 # visualizing the true graphs
 library(covdepGE)
 library(extrafont)
@@ -27,5 +19,4 @@ true_list <- lapply(1:length(true_graphs), function(k)
           text = element_text(family = "Times")
           ))
 (true_graph <- ggarrange(plotlist = true_list, nrow = 1, common.legend = T))
-# ggsave("ground_truth_CDS.pdf", true_graph, height = 4, width = 11)
-```
+ggsave("ground_truth_CDS.pdf", true_graph, height = 4, width = 11)
