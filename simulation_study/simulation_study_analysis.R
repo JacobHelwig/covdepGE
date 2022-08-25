@@ -26,17 +26,26 @@ results25_150 <- add_res(
   "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p25_n150_covdepGE_20220823_145128.Rda",
   "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p25_n150_JGL_mgm_20220823_101913.Rda")
 
-# delete
-results <- results25_150
-
 # p = 50, n = 150
-results50_150 <- results
+results50_150 <- add_res(
+  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p50_n150_covdepGE_20220823_194904.Rda",
+  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p50_n150_JGL_mgm_20220823_101952.Rda"
+)
 
 # p = 100, n = 300
-results100_300 <- results
+results100_300 <- add_res(
+  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n300_covdepGE_20220824_084919.Rda",
+  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n300_JGL_mgm_20220823_102037.Rda"
+)
+
+# DELETE
+results100_300 <- results100_300[1:82]
 
 # p = 100, n = 600
-results100_600 <- results
+results100_600 <- add_res(
+  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n600_covdepGE_20220823_145733.Rda",
+  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/res_p100_n600_JGL_mgm_20220823_102059.Rda"
+)
 
 # remove NULLS
 results25_150 <- results25_150[!sapply(results25_150, is.null)]

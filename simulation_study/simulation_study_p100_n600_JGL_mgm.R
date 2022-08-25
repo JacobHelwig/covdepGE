@@ -9,7 +9,7 @@ library(mgm)
 
 # initialize storage for results, time, and progress tracking
 set.seed(1)
-n_trials <- 25
+n_trials <- 100
 results <- vector("list", n_trials)
 names(results) <- c(paste0("trial", 1:n_trials))
 pb <- txtProgressBar(0, n_trials, style = 3)
