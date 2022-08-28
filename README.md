@@ -44,13 +44,14 @@ perform inference. Finally, `covdepGE` offers several wrappers around
 ## Installation
 
 You can install the released version of covdepGE from
-[CRAN](https://CRAN.R-project.org) with:
+[CRAN](https://cran.r-project.org/package=covdepGE) with:
 
 ``` r
 install.packages("covdepGE")
 ```
 
-And the development version from [GitHub](https://github.com/) with:
+And the development version from
+[GitHub](https://github.com/JacobHelwig/covdepGE) with:
 
 ``` r
 # install.packages("devtools")
@@ -144,7 +145,7 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
 #> 
 #> ELBO: -171501.68                                             # Unique Graphs: 3
 #> n: 180, variables: 5                       Hyperparameter grid size: 125 points
-#> Model fit completed in 2.942 secs
+#> Model fit completed in 3.96 secs
 plot(out)
 #> [[1]]
 ```
@@ -175,6 +176,9 @@ inclusionCurve(out, 1, 3)
 <img src="man/figures/README-example-11.png" width="100%" />
 
 ## Methods
+
+A rendered version of this document is available on
+[CRAN](https://cran.r-project.org/web/packages/covdepGE/readme/README.html).
 
 ### Overview
 
