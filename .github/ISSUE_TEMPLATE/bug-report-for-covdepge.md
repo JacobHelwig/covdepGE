@@ -1,7 +1,7 @@
 ---
 name: Bug report for covdepGE
 about: Create a report to help us improve covdepGE. Alternatively, if you have a solution
-  in mind, consider forking the repo and creating a pull request to correct the issue.
+  in mind, consider forking the repo and creating a pull request.
 title: ''
 labels: ''
 assignees: ''
