@@ -1,0 +1,547 @@
+
+R version 4.2.0 (2022-04-22) -- "Vigorous Calisthenics"
+Copyright (C) 2022 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> rm(list = ls())
+> library(covdepGE)
+> 
+> (now <- format(Sys.time(), "%Y%m%d_%H%M%S"))
+[1] "20220825_090326"
+> 
+> # initialize storage for results, time, and progress tracking
+> set.seed(1)
+> n_trials <- 100
+> results <- vector("list", n_trials)
+> names(results) <- c(paste0("trial", 1:n_trials))
+> pb <- txtProgressBar(0, n_trials, style = 3)
+  |                                                                              |                                                                      |   0%> 
+> # define data dimensions
+> p <- 50
+> (n <- 1 * 3 * p)
+[1] 150
+> (nj <- n %/% 3)
+[1] 50
+> 
+> # p <- 5
+> # n <- 180
+> # (nj <- n %/% 3)
+> 
+> # generate the data
+> data_list <- replicate(n_trials, generateData(p, nj, nj, nj), F)
+> 
+> # get number of available workers
+> (num_workers <- parallel::detectCores() - 5)
+[1] 51
+> 
+> eval_est <- function(est, true){
++ 
++   # get n
++   n <- dim(est)[3]
++ 
++   # get true number of edges and non-edges
++   num_edge <- sum(true, na.rm = T)
++   num_non <- sum(true == 0, na.rm = T)
++ 
++   # calculate sensitivity, specificity, etc.
++   true_edge <- sum(est == 1 & true == 1, na.rm = T)
++   false_edge <- sum(est == 1 & true == 0, na.rm = T)
++   true_non <- sum(est == 0 & true == 0, na.rm = T)
++   false_non <- sum(est == 0 & true == 1, na.rm = T)
++   sens <- true_edge / num_edge
++   spec <- true_non / num_non
++ 
++   list(sens = sens, spec = spec, TP_n = true_edge / n, FP_n = false_edge / n,
++        TN_n = true_non / n, FN_n = false_non / n)
++ }
+> 
+> # function to turn an array into a list of sparse matrices
+> sp.array <- function(arr, n){
++   lapply(1:n, function(l) Matrix::Matrix(arr[ , , l], sparse = T))
++ }
+> 
+> # function to fit and evaluate results for covdepGE
+> covdepGE.eval <- function(X, Z, true, n_workers){
++ 
++   start <- Sys.time()
++ 
++   # get dimensions of the data and fit covdepGE
++   n <- nrow(X)
++   p <- ncol(X)
++   out <- covdepGE(X = X,
++                   Z = Z,
++                   parallel = T,
++                   num_workers = n_workers)
++ 
++   # record time and get the array of graphs
++   out$time <- as.numeric(Sys.time() - start, units = "secs")
++   out$str <- array(unlist(out$graphs$graphs), dim = c(p, p, n))
++ 
++   # covert the unique graphs to a sparse array
++   out$unique_graphs <- out$graphs$unique_graphs
++   for (k in 1:length(out$unique_graphs)){
++     out$unique_graphs[[k]]$graph <- Matrix::Matrix(
++       out$unique_graphs[[k]]$graph, sparse = T)
++   }
++ 
++   # remove large objects, put the unique graphs back in the graphs sublist
++   out$variational_params <- out$graphs <- out$weights <- NULL
++   out$graphs$unique_graphs <- out$unique_graphs
++   out$unique_graphs <- NULL
++ 
++   # get performance, convert graphs to a sparse array, and return
++   perf <- eval_est(out$str, true)
++   out[names(perf)] <- perf
++   out$str <- sp.array(out$str, n)
++   message("\ncovdepGE complete ", Sys.time(), "\n")
++   out
++ }
+> 
+> # perform trials
+> for (j in 1:n_trials){
++ 
++   # record the time the trial started
++   trial_start <- Sys.time()
++ 
++   # get the data
++   data <- data_list[[j]]
++ 
++   # convert the true precision to an array and then to a graph; mask diagonal
++   prec <- array(unlist(data$true_precision), c(p, p, n))
++   graph <- (prec != 0) * 1 + replicate(n, diag(rep(NA, p)) * 1)
++ 
++   # fit covdepGE
++   out_covdepGE <- tryCatch(covdepGE.eval(X = data$X,
++                                          Z = data$Z,
++                                          true = graph,
++                                          n_workers = num_workers),
++                            error = function(e) list(error = e))
++   if (!is.null(out_covdepGE$error)) message(out_covdepGE$error)
++ 
++   # save the trial and update the progress bar
++   results[[j]] <- out_covdepGE
++   setTxtProgressBar(pb, j)
++   save(results, file = paste0("res_p", p, "_n", n, "_covdepGE_", now, ".Rda"))
++ }
+
+covdepGE complete 2022-08-25 09:03:53
+
+  |                                                                              |=                                                                     |   1%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:04:11
+
+  |                                                                              |=                                                                     |   2%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:04:31
+
+  |                                                                              |==                                                                    |   3%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:04:52
+
+  |                                                                              |===                                                                   |   4%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:05:14
+
+  |                                                                              |====                                                                  |   5%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:05:35
+
+  |                                                                              |====                                                                  |   6%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:05:56
+
+  |                                                                              |=====                                                                 |   7%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:06:14
+
+  |                                                                              |======                                                                |   8%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:06:32
+
+  |                                                                              |======                                                                |   9%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:06:53
+
+  |                                                                              |=======                                                               |  10%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:07:11
+
+  |                                                                              |========                                                              |  11%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:07:29
+
+  |                                                                              |========                                                              |  12%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:07:49
+
+  |                                                                              |=========                                                             |  13%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:08:09
+
+  |                                                                              |==========                                                            |  14%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:08:27
+
+  |                                                                              |==========                                                            |  15%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:08:47
+
+  |                                                                              |===========                                                           |  16%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:09:07
+
+  |                                                                              |============                                                          |  17%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:09:27
+
+  |                                                                              |=============                                                         |  18%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:09:46
+
+  |                                                                              |=============                                                         |  19%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:10:07
+
+  |                                                                              |==============                                                        |  20%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:10:27
+
+  |                                                                              |===============                                                       |  21%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:10:48
+
+  |                                                                              |===============                                                       |  22%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:11:09
+
+  |                                                                              |================                                                      |  23%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:11:29
+
+  |                                                                              |=================                                                     |  24%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:11:49
+
+  |                                                                              |==================                                                    |  25%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:12:11
+
+  |                                                                              |==================                                                    |  26%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:12:30
+
+  |                                                                              |===================                                                   |  27%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:12:52
+
+  |                                                                              |====================                                                  |  28%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:13:13
+
+  |                                                                              |====================                                                  |  29%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:13:33
+
+  |                                                                              |=====================                                                 |  30%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:13:53
+
+  |                                                                              |======================                                                |  31%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:14:14
+
+  |                                                                              |======================                                                |  32%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:14:35
+
+  |                                                                              |=======================                                               |  33%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:14:54
+
+  |                                                                              |========================                                              |  34%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:15:18
+
+  |                                                                              |========================                                              |  35%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:15:37
+
+  |                                                                              |=========================                                             |  36%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:15:57
+
+  |                                                                              |==========================                                            |  37%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:16:16
+
+  |                                                                              |===========================                                           |  38%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:16:35
+
+  |                                                                              |===========================                                           |  39%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:16:56
+
+  |                                                                              |============================                                          |  40%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:17:16
+
+  |                                                                              |=============================                                         |  41%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:17:36
+
+  |                                                                              |=============================                                         |  42%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:17:58
+
+  |                                                                              |==============================                                        |  43%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:18:19
+
+  |                                                                              |===============================                                       |  44%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:18:38
+
+  |                                                                              |================================                                      |  45%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:18:58
+
+  |                                                                              |================================                                      |  46%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:19:17
+
+  |                                                                              |=================================                                     |  47%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:19:36
+
+  |                                                                              |==================================                                    |  48%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:19:55
+
+  |                                                                              |==================================                                    |  49%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:20:16
+
+  |                                                                              |===================================                                   |  50%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:20:37
+
+  |                                                                              |====================================                                  |  51%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:20:56
+
+  |                                                                              |====================================                                  |  52%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:21:17
+
+  |                                                                              |=====================================                                 |  53%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:21:38
+
+  |                                                                              |======================================                                |  54%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:21:57
+
+  |                                                                              |======================================                                |  55%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:22:18
+
+  |                                                                              |=======================================                               |  56%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:22:38
+
+  |                                                                              |========================================                              |  57%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:22:59
+
+  |                                                                              |=========================================                             |  58%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:23:20
+
+  |                                                                              |=========================================                             |  59%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:23:40
+
+  |                                                                              |==========================================                            |  60%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:24:00
+
+  |                                                                              |===========================================                           |  61%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:24:20
+
+  |                                                                              |===========================================                           |  62%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:24:40
+
+  |                                                                              |============================================                          |  63%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:25:00
+
+  |                                                                              |=============================================                         |  64%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:25:20
+
+  |                                                                              |==============================================                        |  65%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:25:39
+
+  |                                                                              |==============================================                        |  66%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:26:00
+
+  |                                                                              |===============================================                       |  67%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:26:21
+
+  |                                                                              |================================================                      |  68%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:26:42
+
+  |                                                                              |================================================                      |  69%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:27:02
+
+  |                                                                              |=================================================                     |  70%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:27:23
+
+  |                                                                              |==================================================                    |  71%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:27:42
+
+  |                                                                              |==================================================                    |  72%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:28:02
+
+  |                                                                              |===================================================                   |  73%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:28:23
+
+  |                                                                              |====================================================                  |  74%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:28:42
+
+  |                                                                              |====================================================                  |  75%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:29:03
+
+  |                                                                              |=====================================================                 |  76%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:29:25
+
+  |                                                                              |======================================================                |  77%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:29:46
+
+  |                                                                              |=======================================================               |  78%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:30:06
+
+  |                                                                              |=======================================================               |  79%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:30:26
+
+  |                                                                              |========================================================              |  80%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:30:46
+
+  |                                                                              |=========================================================             |  81%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:31:06
+
+  |                                                                              |=========================================================             |  82%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:31:27
+
+  |                                                                              |==========================================================            |  83%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:31:48
+
+  |                                                                              |===========================================================           |  84%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:32:07
+
+  |                                                                              |============================================================          |  85%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:32:26
+
+  |                                                                              |============================================================          |  86%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:32:48
+
+  |                                                                              |=============================================================         |  87%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:33:08
+
+  |                                                                              |==============================================================        |  88%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:33:27
+
+  |                                                                              |==============================================================        |  89%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:33:48
+
+  |                                                                              |===============================================================       |  90%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:34:09
+
+  |                                                                              |================================================================      |  91%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:34:29
+
+  |                                                                              |================================================================      |  92%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:34:48
+
+  |                                                                              |=================================================================     |  93%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:35:09
+
+  |                                                                              |==================================================================    |  94%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:35:30
+
+  |                                                                              |==================================================================    |  95%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:35:50
+
+  |                                                                              |===================================================================   |  96%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:36:10
+
+  |                                                                              |====================================================================  |  97%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:36:32
+
+  |                                                                              |===================================================================== |  98%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:36:54
+
+  |                                                                              |===================================================================== |  99%Detected 51 workers
+
+covdepGE complete 2022-08-25 09:37:16
+
+  |                                                                              |======================================================================| 100%Warning message:
+In covdepGE(X = X, Z = Z, parallel = T, num_workers = n_workers) :
+  No registered workers detected; registering doParallel with 51 workers
+> 
+> save(results, file = paste0("res_p", p, "_n", n, "_covdepGE_", now, ".Rda"))
+> 
+> proc.time()
+     user    system   elapsed 
+74756.367  2168.907  2031.461 
