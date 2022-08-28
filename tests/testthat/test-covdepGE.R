@@ -177,9 +177,9 @@ test_that("Greater alpha_tol gives faster convergence", {
 
 test_that("Greater max_iter and max_iter_grid gives slower convergence", {
   out_slow1 <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
-                        max_iter_grid = 100, prog_bar = F)
+                        max_iter_grid = 1000, prog_bar = F)
   out_slow2 <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
-                        max_iter = 500, prog_bar = F)
+                        max_iter = 1000, prog_bar = F)
   out_fast <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
                        prog_bar = F)
   expect_gt(out_slow1$model_details$elapsed, out_fast$model_details$elapsed)
