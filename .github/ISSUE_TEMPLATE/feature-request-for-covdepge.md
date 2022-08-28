@@ -1,7 +1,7 @@
 ---
 name: Feature request for covdepGE
 about: Suggest an idea for adding to covdepGE. Alternatively, if you have a solution
-  in mind, consider forking the repo and creating a pull request to correct the issue.
+  in mind, consider forking the repo and creating a pull request.
 title: ''
 labels: ''
 assignees: ''
