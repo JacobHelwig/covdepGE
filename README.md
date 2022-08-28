@@ -145,7 +145,7 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
 #> 
 #> ELBO: -171501.68                                             # Unique Graphs: 3
 #> n: 180, variables: 5                       Hyperparameter grid size: 125 points
-#> Model fit completed in 3.96 secs
+#> Model fit completed in 3.156 secs
 plot(out)
 #> [[1]]
 ```
@@ -177,7 +177,7 @@ inclusionCurve(out, 1, 3)
 
 ## Methods
 
-A rendered version of this document is available on
+Math is correctly rendered in the version of this document available on
 [CRAN](https://cran.r-project.org/web/packages/covdepGE/readme/README.html).
 
 ### Overview
