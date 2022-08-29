@@ -1,4 +1,6 @@
 ## -----------------------------------------------------------------------------
+#' Distributed under GPL (≥ 3) license
+#'
 #' @title Visualize a matrix
 #' @export
 ## -----------------------------------------------------------------------------
@@ -162,6 +164,8 @@ matViz <- function(x, color1 = "white", color2 = "#500000",
 }
 
 ## -----------------------------------------------------------------------------
+#' Distributed under GPL (≥ 3) license
+#'
 #' @title Plot PIP as a Function of Index
 #' @export
 ## -----------------------------------------------------------------------------
@@ -281,6 +285,8 @@ inclusionCurve <- function(out, col_idx1, col_idx2, line_type = "solid",
 }
 
 ## -----------------------------------------------------------------------------
+#' Distributed under GPL (≥ 3) license
+#'
 #' @title Plot the Graphs Estimated by `covdepGE`
 #' @export
 ## -----------------------------------------------------------------------------

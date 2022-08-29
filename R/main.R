@@ -1,4 +1,6 @@
 ## -----------------------------------------------------------------------------
+#' Distributed under GPL (≥ 3) license
+#'
 #' @title Covariate Dependent Graph Estimation
 #' @aliases covdepGE-method
 #' @export
@@ -805,6 +807,8 @@ covdepGE <- function(X, Z = NULL, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
 }
 
 ## -----------------------------------------------------------------------------
+#' Distributed under GPL (≥ 3) license
+#'
 #' @title Print the Return of `covdepGE`
 #' @export
 #' @rdname covdepGE
