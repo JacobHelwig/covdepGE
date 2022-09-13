@@ -38,12 +38,14 @@ results25_150 <- add_res(
 # p = 50, n = 150
 results50_150 <- add_res(
   "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p50_n150/res_p50_n150_covdepGE_20220825_090326.Rda",
-  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p50_n150/res_p50_n150_JGL_mgm_20220825_090205.Rda")
+  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p50_n150/res_p50_n150_JGL_mgm_20220825_090205.Rda"
+)
 
 # p = 100, n = 300
 results100_300 <- add_res(
   "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p100_n300/res_p100_n300_covdepGE_20220824_084919.Rda",
-  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p100_n300/res_p100_n300_JGL_mgm_20220823_102037.Rda")
+  "~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/simulation_study/p100_n300/res_p100_n300_JGL_mgm_20220823_102037.Rda"
+)
 
 # put all results together
 results <- list(
@@ -79,7 +81,7 @@ mean_sd <- function(x, prec = 4, mean_format = "f", sd_format = "f") {
 }
 
 # get summary stats for each
-times_sum <- lapply(times, lapply, mean_sd, prec = 1)
+times_sum <- lapply(times, lapply, mean_sd)
 sens_sum <- lapply(sens, lapply, mean_sd)
 spec_sum <- lapply(spec, lapply, mean_sd)
 TP_sum <- lapply(TP, lapply, mean_sd)
@@ -102,8 +104,8 @@ names(times_exp) <- names(sens_exp) <- names(spec_exp) <- names(TP_exp) <-
 # create a matrix for each experiment
 exp_sum <- list("Sensitivity$(\\uparrow)$" = sens_exp,
                 "Specificity$(\\uparrow)$" = spec_exp,
-                #"TP/graph$(\\uparrow)$" = TP_exp,
-                #"FP/graph$(\\downarrow)$" = FP_exp,
+                # "TP/graph$(\\uparrow)$" = TP_exp,
+                # "FP/graph$(\\downarrow)$" = FP_exp,
                 "Time(s)$(\\downarrow)$" = times_exp)
 p5_n90df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p5_n90")))
 p15_n90df <- as.matrix(data.frame(lapply(exp_sum, `[[`, "p15_n90")))
