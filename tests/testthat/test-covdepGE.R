@@ -4,6 +4,7 @@ set.seed(1)
 data <- generateData()
 
 test_that("Runtime is reasonable", {
+  skip_on_cran()
   out <- covdepGE(data$X, data$Z, prog_bar = F)
   print(out$model_details$elapsed)
   expect_lt(as.numeric(out$model_details$elapsed, units = "mins"), 5)
@@ -170,12 +171,14 @@ test_that("scale_Z is working", {
 })
 
 test_that("Greater alpha_tol gives faster convergence", {
+  skip_on_cran()
   out_slow <- covdepGE(data$X, data$Z, alpha_tol = 1e-12, prog_bar = F)
   out_fast <- covdepGE(data$X, data$Z, alpha_tol = 1e-1, prog_bar = F)
   expect_gt(out_slow$model_details$elapsed, out_fast$model_details$elapsed)
 })
 
 test_that("Greater max_iter and max_iter_grid gives slower convergence", {
+  skip_on_cran()
   out_slow1 <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,
                         max_iter_grid = 1000, prog_bar = F)
   out_slow2 <- covdepGE(data$X, data$Z, nssq = 2, nsbsq = 2, npip = 2,

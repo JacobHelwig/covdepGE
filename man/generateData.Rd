@@ -53,6 +53,9 @@ and \eqn{p}-dimensional Gaussian data with a precision matrix that varies as
 a continuous function of the extraneous covariate. This data is distributed
 similar to that used in the simulation study from (1)
 }
+\details{
+Distributed under GPL (≥ 3) license
+}
 \section{Extraneous Covariate}{
 If \code{Z = NULL}, then the generation of \code{Z} is as follows:
 

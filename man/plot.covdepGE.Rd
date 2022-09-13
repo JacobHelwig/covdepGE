@@ -25,6 +25,9 @@ by \code{covdepGE}
 \description{
 Create a list of the unique graphs estimated by \code{covdepGE}
 }
+\details{
+Distributed under GPL (≥ 3) license
+}
 \examples{
 library(ggplot2)
 
