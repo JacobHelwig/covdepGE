@@ -50,9 +50,6 @@ Returns \code{ggplot2} visualization of inclusion probability curve
 Plot the posterior inclusion probability of an edge between two
 variables as a function of observation index
 }
-\details{
-Distributed under GPL (≥ 3) license
-}
 \examples{
 library(ggplot2)
 

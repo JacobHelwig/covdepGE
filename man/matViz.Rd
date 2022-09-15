@@ -50,9 +50,6 @@ Returns \code{ggplot2} visualization of matrix
 \description{
 Create a visualization of a matrix
 }
-\details{
-Distributed under GPL (≥ 3) license
-}
 \examples{
 library(ggplot2)
 

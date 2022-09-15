@@ -1,5 +1,5 @@
 ## -----------------------------------------------------------------------------
-#' Distributed under GPL (≥ 3) license
+## Distributed under GPL (≥ 3) license
 #'
 #' @title Generate Covariate-Dependent Data
 #' @export

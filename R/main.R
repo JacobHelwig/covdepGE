@@ -1,5 +1,5 @@
 ## -----------------------------------------------------------------------------
-#' Distributed under GPL (≥ 3) license
+## Distributed under GPL (≥ 3) license
 #'
 #' @title Covariate Dependent Graph Estimation
 #' @aliases covdepGE-method

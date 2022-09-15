@@ -306,9 +306,6 @@ entry is the bandwidth for the \eqn{i}-th observation
 Model the conditional dependence structure of \code{X} as a function
 of \code{Z} as described in (1)
 }
-\details{
-Distributed under GPL (≥ 3) license
-}
 \examples{
 library(ggplot2)
 
