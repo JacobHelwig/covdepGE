@@ -92,6 +92,7 @@ interval.
 }
 
 \examples{
+\dontrun{
 library(ggplot2)
 
 # get the data
@@ -131,10 +132,11 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
                  n1 + n2 + 1, ",...,", n1 + n2 + n3))
 
 # fit the model and visualize the estimated graphs
-(out <- covdepGE(X, Z, nssq = 2, nsbsq = 2, npip = 2))
+(out <- covdepGE(X, Z))
 plot(out)
 
 # visualize the posterior inclusion probabilities for variables (1, 3) and (1, 2)
 inclusionCurve(out, 1, 2)
 inclusionCurve(out, 1, 3)
+}
 }
