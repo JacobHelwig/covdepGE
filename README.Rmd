@@ -20,6 +20,7 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 [![Codecov test coverage](https://codecov.io/gh/JacobHelwig/covdepGE/branch/master/graph/badge.svg)](https://app.codecov.io/gh/JacobHelwig/covdepGE?branch=master)
 [![R-CMD-check](https://github.com/JacobHelwig/covdepGE/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/JacobHelwig/covdepGE/actions/workflows/R-CMD-check.yaml)
+[![CRAN status](https://www.r-pkg.org/badges/version/covdepGE)](https://CRAN.R-project.org/package=covdepGE)
 <!-- badges: end -->
 
 The conditional dependence structure (CDS) of a data matrix with $p$ variables can be modeled as an undirected graph with $p$ vertices, where two variables are connected if, and only if, the two variables are dependent given the remaining variables in the data. Gaussian graphical modeling (GGM) seeks to capture the CDS of the data under the assumption that the data are normally distributed. This distributional assumption is convenient for inference, as the CDS is given by the sparsity structure of the precision matrix, where the precision matrix is defined as the inverse covariance matrix of the data. 
@@ -101,7 +102,7 @@ inclusionCurve(out, 1, 3)
 
 ## Methods
 
-Math is correctly rendered in the version of this document available on [CRAN](https://cran.r-project.org/web/packages/covdepGE/readme/README.html). 
+Math is correctly rendered in the version of this document available on [CRAN](https://CRAN.R-project.org/package=covdepGE/readme/README.html). 
 
 ### Overview
 
