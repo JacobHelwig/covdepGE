@@ -7,7 +7,7 @@ Authors@R:
     person("Peng", "Zhao", email = "pzhao@stat.tamu.edu", role = c("aut")),
     person("Bani", "Mallick", email = "bmallick@stat.tamu.edu", role = c("aut")),
     person("Debdeep", "Pati", email = "debdeep@stat.tamu.edu", role = c("aut")))
-Date: 2022-08-14
+Date: 2022-09-16
 Language: en-US
 BugReports: https://github.com/JacobHelwig/covdepGE/issues 
 URL: https://github.com/JacobHelwig/covdepGE
