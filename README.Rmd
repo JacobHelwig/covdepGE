@@ -1,6 +1,6 @@
 ---
 output: github_document
----
+--- 
 
 <!-- Re-knit 'README.Rmd' with `devtools::build_readme()` -->
 
