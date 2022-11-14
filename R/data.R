@@ -192,28 +192,20 @@ generateData <- function(p = 5, n1 = 60, n2 = 60, n3 = 60, Z = NULL,
     beta1 <- diff(limits2)^-1
     beta0 <- -limits2[1] * beta1
 
+    # define omega12 and omega 13
+    omega12 <- (Z < 1) * pmin(1, 1 - beta0 - beta1 * Z)
+    omega13 <- (Z > -1) * pmin(1, beta0 + beta1 * Z)
+
     # interval 2 has two different linear functions of Z in the (1, 2) position
     # and (1, 3) positions; define structures for each of these components
-    int2_str12 <- int2_str13 <- matrix(0, p, p)
-    int2_str12[1, 2] <- int2_str13[1, 3] <- 1
+    str12 <- str13 <- matrix(0, p, p)
+    str12[1, 2] <- str13[1, 3] <- 1
 
-    # define the precision matrices for each of the observations in interval 2
-    int2_prec <- lapply(z2, function(z) common_str +
-                          ((1 - beta0 - beta1 * z) * int2_str12) +
-                          ((beta0 + beta1 * z) * int2_str13))
-
-    # interval 1 has a 1 in the (1, 2) position and interval 3 has a 1 in the
-    # (1, 3) position; define structures for each of these components
-    int1_str12 <- int3_str13 <- matrix(0, p, p)
-    int1_str12[1, 2] <- int3_str13[1, 3] <- 1
-
-    # define the precision matrices for each of the observations in interval 1
-    # and interval 3
-    int1_prec <- rep(list(common_str + int1_str12), n1)
-    int3_prec <- rep(list(common_str + int3_str13), n3)
-
-    # put all of the precision matrices into one list
-    prec_mats <- c(int1_prec, int2_prec, int3_prec)
+    # create the precision matrices
+    prec_mats <- vector("list", n)
+    for (j in 1:n){
+      prec_mats[[j]] <- common_str + omega12[j] * str12 + omega13[j] * str13
+    }
 
     # symmetrize the precision matrices
     true_precision <- lapply(prec_mats, function(mat) t(mat) + mat)
