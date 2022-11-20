@@ -142,7 +142,17 @@ generateData <- function(p = 5, n1 = 60, n2 = 60, n3 = 60, Z = NULL,
   # create covariate for observations in each of the three intervals
 
   # define number of samples
-  n <- ifelse(is.null(true_precision), sum(n1, n2, n3), length(true_precision))
+  if(!is.null(true_precision)){
+    n <- length(true_precision)
+  }else if (!is.null(Z)){
+    if(is.matrix(Z)){
+      n <- nrow(Z)
+    }else{
+      n <- length(Z)
+    }
+  }else{
+    n <- sum(n1, n2, n3)
+  }
 
   # define the intervals
   limits1 <- c(-3, -1)
