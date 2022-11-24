@@ -51,7 +51,7 @@ loggle.eval <- function(X, Z, true, n_workers){
   n <- nrow(X)
   p <- ncol(X)
 
-  # determine if the covariate is discete
+  # determine if the covariate is discrete
   Z_star <- unique(Z)
   discrete <- length(Z_star) <= 2
 
@@ -65,15 +65,18 @@ loggle.eval <- function(X, Z, true, n_workers){
 
     # there are issues with estimating graphs at the end points of the time
     # interval; don't estimate these
-    cutoff <- 5
+    cutoff <- 10
     pos <- cutoff:(n - cutoff)
 
   }
 
   # fit loggle
-  out <- quiet(loggle.cv(t(X),
-                         pos = pos,
-                         num.thread = n_workers))
+  out <- R.utils::withTimeout(
+    quiet(loggle.cv(t(X),
+                    pos = pos,
+                    d.list = c(0, 0.001, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2),
+                    num.thread = n_workers)),
+    timeout = 1.5 * 60 * 60)
   closeAllConnections()
 
   # record time and get the array of graphs

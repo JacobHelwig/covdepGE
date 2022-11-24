@@ -11,8 +11,8 @@ print(args)
 
 # DEBUGGING
 if (interactive()){
-  args <- c("save_dir=./experiments", "experiment='cont_cov_dep'", "p=5", "n1=50", "n2=50", "n3=50", "n_trials=3")
-  args <- c("save_dir=./experiments", "experiment='disc_cov_dep'", "p=11", "n1=50", "n2=50", "lambda=15", "n_trials=3")
+  args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=5", "n1=50", "n2=50", "n3=50", "n_trials=3")
+  args <- c("save_dir='./experiments'", "experiment='disc_cov_dep'", "p=11", "n1=50", "n2=50", "lambda=15", "n_trials=3")
 }
 
 if (length(args) > 0){
@@ -65,9 +65,11 @@ filename <- paste0(experiment, "_ntrials", n_trials, "_p", p, "_n1_", n1,
 (filename <- file.path(save_dir, filename))
 
 # create list for storing results
-trial_list <- list(loggle = NA, mgm = NA, covdepGE = NA)
+trial_list <- list(mgm = NA, covdepGE = NA)
 if (disc){
   trial_list$varbvs <- NA
+}else{
+  trial_list$loggle <- NA
 }
 results <- replicate(n_trials, trial_list, simplify = F)
 names(results) <- c(paste0("trial", 1:n_trials))

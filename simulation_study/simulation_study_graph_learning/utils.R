@@ -46,37 +46,41 @@ trials <- function(data_list, results, filename){
   num_workers <- min(10, parallel::detectCores() - 5)
   n_trials <- length(data_list)
 
-  # trials for loggle
-  for (j in 1:n_trials){
+  # check if loggle trials should be performed
+  if ("loggle" %in% names(results$trial1)){
 
-    # record the time the trial started
-    trial_start <- Sys.time()
+    # trials for loggle
+    for (j in 1:n_trials){
 
-    # get the data
-    data <- data_list[[j]]
+      # record the time the trial started
+      trial_start <- Sys.time()
 
-    # loggle
-    out_loggle <- tryCatch(loggle.eval(X = data$X,
-                                       Z = data$Z,
-                                       true = data$true_precision,
-                                       n_workers = num_workers),
-                           error = function(e) list(error = e))
-    if (!is.null(out_loggle$error)){
-      message("loggle ERROR:", out_loggle$error)
+      # get the data
+      data <- data_list[[j]]
+
+      # loggle
+      out_loggle <- tryCatch(loggle.eval(X = data$X,
+                                         Z = data$Z,
+                                         true = data$true_precision,
+                                         n_workers = num_workers),
+                             error = function(e) list(error = e))
+      if (!is.null(out_loggle$error)){
+        message("loggle ERROR:", out_loggle$error)
+      }
+
+      results[[j]]$loggle <- out_loggle
+      rm(list = "out_loggle")
+      gc()
+
+      # save the trial
+      time_delta <- round(as.numeric(Sys.time() - trial_start, units = "mins"))
+      message("\nloggle trial ", j, " complete; ", time_delta, " minutes elapsed\n")
+      save(results, file = filename)
     }
 
-    results[[j]]$loggle <- out_loggle
-    rm(list = "out_loggle")
-    gc()
-
-    # save the trial
-    time_delta <- round(as.numeric(Sys.time() - trial_start, units = "mins"))
-    message("\nloggle trial ", j, " complete; ", time_delta, " minutes elapsed\n")
+    # save the results
     save(results, file = filename)
   }
-
-  # save the results
-  save(results, file = filename)
 
   # trials for mgm
   functions <- c("eval_est", "sp.array", "tvmgm.eval")
@@ -85,11 +89,6 @@ trials <- function(data_list, results, filename){
   results_mgm <- foreach(j = 1:n_trials, .export = functions,
                          .packages = packages)%dopar%
     {
-
-      # ensure that loggle produced results for the current trial
-      if (!is.null(results[[j]]$loggle$error)){
-        return(NA)
-      }
 
       # record the time the trial started
       trial_start <- Sys.time()
@@ -130,11 +129,6 @@ trials <- function(data_list, results, filename){
                               .packages = packages)%dopar%
       {
 
-        # ensure that both loggle and mgm produced results for the current trial
-        if (!is.null(results[[j]]$mgm$error) | !is.null(results[[j]]$loggle$error)){
-          return(NA)
-        }
-
         # record the time the trial started
         trial_start <- Sys.time()
 
@@ -169,11 +163,6 @@ trials <- function(data_list, results, filename){
   # get number of available workers
   (num_workers <- parallel::detectCores() - 5)
   for (j in 1:n_trials){
-
-    # ensure that both loggle, mgm, and varbvs produced results for the current trial
-    if (!is.null(results[[j]]$mgm$error) | !is.null(results[[j]]$loggle$error) | !is.null(results[[j]]$varbvs$error)){
-      return(NA)
-    }
 
     # record the time the trial started
     trial_start <- Sys.time()
