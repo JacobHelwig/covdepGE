@@ -21,11 +21,15 @@ disc_cov_dep_data <- function(p, n1, n2, lambda, independent = F){
   true_precision <- c(replicate(n1, prec1, simplify = F),
                       replicate(n2, prec2, simplify = F))
 
-  # invert the precision matrices to get the covariance matrices
-  cov_mats <- lapply(true_precision, solve)
+  data_mat <- matrix(NA, n, p)
+  for (j in 1:n){
 
-  # generate the data using the covariance matrices
-  data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p)))
+    # invert the precision matrix to get the covariance matrix
+    cov_mat <- solve(true_precision[[j]])
+
+    # generate the data using the covariance matrices
+    data_mat[j, ] <- MASS::mvrnorm(n = 1, mu = rep(0, p), Sigma = cov_mat)
+  }
 
   return(list(X = data_mat, Z = Z, true_precision = true_precision))
 }
@@ -70,20 +74,22 @@ cont_cov_dep_data <- function(p, n1, n2, n3){
   str12 <- str13 <- matrix(0, p, p)
   str12[1, 2] <- str13[1, 3] <- 1
 
-  # create the precision matrices
-  prec_mats <- vector("list", n)
+  true_precision <- vector("list", n)
+  data_mat <- matrix(NA, n, p)
   for (j in 1:n){
-    prec_mats[[j]] <- common_str + omega12[j] * str12 + omega13[j] * str13
+
+    # create the precision matrix
+    prec_mat <- common_str + omega12[j] * str12 + omega13[j] * str13
+
+    # symmetrize the precision matrix
+    true_precision[[j]] <- t(prec_mat) + prec_mat
+
+    # invert the precision matrix to get the covariance matrix
+    cov_mats <- lapply(true_precision, solve)
+
+    # generate the data using the covariance matrices
+    data_mat[j, ] <- MASS::mvrnorm(n = 1, mu = rep(0, p), Sigma = cov_mats[[j]])
   }
-
-  # symmetrize the precision matrices
-  true_precision <- lapply(prec_mats, function(mat) t(mat) + mat)
-
-  # invert the precision matrices to get the covariance matrices
-  cov_mats <- lapply(true_precision, solve)
-
-  # generate the data using the covariance matrices
-  data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p)))
 
   return(list(X = data_mat, Z = Z, true_precision = true_precision,
               interval = interval))
@@ -128,20 +134,22 @@ cont_multi_cov_dep_data <- function(p, n){
   str12 <- str13 <- matrix(0, p, p)
   str12[1, 2] <- str13[1, 3] <- 1
 
-  # create the precision matrices
-  prec_mats <- vector("list", n)
+  true_precision <- vector("list", n)
+  data_mat <- matrix(NA, n, p)
   for (j in 1:(9 * n)){
-    prec_mats[[j]] <- common_str + omega12[j] * str12 + omega13[j] * str13
+
+    # create the precision matrix
+    prec_mat <- common_str + omega12[j] * str12 + omega13[j] * str13
+
+    # symmetrize the precision matrix
+    true_precision[[j]] <- t(prec_mat) + prec_mat
+
+    # invert the precision matrix to get the covariance matrix
+    cov_mats <- lapply(true_precision, solve)
+
+    # generate the data using the covariance matrices
+    data_mat[j, ] <- MASS::mvrnorm(n = 1, mu = rep(0, p), Sigma = cov_mats[[j]])
   }
-
-  # symmetrize the precision matrices
-  true_precision <- lapply(prec_mats, function(mat) t(mat) + mat)
-
-  # invert the precision matrices to get the covariance matrices
-  cov_mats <- lapply(true_precision, solve)
-
-  # generate the data using the covariance matrices
-  data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p)))
 
   return(list(X = data_mat, Z = Z, true_precision = true_precision))
 }
