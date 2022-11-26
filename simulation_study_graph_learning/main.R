@@ -11,9 +11,9 @@ print(args)
 
 # DEBUGGING
 if (interactive()){
-  args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=5", "n=50", "n2=50", "n3=50", "n_trials=3")
-  args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=11", "n=25", "n_trials=3")
-  # args <- c("save_dir='./experiments'", "experiment='disc_cov_dep'", "p=11", "n1=50", "n2=50", "lambda=15", "n_trials=3")
+  # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=5", "n=50", "n2=50", "n3=50", "n_trials=3")
+  # args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=11", "n=25", "n_trials=3")
+  # args <- c("save_dir='./experiments'", "experiment='disc_cov_dep'", "p=11", "n1=80", "n2=20", "lambda=3", "n_trials=3")
   # args <- c("save_dir='./experiments'", "experiment='disc_cov_indep'", "p=11", "n1=50", "n2=50", "lambda=15", "n_trials=3")
   # args <- c("save_dir='./experiments'", "experiment='disc_cov_free'", "p=11", "n1=50", "n2=50", "lambda=15", "n_trials=3")
 }
@@ -60,37 +60,56 @@ if (!all(expected_args %in% ls())){
   stop("Missing args")
 }
 
-# create filename for saved results
-(now <- format(Sys.time(), "%Y%m%d_%H%M%S"))
-filename <- paste0(experiment, "_ntrials", n_trials, "_p", p)
-if (experiment == "cont_multi_cov_dep"){
-  filename <- paste0(filename, "_n_", n, "_", now, ".Rda")
+# check if any skips have been specified
+if (!("skips" %in% ls())){
+  skips <- NULL
 }else{
-  if (disc){
-    file_suffix <- paste0("_lambda", lambda)
-  }else{
-    file_suffix <- paste0("_n3_", n3)
-  }
-  filename <- paste0(filename, "_n1_", n1, "_n2_", n2, file_suffix, "_", now,
-                     ".Rda")
+  print(paste0(c("Skipping", skips), collapse = " "))
 }
-(filename <- file.path(save_dir, filename))
 
-# create list for storing results
-trial_list <- list(mgm = NA, covdepGE = NA)
-if (disc){
-  trial_list$varbvs <- NA
-  if (experiment == "disc_cov_free"){
-    trial_list <- list(varbvs = NA, covdepGE = NA)
-  }
+# check if a filename has been passed
+if ("filename" %in% ls()){
+
+  # a file has been specified; load the associated results
+  load(filename)
+
 }else{
-  trial_list$loggle <- NA
-  if (experiment == "cont_multi_cov_dep"){
-    trial_list$covdepGE_sortZ <- NA
+
+  # a filename has not been specified
+
+  # create list for storing results
+  trial_list <- list(mgm = NA, covdepGE = NA)
+  if (disc){
+    trial_list$varbvs <- NA
+    if (experiment == "disc_cov_free"){
+      trial_list <- list(varbvs = NA, covdepGE = NA)
+    }
+  }else{
+    trial_list$loggle <- NA
+    if (experiment == "cont_multi_cov_dep"){
+      trial_list$covdepGE_sortZ <- NA
+    }
   }
+  results <- replicate(n_trials, trial_list, simplify = F)
+  names(results) <- c(paste0("trial", 1:n_trials))
+
+  # create filename for saved results
+  (now <- format(Sys.time(), "%Y%m%d_%H%M%S"))
+  filename <- paste0(c(setdiff(names(trial_list), skips), ""), collapse = "_")
+  filename <- paste0(filename, experiment, "_ntrials", n_trials, "_p", p)
+  if (experiment == "cont_multi_cov_dep"){
+    filename <- paste0(filename, "_n_", n, "_", now, ".Rda")
+  }else{
+    if (disc){
+      file_suffix <- paste0("_lambda", lambda)
+    }else{
+      file_suffix <- paste0("_n3_", n3)
+    }
+    filename <- paste0(filename, "_n1_", n1, "_n2_", n2, file_suffix, "_", now,
+                       ".Rda")
+  }
+  (filename <- file.path(save_dir, filename))
 }
-results <- replicate(n_trials, trial_list, simplify = F)
-names(results) <- c(paste0("trial", 1:n_trials))
 
 # generate the data
 set.seed(1)
@@ -123,4 +142,5 @@ if (interactive()){
 # perform trials
 trials(data_list = data_list,
        results = results,
-       filename = filename)
+       filename = filename,
+       skips = skips)

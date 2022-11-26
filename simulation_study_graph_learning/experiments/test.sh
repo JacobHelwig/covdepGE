@@ -22,6 +22,7 @@ n1=$n1 \
 n2=$n2 \
 lambda=$lambda \
 n_trials=$ntrials" \
+skips=c('mgm')"
 test.R $out_name
 duration=$SECONDS
 echo "Done. $(($duration / 60)) minutes and $(($duration % 60)) seconds elapsed"

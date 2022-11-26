@@ -1,3 +1,53 @@
+# function for visualizing a list of graphs
+graph_viz <- function(graphs){
+
+  # find the unique graphs
+  unique_graphs <- unique(graphs)
+
+  # create a list where the j-th element is the j-th unique graph and the
+  # indices of the observations corresponding to this graph
+  unique_sum <- vector("list", length(unique_graphs))
+  names(unique_sum) <- paste0("graph", 1:length(unique_graphs))
+
+  # iterate over each of the unique graphs
+  for (j in 1:length(unique_graphs)){
+
+    # fix the unique graph
+    graph <- unique_graphs[[j]]
+
+    # find indices of the observations corresponding to this graph
+    graph_inds <- which(sapply(graphs, identical, graph))
+
+    # split up the contiguous subsequences of these indices
+    cont_inds <- split(sort(graph_inds), cumsum(c(1, diff(sort(graph_inds))
+                                                  != 1)))
+
+    # create a character summary for each of the contiguous sequences
+    inds_sum <- sapply(cont_inds, function(idx_seq) ifelse(length(
+      idx_seq) > 3, paste0(min(idx_seq), ",...,", max(idx_seq)),
+      paste0(idx_seq, collapse = ",")))
+
+    # combine the summary
+    inds_sum <- paste0(inds_sum, collapse = ",")
+
+    # add the graph, indices, and summary to the unique graphs summary list
+    unique_sum[[j]] <- list(graph = graph, indices = graph_inds,
+                            ind_sum = inds_sum)
+  }
+
+  # create the titles for the plots
+  titles <- paste("Graph", 1:length(unique_graphs))
+  obs_sum <- sapply(unique_sum, `[[`, "ind_sum")
+  titles <- paste0(titles, ", observations ", obs_sum)
+
+  # create a visualization for each graph and store it in a list
+  graph_viz <- lapply(1:length(unique_graphs), function(gr_idx) matViz(
+    unique_graphs[[gr_idx]], color2 = "#500000") + ggplot2::ggtitle(
+      titles[gr_idx]))
+
+  graph_viz
+}
+
 # function to turn an array into a list of sparse matrices
 sp.array <- function(arr, n){
   lapply(1:n, function(l) Matrix::Matrix(arr[ , , l], sparse = T))
@@ -63,7 +113,7 @@ eval_est <- function(est, true){
 }
 
 # function to perform trials
-trials <- function(data_list, results, filename){
+trials <- function(data_list, results, filename, skips){
 
   # save sample data to results
   results$sample_data <- data_list[[1]]
@@ -73,7 +123,7 @@ trials <- function(data_list, results, filename){
   n_trials <- length(data_list)
 
   # check if loggle trials should be performed
-  if ("loggle" %in% names(results$trial1)){
+  if ("loggle" %in% names(results$trial1) & !("loggle" %in% skips)){
 
     # trials for loggle
     for (j in 1:n_trials){
@@ -109,11 +159,12 @@ trials <- function(data_list, results, filename){
   }
 
   # check if mgm trials should be performed
-  if ("mgm" %in% names(results$trial1)){
+  if ("mgm" %in% names(results$trial1) & !("mgm" %in% skips)){
 
     # trials for mgm
     functions <- c("eval_est", "sort_Z", "sp.array", "tvmgm.eval")
     packages <- "mgm"
+    num_workers <- min(25, parallel::detectCores())
     doParallel::registerDoParallel(num_workers)
     results_mgm <- foreach(j = 1:n_trials, .export = functions,
                            .packages = packages)%dopar%
@@ -149,7 +200,7 @@ trials <- function(data_list, results, filename){
   }
 
   # check if varbvs trials should be performed
-  if ("varbvs" %in% names(results$trial1)){
+  if ("varbvs" %in% names(results$trial1) & !("varbvs" %in% skips)){
 
     # trials for varbvs
     functions <- c("eval_est", "sp.array", "varbvs.eval")
@@ -188,39 +239,43 @@ trials <- function(data_list, results, filename){
     save(results, file = filename)
   }
 
-  # trials for covdepGE
+  # check if covdepGE trials should be performed
+  if (!("covdepGE" %in% skips)){
 
-  # get number of available workers
-  (num_workers <- parallel::detectCores() - 5)
-  for (j in 1:n_trials){
+    # trials for covdepGE
 
-    # record the time the trial started
-    trial_start <- Sys.time()
+    # get number of available workers
+    (num_workers <- parallel::detectCores() - 5)
+    for (j in 1:n_trials){
 
-    # get the data
-    data <- data_list[[j]]
+      # record the time the trial started
+      trial_start <- Sys.time()
 
-    # covdepGE
-    out_covdepGE <- tryCatch(covdepGE.eval(X = data$X,
-                                           Z = data$Z,
-                                           true = data$true_precision,
-                                           n_workers = num_workers),
-                             error = function(e) list(error = e))
-    if (!is.null(out_covdepGE$error)){
-      message("covdepGE ERROR:", out_covdepGE$error)
+      # get the data
+      data <- data_list[[j]]
+
+      # covdepGE
+      out_covdepGE <- tryCatch(covdepGE.eval(X = data$X,
+                                             Z = data$Z,
+                                             true = data$true_precision,
+                                             n_workers = num_workers),
+                               error = function(e) list(error = e))
+      if (!is.null(out_covdepGE$error)){
+        message("covdepGE ERROR:", out_covdepGE$error)
+      }
+
+      results[[j]]$covdepGE <- out_covdepGE
+      rm(list = "out_covdepGE")
+      gc()
+
+      time_delta <- round(as.numeric(Sys.time() - trial_start, units = "mins"))
+      message("\ncovdepGE trial ", j, " complete; ", time_delta, " minutes elapsed\n")
+      save(results, file = filename)
     }
-
-    results[[j]]$covdepGE <- out_covdepGE
-    rm(list = "out_covdepGE")
-    gc()
-
-    time_delta <- round(as.numeric(Sys.time() - trial_start, units = "mins"))
-    message("\ncovdepGE trial ", j, " complete; ", time_delta, " minutes elapsed\n")
-    save(results, file = filename)
   }
 
   # check if covdepGE_sortZ trials should be performed
-  if ("covdepGE_sortZ" %in% names(results$trial1)){
+  if ("covdepGE_sortZ" %in% names(results$trial1) & !("covdepGE_sortZ" %in% skips)){
     for (j in 1:n_trials){
 
       # record the time the trial started
