@@ -2,6 +2,7 @@
 ^\.Rproj\.user$
 ^dev$
 ^simulation_study$
+^simulation_study_graph_learning$
 ^LICENSE\.md$
 ^README_files$
 ^README\.Rmd$
