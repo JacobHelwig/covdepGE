@@ -1,5 +1,5 @@
 .Rproj.user
-#*.Rda
+*.Rda
 *.zip
 *.aux
 *.knit.md
