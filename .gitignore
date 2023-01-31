@@ -1,5 +1,5 @@
 .Rproj.user
-#*.Rda
+*.Rda
 *.zip
 *.aux
 *.knit.md
@@ -11,3 +11,5 @@
 .Rhistory
 tests/testthat/_snaps
 nul
+graph_learning_simulation_study/sim_study_graph_learning_data_backup
+*.Rout
