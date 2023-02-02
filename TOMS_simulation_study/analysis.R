@@ -9,21 +9,23 @@ library(kableExtra)
 
 # univariate extraneous covariate
 exper <- "cont_cov_dep_"
+methods <- c("covdepGE" , "JGL", "mgm")
 n <- 75
 samp_str <- paste0("_n1_", n, "_n2_", n, "_n3_", n)
 path <- "./experiments/z1"
 
 # multivariate extraneous covariate
 exper <- "cont_multi_cov_dep_"
+methods <- c("covdepGE" , "JGL", "mgm", "covdepGE_sortZ")
 n <- 25
 samp_str <- paste0("_n_", n)
 path <- "./experiments/z2"
 
 ntrials <- 50
 trial_str <- paste0("ntrials", ntrials, "_")
-dims <- c(10, 25, 50)
+dims <- c(10, 25, 50, 100)
 files <- list.files(path)
-prec <- 4
+prec <- 2
 df <- vector("list", length(dims))
 names(df) <- dims
 for (j in 1:length(dims)){
@@ -38,24 +40,25 @@ for (j in 1:length(dims)){
   if (length(file_name) != 1) stop(paste(length(file_name), "files found"))
   file_path <- file.path(path, file_name)
   load(file_path)
+  print(paste0("n: ", nrow(results$sample_data$X), ", p: ", ncol(results$sample_data$X)))
   results <- results[setdiff(names(results), "sample_data")]
 
   # process sensitivity results
   sens <- sapply(results, sapply, `[[`, "sens")
   sens_mean <- rowMeans(sens)
   max_sens_ind <- which.max(sens_mean)
-  sens_mean <- sprintf(paste0("%.", prec, "f"), sens_mean)
+  sens_mean <- sprintf(paste0("%.", prec, "f"), sens_mean * 100)
   sens_mean[max_sens_ind] <- paste0("\\mathbf{", sens_mean[max_sens_ind], "}")
-  sens_sd  <- sprintf(paste0("%.", prec, "f"), apply(sens, 1, sd))
+  sens_sd  <- sprintf(paste0("%.", prec, "f"), apply(sens * 100, 1, sd))
   sens_str <- paste0(sens_mean, " (", sens_sd, ")")
 
   # process specificity results
   spec <- sapply(results, sapply, `[[`, "spec")
   spec_mean <- rowMeans(spec)
   max_spec_ind <- which.max(spec_mean)
-  spec_mean <- sprintf(paste0("%.", prec, "f"), spec_mean)
+  spec_mean <- sprintf(paste0("%.", prec, "f"), spec_mean * 100)
   spec_mean[max_spec_ind] <- paste0("\\mathbf{", spec_mean[max_spec_ind], "}")
-  spec_sd  <- sprintf(paste0("%.", prec, "f"), apply(spec, 1, sd))
+  spec_sd  <- sprintf(paste0("%.", prec, "f"), apply(spec * 100, 1, sd))
   spec_str <- paste0(spec_mean, " (", spec_sd, ")")
 
   # process time results
@@ -73,8 +76,7 @@ for (j in 1:length(dims)){
   row.names(perf_str) <- row.names(spec)
 
   # create storage
-  p_str <- paste0(c(p, rep("!", which(p == dims))), collapse = "")
-  df_exp <- data.frame(p = p_str, method = c("covdepGE" , "JGL", "mgm"),
+  df_exp <- data.frame(p = p, method = methods,
                        sens = NA, spec = NA, time = NA)
   df_exp[ , c("sens", "spec", "time")] <- perf_str[df_exp$method, ]
   df[[p]] <- df_exp
@@ -83,7 +85,9 @@ for (j in 1:length(dims)){
 }
 
 df <- Reduce(rbind, df)
-colnames(df) <- c("$p$", "Method", "Sensitivity$(\\uparrow)$", "Specificity$(\\uparrow)$", "Time (seconds)")
+df$method <- gsub("_sortZ", "\\\\_time", df$method)
+df$method <- paste0("\\texttt{", df$method, "}")
+colnames(df) <- c("$p$", "Method", "Sensitivity$(\\%)$", "Specificity$(\\%)$", "Time (seconds)")
 kbl(df, format = "latex", booktabs = T, escape = FALSE) %>%
   collapse_rows(columns = c(1, 2, 3, 4), latex_hline = "major", valign = "middle")
 
@@ -104,9 +108,9 @@ path <- "./experiments/z1_hp"
 
 ntrials <- 50
 trial_str <- paste0("ntrials", ntrials, "_")
-dims <- c(10, 25, 50)
+dims <- c(10, 25, 50, 100)
 files <- c(list.files(path), list.files(substr(path, 1, nchar(path) - 3)))
-prec <- 4
+prec <- 2
 
 df <- list(grid_search = NA, hybrid = NA, model_average = NA)
 df <- replicate(length(dims), df, simplify = F)
@@ -133,6 +137,7 @@ for (p in as.character(dims)){
       file_path <- file.path(substr(path, 1, nchar(path) - 3), file_name)
     }
     load(file_path)
+    print(paste0("n: ", nrow(results$sample_data$X), ", p: ", ncol(results$sample_data$X)))
     results <- results[setdiff(names(results), "sample_data")]
 
     results <- lapply(results, `[`, "covdepGE")
@@ -144,8 +149,8 @@ for (p in as.character(dims)){
       best_sens <- sens_mean
       sens_method <- hp_method
     }
-    sens_mean <- sprintf(paste0("%.", prec, "f"), sens_mean)
-    sens_sd  <- sprintf(paste0("%.", prec, "f"), sd(sens))
+    sens_mean <- sprintf(paste0("%.", prec, "f"), sens_mean * 100)
+    sens_sd  <- sprintf(paste0("%.", prec, "f"), sd(sens * 100))
     sens_str <- paste0(sens_mean, " (", sens_sd, ")")
 
     # process specificity results
@@ -155,8 +160,8 @@ for (p in as.character(dims)){
       best_spec <- spec_mean
       spec_method <- hp_method
     }
-    spec_mean <- sprintf(paste0("%.", prec, "f"), spec_mean)
-    spec_sd  <- sprintf(paste0("%.", prec, "f"), sd(spec))
+    spec_mean <- sprintf(paste0("%.", prec, "f"), spec_mean * 100)
+    spec_sd  <- sprintf(paste0("%.", prec, "f"), sd(spec * 100))
     spec_str <- paste0(spec_mean, " (", spec_sd, ")")
 
     # process time results
@@ -176,9 +181,7 @@ for (p in as.character(dims)){
     row.names(perf_str) <- row.names(spec)
 
     # create storage
-    p_str <- paste0(c(p, rep("!", which(p == dims))), collapse = "")
-
-    df_exp <- data.frame(p = p_str, method = hp_method,
+    df_exp <- data.frame(p = p, method = hp_method,
                          sens = NA, spec = NA, time = NA)
 
     df_exp[ , c("sens", "spec", "time")] <- perf_str
@@ -186,8 +189,8 @@ for (p in as.character(dims)){
     df[[p]][[hp_method]] <- df_exp
     rm("results")
   }
-  best_sens <- sprintf(paste0("%.", prec, "f"), best_sens)
-  best_spec <- sprintf(paste0("%.", prec, "f"), best_spec)
+  best_sens <- sprintf(paste0("%.", prec, "f"), best_sens * 100)
+  best_spec <- sprintf(paste0("%.", prec, "f"), best_spec * 100)
   best_time <- sprintf(paste0("%.", prec, "f"), best_time)
   df[[p]][[sens_method]]$sens <- gsub(best_sens, paste0("\\\\mathbf{", best_sens, "}"), df[[p]][[sens_method]]$sens)
   df[[p]][[spec_method]]$spec <- gsub(best_spec, paste0("\\\\mathbf{", best_spec, "}"), df[[p]][[spec_method]]$spec)
@@ -196,6 +199,8 @@ for (p in as.character(dims)){
 
 df <- lapply(df, function(x) Reduce(rbind, x))
 df <- Reduce(rbind, df)
-colnames(df) <- c("$p$", "Method", "Sensitivity$(\\uparrow)$", "Specificity$(\\uparrow)$")
+df$method <- gsub("_", "\\\\_", df$method)
+df$method <- paste0("\\texttt{", df$method, "}")
+colnames(df) <- c("$p$", "HP Method", "Sensitivity$(\\%)$", "Specificity$(\\%)$", "Time (seconds)")
 kbl(df, format = "latex", booktabs = T, escape = FALSE) %>%
   collapse_rows(columns = c(1, 2, 3, 4), latex_hline = "major", valign = "middle")

@@ -115,10 +115,10 @@ eval_est <- function(est, true){
 }
 
 # function to perform trials
-trials <- function(data_list, results, filename, skips, hp_method){
+trials <- function(data_list, results, filename, skips, hp_method, max_iter_grid){
 
   # save sample data to results
-  results$sample_data <- data_list[[1]]
+  results$sample_data <- dim(data_list[[1]]$X)
 
   # get number of available workers and trials
   num_workers <- min(10, parallel::detectCores() - 5)
@@ -219,6 +219,7 @@ trials <- function(data_list, results, filename, skips, hp_method){
 
     # get number of available workers
     (num_workers <- parallel::detectCores() - 5)
+    doParallel::registerDoParallel(num_workers)
     for (j in 1:n_trials){
 
       # record the time the trial started
@@ -232,7 +233,8 @@ trials <- function(data_list, results, filename, skips, hp_method){
                                              Z = data$Z,
                                              hp_method = hp_method,
                                              true = data$true_precision,
-                                             n_workers = num_workers),
+                                             n_workers = num_workers,
+                                             max_iter_grid = max_iter_grid),
                                error = function(e) list(error = e))
       if (!is.null(out_covdepGE$error)){
         message("covdepGE ERROR:", out_covdepGE$error)

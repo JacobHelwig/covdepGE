@@ -4,7 +4,7 @@ library(mclust)
 library(mgm)
 
 # function to fit and evaluate results for covdepGE
-covdepGE.eval <- function(X, Z, hp_method, true, n_workers){
+covdepGE.eval <- function(X, Z, hp_method, true, n_workers, max_iter_grid){
 
   start <- Sys.time()
 
@@ -15,7 +15,8 @@ covdepGE.eval <- function(X, Z, hp_method, true, n_workers){
                   Z = Z,
                   hp_method = hp_method,
                   parallel = T,
-                  num_workers = n_workers)
+                  num_workers = n_workers,
+                  max_iter_grid = max_iter_grid)
 
   # record time and get the array of graphs
   out$time <- as.numeric(Sys.time() - start, units = "secs")

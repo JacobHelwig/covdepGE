@@ -59,8 +59,9 @@ if (!("skips" %in% ls())){
   print(paste0(c("Skipping", skips), collapse = " "))
 }
 
-# check if a HP method for covdepGE has been specified
+# check if a HP method or max_iter_grid for covdepGE has been specified
 if (!("hp_method" %in% ls())) hp_method <- "hybrid"
+if (!("max_iter_grid" %in% ls())) max_iter_grid <- 10
 print(paste0(c("covdepGE HP specification scheme: ", hp_method), collapse = " "))
 
 # check if a filename has been passed
@@ -120,5 +121,6 @@ trials(data_list = data_list,
        results = results,
        filename = filename,
        skips = skips,
-       hp_method = hp_method)
+       hp_method = hp_method,
+       max_iter_grid = max_iter_grid)
 
