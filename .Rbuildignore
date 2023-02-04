@@ -2,10 +2,12 @@
 ^\.Rproj\.user$
 ^dev$
 ^simulation_study$
-^simulation_study_graph_learning$
+^graph_learning_simulation_study$
+^TOMS_simulation_study$
 ^LICENSE\.md$
 ^README_files$
 ^README\.Rmd$
 ^README\.pdf$
 ^\.github$
 ^codecov\.yml$
+makefile
