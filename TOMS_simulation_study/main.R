@@ -1,5 +1,4 @@
-# USAGE: R CMD BATCH --no-save --no-restore "--args experiment='disc_cov_dep' p=11 n1=50 n2=50 lambda=15 n_trials=20" main.R main_all.Rout
-# USAGE: R CMD BATCH --no-save --no-restore "--args experiment='cont_cov_dep' p=11 n1=50 n2=50 n3=50 n_trials=5" main.R cont_test.Rout
+# R CMD BATCH --no-save --no-restore "--args save_dir='./experiments/z2' experiment='cont_multi_cov_dep' p=100 n=25 n_trials=50 skips=c('JGL','mgm','covdepGE') trial_skips=1:49" main.R ./experiments/z2/cont_multi_cov_dep_ntrials50_p100_n_25_2023-02-04_13-15.Rout
 rm(list = ls())
 source("models.R")
 source("data.R")
@@ -58,7 +57,11 @@ if (!("skips" %in% ls())){
 }else{
   print(paste0(c("Skipping", skips), collapse = " "))
 }
-
+if (!("trial_skips" %in% ls())){
+  trial_skips <- NULL
+}else{
+  print(paste0(c("Skipping trials", trial_skips), collapse = " "))
+}
 # check if a HP method or max_iter_grid for covdepGE has been specified
 if (!("hp_method" %in% ls())) hp_method <- "hybrid"
 if (!("max_iter_grid" %in% ls())) max_iter_grid <- 10
@@ -121,6 +124,7 @@ trials(data_list = data_list,
        results = results,
        filename = filename,
        skips = skips,
+       trial_skips = trial_skips,
        hp_method = hp_method,
        max_iter_grid = max_iter_grid)
 

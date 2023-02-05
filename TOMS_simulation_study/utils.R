@@ -115,7 +115,7 @@ eval_est <- function(est, true){
 }
 
 # function to perform trials
-trials <- function(data_list, results, filename, skips, hp_method, max_iter_grid){
+trials <- function(data_list, results, filename, skips, trial_skips, hp_method, max_iter_grid){
 
   # save sample data to results
   results$sample_data <- dim(data_list[[1]]$X)
@@ -135,6 +135,8 @@ trials <- function(data_list, results, filename, skips, hp_method, max_iter_grid
     results_JGL <- foreach(j = 1:n_trials, .export = functions,
                            .packages = packages)%dopar%
       {
+
+        if (j %in% trial_skips) return(NULL)
 
         # record the time the trial started
         trial_start <- Sys.time()
@@ -179,6 +181,8 @@ trials <- function(data_list, results, filename, skips, hp_method, max_iter_grid
                            .packages = packages)%dopar%
       {
 
+        if (j %in% trial_skips) return(NULL)
+
         # record the time the trial started
         trial_start <- Sys.time()
 
@@ -212,15 +216,18 @@ trials <- function(data_list, results, filename, skips, hp_method, max_iter_grid
 
   doParallel::stopImplicitCluster()
 
+  # get number of available workers
+  (num_workers <- parallel::detectCores() - 5)
+  doParallel::registerDoParallel(num_workers)
+
+
   # check if covdepGE trials should be performed
   if (!("covdepGE" %in% skips)){
 
     # trials for covdepGE
-
-    # get number of available workers
-    (num_workers <- parallel::detectCores() - 5)
-    doParallel::registerDoParallel(num_workers)
     for (j in 1:n_trials){
+
+      if (j %in% trial_skips) next
 
       # record the time the trial started
       trial_start <- Sys.time()
@@ -256,6 +263,8 @@ trials <- function(data_list, results, filename, skips, hp_method, max_iter_grid
   if ("covdepGE_sortZ" %in% names(results$trial1) & !("covdepGE_sortZ" %in% skips)){
     for (j in 1:n_trials){
 
+      if (j %in% trial_skips) next
+
       # record the time the trial started
       trial_start <- Sys.time()
 
@@ -273,7 +282,8 @@ trials <- function(data_list, results, filename, skips, hp_method, max_iter_grid
                                              Z = data$Z,
                                              hp_method = hp_method,
                                              true = data$true_precision,
-                                             n_workers = num_workers),
+                                             n_workers = num_workers,
+                                             max_iter_grid = max_iter_grid),
                                error = function(e) list(error = e))
       if (!is.null(out_covdepGE$error)){
         message("covdepGE ERROR:", out_covdepGE$error)

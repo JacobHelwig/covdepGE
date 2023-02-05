@@ -417,15 +417,16 @@ covdepGE <- function(X, Z = NULL, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
       message(paste("Detected", foreach::getDoParWorkers(), "workers"))
     }else{
 
-      # otherwise, register parallel backend
-      warning(paste(
-        "No registered workers detected; registering doParallel with",
-        num_workers, "workers"))
-
       # if num_workers has not been provided, get the number of workers
       if (is.null(num_workers)){
         num_workers <- floor(parallel::detectCores() / 2)
       }
+
+
+      # otherwise, register parallel backend
+      warning(paste(
+        "No registered workers detected; registering doParallel with",
+        num_workers, "workers"))
 
       # perform registration
       doParallel::registerDoParallel(cores = num_workers)

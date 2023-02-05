@@ -1,36 +1,50 @@
 # ------------------------------------------------------------------------------
-# continuous covariate dependent analysis
+# Baseline comparisons
 rm(list = ls())
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 library(kableExtra)
+library(ggplot2)
+library(ggpubr)
+library(extrafont)
+library(latex2exp)
+
+subgroups_list <- list()
 
 # load and store results from each experiment; get sensitivity and specificity
 # and calculate mean/ sd for each
 
-# univariate extraneous covariate
-exper <- "cont_cov_dep_"
-methods <- c("covdepGE" , "JGL", "mgm")
-n <- 75
-samp_str <- paste0("_n1_", n, "_n2_", n, "_n3_", n)
-path <- "./experiments/z1"
+# results config; med outputs median in place of mean and univariate is for
+# switching setting from q=1->q=2
+med <- T
+univariate <- T
 
-# multivariate extraneous covariate
-exper <- "cont_multi_cov_dep_"
-methods <- c("covdepGE" , "JGL", "mgm", "covdepGE_sortZ")
-n <- 25
-samp_str <- paste0("_n_", n)
-path <- "./experiments/z2"
+if (univariate){
+
+  # univariate extraneous covariate
+  exper <- "cont_cov_dep_"
+  methods <- c("covdepGE" , "JGL", "mgm")
+  n <- 75
+  samp_str <- paste0("_n1_", n, "_n2_", n, "_n3_", n)
+  path <- "./experiments/z1"
+}else{
+
+  # multivariate extraneous covariate
+  exper <- "cont_multi_cov_dep_"
+  methods <- c("covdepGE" , "JGL", "mgm", "covdepGE_sortZ")
+  n <- 25
+  samp_str <- paste0("_n_", n)
+  path <- "./experiments/z2"
+}
 
 ntrials <- 50
 trial_str <- paste0("ntrials", ntrials, "_")
 dims <- c(10, 25, 50, 100)
 files <- list.files(path)
 prec <- 2
-df <- vector("list", length(dims))
+df <- subgroups <- vector("list", length(dims))
 names(df) <- dims
-for (j in 1:length(dims)){
 
-  p <- dims[j]
+for (p in as.character(dims)){
 
   # format file name
   exp_name <- paste0(exper, trial_str, "p", p, samp_str)
@@ -40,34 +54,40 @@ for (j in 1:length(dims)){
   if (length(file_name) != 1) stop(paste(length(file_name), "files found"))
   file_path <- file.path(path, file_name)
   load(file_path)
-  print(paste0("n: ", nrow(results$sample_data$X), ", p: ", ncol(results$sample_data$X)))
+  print(paste0("n: ", results$sample_data[1], ", p: ", results$sample_data[2]))
   results <- results[setdiff(names(results), "sample_data")]
 
   # process sensitivity results
   sens <- sapply(results, sapply, `[[`, "sens")
   sens_mean <- rowMeans(sens)
+  if (med) sens_mean <- apply(sens, 1, median)
   max_sens_ind <- which.max(sens_mean)
   sens_mean <- sprintf(paste0("%.", prec, "f"), sens_mean * 100)
   sens_mean[max_sens_ind] <- paste0("\\mathbf{", sens_mean[max_sens_ind], "}")
   sens_sd  <- sprintf(paste0("%.", prec, "f"), apply(sens * 100, 1, sd))
+  if (med) sens_sd <- sprintf(paste0("%.", prec, "f"), apply(sens * 100, 1, IQR))
   sens_str <- paste0(sens_mean, " (", sens_sd, ")")
 
   # process specificity results
   spec <- sapply(results, sapply, `[[`, "spec")
   spec_mean <- rowMeans(spec)
+  if (med) spec_mean <- apply(spec, 1, median)
   max_spec_ind <- which.max(spec_mean)
   spec_mean <- sprintf(paste0("%.", prec, "f"), spec_mean * 100)
   spec_mean[max_spec_ind] <- paste0("\\mathbf{", spec_mean[max_spec_ind], "}")
   spec_sd  <- sprintf(paste0("%.", prec, "f"), apply(spec * 100, 1, sd))
+  if (med) spec_sd <- sprintf(paste0("%.", prec, "f"), apply(spec * 100, 1, IQR))
   spec_str <- paste0(spec_mean, " (", spec_sd, ")")
 
   # process time results
   time <- sapply(results, sapply, `[[`, "time")
   time_mean <- rowMeans(time)
+  if (med) time_mean <- apply(time, 1, median)
   min_time_ind <- which.min(time_mean)
   time_mean <- sprintf(paste0("%.", prec, "f"), time_mean)
   time_mean[min_time_ind] <- paste0("\\mathbf{", time_mean[min_time_ind], "}")
   time_sd  <- sprintf(paste0("%.", prec, "f"), apply(time, 1, sd))
+  if (med) time_sd <- sprintf(paste0("%.", prec, "f"), apply(time, 1, IQR))
   time_str <- paste0(time_mean, " (", time_sd, ")")
 
   # combine summary strings
@@ -81,8 +101,12 @@ for (j in 1:length(dims)){
   df_exp[ , c("sens", "spec", "time")] <- perf_str[df_exp$method, ]
   df[[p]] <- df_exp
 
+  subgroups[[p]] <- sapply(results, function(trial) length(unique(trial$JGL$classification)))
+
   rm("results")
 }
+
+subgroups_list[[exper]] <- factor(Reduce(c, subgroups), levels = 2:6)
 
 df <- Reduce(rbind, df)
 df$method <- gsub("_sortZ", "\\\\_time", df$method)
@@ -91,8 +115,33 @@ colnames(df) <- c("$p$", "Method", "Sensitivity$(\\%)$", "Specificity$(\\%)$", "
 kbl(df, format = "latex", booktabs = T, escape = FALSE) %>%
   collapse_rows(columns = c(1, 2, 3, 4), latex_hline = "major", valign = "middle")
 
+windowsFonts("Times" = windowsFont("Times"))
+plots[[exper]] <- list(x = factor(subgroups, levels = 2:6), plot = NULL)
+plots <- list(ggplot() +
+                geom_bar(aes(x = subgroups_list[["cont_cov_dep_"]]),
+                         color = "black", fill = "#500000") +
+                theme_pubclean() +
+                theme(text = element_text(family = "Times", size = 18),
+                      plot.title = element_text(hjust = 0.5)) +
+                ggtitle(TeX(paste0("Optimal $\\textit{K}, \\textit{q}=1$"))) +
+                scale_y_continuous(breaks = seq(0, 180, 30), limits = c(0, 180)) +
+                scale_x_discrete(drop=FALSE) +
+                labs(x = TeX("$\\textit{K}$")),
+              ggplot() +
+                geom_bar(aes(x = subgroups_list[["cont_multi_cov_dep_"]]),
+                         color = "black", fill = "steelblue") +
+                theme_pubclean() +
+                theme(text = element_text(family = "Times", size = 18),
+                      plot.title = element_text(hjust = 0.5)) +
+                ggtitle(TeX(paste0("Optimal $\\textit{K}, \\textit{q}=2$"))) +
+                scale_y_continuous(breaks = seq(0, 180, 30), limits = c(0, 180)) +
+                scale_x_discrete(drop=FALSE) +
+                labs(x = TeX("$\\textit{K}$")))
+ggarrange(plotlist = plots, nrow = 2)
+
+
 # ------------------------------------------------------------------------------
-# continuous covariate dependent analysis
+# HP comparisons
 rm(list = ls())
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 library(kableExtra)
@@ -100,16 +149,30 @@ library(kableExtra)
 # load and store results from each experiment; get sensitivity and specificity
 # and calculate mean/ sd for each
 
-# univariate extraneous covariate
-exper <- "cont_cov_dep_"
-n <- 75
-samp_str <- paste0("_n1_", n, "_n2_", n, "_n3_", n)
-path <- "./experiments/z1_hp"
+# results config; switches from comparisons with max_iter_grid=max_iter=100 to
+# max_iter_grid=10
+max_iter_grid <- F
 
+if (max_iter_grid){
+  # comparisons with max_iter_grid = max_iter (set max_iter_grid = T)
+  exper <- "cont_cov_dep_"
+  n <- 75
+  samp_str <- paste0("_n1_", n, "_n2_", n, "_n3_", n)
+  path <- "./experiments/z1_hp"
+  files <- list.files(path)
+  files <- files[grepl("model_average", files)]
+  files <- c(files, list.files(paste0(path, "_full")))
+}else{
+  # default comparisons
+  exper <- "cont_cov_dep_"
+  n <- 75
+  samp_str <- paste0("_n1_", n, "_n2_", n, "_n3_", n)
+  path <- "./experiments/z1_hp"
+  files <- c(list.files(path), list.files(substr(path, 1, nchar(path) - 3)))
+}
 ntrials <- 50
 trial_str <- paste0("ntrials", ntrials, "_")
 dims <- c(10, 25, 50, 100)
-files <- c(list.files(path), list.files(substr(path, 1, nchar(path) - 3)))
 prec <- 2
 
 df <- list(grid_search = NA, hybrid = NA, model_average = NA)
@@ -134,10 +197,14 @@ for (p in as.character(dims)){
     if (length(file_name) != 1) stop(paste(length(file_name), "files found"))
     file_path <- file.path(path, file_name)
     if (!file.exists(file_path)){
-      file_path <- file.path(substr(path, 1, nchar(path) - 3), file_name)
+      if (max_iter_grid){
+        file_path <- file.path(paste0(path, "_full"), file_name)
+      }else{
+        file_path <- file.path(substr(path, 1, nchar(path) - 3), file_name)
+      }
     }
     load(file_path)
-    print(paste0("n: ", nrow(results$sample_data$X), ", p: ", ncol(results$sample_data$X)))
+    print(paste0("n: ", results$sample_data[1], ", p: ", results$sample_data[2]))
     results <- results[setdiff(names(results), "sample_data")]
 
     results <- lapply(results, `[`, "covdepGE")
