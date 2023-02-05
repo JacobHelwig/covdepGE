@@ -1,4 +1,4 @@
-# to install covdepGE from CRAN, run install.packages("covdepGE")
+# to install covdepGE from CRAN, run install.packages("covdepGE", repos="https://cloud.r-project.org")
 
 .PHONY: install
 
@@ -14,8 +14,8 @@ install:
 
 	@ # install dependencies
 	@ # https://stackoverflow.com/questions/6907937/how-to-install-dependencies-when-using-r-cmd-install-to-install-r-packages
-	sudo Rscript -vanilla -e 'install.packages("devtools", repos="https://cloud.r-project.org")'
-	sudo Rscript -vanilla -e 'devtools::install_deps(".")'
+	sudo R -vanilla -e 'install.packages("devtools", repos="https://cloud.r-project.org")'
+	sudo R -vanilla -e 'devtools::install_deps(".")'
 
 	@ # build package
 	sudo R CMD INSTALL .
