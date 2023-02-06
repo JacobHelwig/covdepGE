@@ -1,0 +1,38 @@
+Package: covdepGE
+Title: Covariate Dependent Graph Estimation
+Version: 1.0.1
+Authors@R: 
+    c(person("Jacob", "Helwig", email = "jacob.a.helwig@tamu.edu", role = c("cre", "aut")),
+    person("Sutanoy", "Dasgupta", email = "sutanoy@stat.tamu.edu", role = c("aut")),
+    person("Peng", "Zhao", email = "pzhao@stat.tamu.edu", role = c("aut")),
+    person("Bani", "Mallick", email = "bmallick@stat.tamu.edu", role = c("aut")),
+    person("Debdeep", "Pati", email = "debdeep@stat.tamu.edu", role = c("aut")))
+Date: 2022-09-16
+Language: en-US
+BugReports: https://github.com/JacobHelwig/covdepGE/issues 
+URL: https://github.com/JacobHelwig/covdepGE
+Description: A covariate-dependent approach to Gaussian graphical modeling as described in Dasgupta et al. (2022). Employs a novel weighted pseudo-likelihood approach to model the conditional dependence structure of data as a continuous function of an extraneous covariate. The main function, covdepGE::covdepGE(), estimates a graphical representation of the conditional dependence structure via a block mean-field variational approximation, while several auxiliary functions (inclusionCurve(), matViz(), and plot.covdepGE()) are included for visualizing the resulting estimates. 
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.1
+LinkingTo: 
+    Rcpp,
+    RcppArmadillo
+Imports: 
+    doParallel,
+    foreach,
+    ggplot2,
+    glmnet,
+    latex2exp,
+    MASS,
+    parallel,
+    Rcpp,
+    reshape2,
+    stats
+Suggests: 
+    testthat (>= 3.0.0),
+    covr,
+    vdiffr
+Config/testthat/edition: 3
