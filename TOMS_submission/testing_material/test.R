@@ -13,10 +13,13 @@
 #
 # For command line usage:
 #
-# R.exe CMD BATCH --no-save --no-restore "--args n=225 p=10 n_trials=5" test.R test_n225_p10_ntrials5.Rout
+# R CMD BATCH --no-save --no-restore "--args n=225 p=10 n_trials=5" test.R test_n225_p10_ntrials5.Rout
 #
-# For running in an IDE, modify these arguments under the `IDE args` section
-# below
+# For windows, replace `R CMD BATCH` with `R.exe CMD BATCH` after adding the 
+# `R` exectuable to the path environment variable (e.g., 
+# `C:\Program Files\R\R-4.2.2\bin\x64`)
+#
+# For running in an IDE, modify `args` under the `IDE args` section below
 #
 # ------------------------------------------------------------------------------
 
@@ -100,7 +103,7 @@ trial_list <- list(grid_search = metrics,
 results <- replicate(n_trials, trial_list, simplify = F)
 
 # register parallel backend
-num_workers <- min(p, parallel::detectCores() %/% 2)
+num_workers <- min(p, parallel::detectCores())
 message(paste("Registering parallel backend with", num_workers, "workers"))
 doParallel::registerDoParallel(num_workers)
 
