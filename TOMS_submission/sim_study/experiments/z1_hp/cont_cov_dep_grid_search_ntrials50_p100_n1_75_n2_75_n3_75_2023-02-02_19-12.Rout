@@ -1,0 +1,532 @@
+
+R version 4.2.0 (2022-04-22) -- "Vigorous Calisthenics"
+Copyright (C) 2022 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # USAGE: R CMD BATCH --no-save --no-restore "--args experiment='disc_cov_dep' p=11 n1=50 n2=50 lambda=15 n_trials=20" main.R main_all.Rout
+> # USAGE: R CMD BATCH --no-save --no-restore "--args experiment='cont_cov_dep' p=11 n1=50 n2=50 n3=50 n_trials=5" main.R cont_test.Rout
+> rm(list = ls())
+> source("models.R")
+Loading required package: igraph
+
+Attaching package: ‘igraph’
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+Package 'mclust' version 5.4.10
+Type 'citation("mclust")' for citing this R package in publications.
+This is mgm 1.2-13
+Please report issues on Github: https://github.com/jmbh/mgm/issues
+> source("data.R")
+> source("utils.R")
+Loading required package: foreach
+Loading required package: iterators
+Loading required package: parallel
+> 
+> # parse command line arguments
+> args <- (commandArgs(TRUE))
+> print(args)
+[1] "save_dir='./experiments/z1_hp'" "experiment='cont_cov_dep'"     
+[3] "p=100"                          "n1=75"                         
+[5] "n2=75"                          "n3=75"                         
+[7] "n_trials=50"                    "hp_method='grid_search'"       
+[9] "skips=c('JGL','mgm')"          
+> 
+> # DEBUGGING
+> if (interactive()){
++   # args <- c("save_dir='./experiments/z2'", "experiment='cont_multi_cov_dep'", "p=10", "n=10", "n_trials=10")
++   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=3", "n1=5", "n2=5", "n3=5", "n_trials=1")
++   args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=3", "n=2", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=5", "n1=50", "n2=50", "n3=50", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=11", "n=25", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='disc_cov_dep'", "p=11", "n1=80", "n2=20", "lambda=3", "n_trials=3")
++   # args <- c("save_dir='./experiments'", "experiment='disc_cov_indep'", "p=11", "n1=50", "n2=50", "lambda=15", "n_trials=3")
++   # args <- c("save_dir='./experiments'", "experiment='disc_cov_free'", "p=11", "n1=50", "n2=50", "lambda=15", "n_trials=3")
++ }
+> 
+> if (length(args) > 0){
++   for(i in 1:length(args)){
++     eval(parse(text = args[[i]]))
++   }
++ }else{
++   stop("No arguments passed")
++ }
+> 
+> # check passed arguments
+> print(args)
+[1] "save_dir='./experiments/z1_hp'" "experiment='cont_cov_dep'"     
+[3] "p=100"                          "n1=75"                         
+[5] "n2=75"                          "n3=75"                         
+[7] "n_trials=50"                    "hp_method='grid_search'"       
+[9] "skips=c('JGL','mgm')"          
+> if (!("experiment" %in% ls())){
++   stop("Missing experiment")
++ }
+> 
+> # ensure experiment is recognized
+> experiment_choices <- c("cont_cov_dep", "cont_multi_cov_dep")
+> if (!(experiment %in% experiment_choices)){
++   stop("Invalid experiment")
++ }
+> 
+> # check remaining args
+> expected_args <- c("save_dir", "p", "n_trials")
+> if (experiment == "cont_multi_cov_dep"){
++   expected_args <- c(expected_args, "n")
++ }else{
++   expected_args <- c(expected_args, "n1", "n2", "n3")
++ }
+> if (!all(expected_args %in% ls())){
++   stop("Missing args")
++ }
+> 
+> # check if any skips have been specified
+> if (!("skips" %in% ls())){
++   skips <- NULL
++ }else{
++   print(paste0(c("Skipping", skips), collapse = " "))
++ }
+[1] "Skipping JGL mgm"
+> 
+> # check if a HP method or max_iter_grid for covdepGE has been specified
+> if (!("hp_method" %in% ls())) hp_method <- "hybrid"
+> if (!("max_iter_grid" %in% ls())) max_iter_grid <- 10
+> print(paste0(c("covdepGE HP specification scheme: ", hp_method), collapse = " "))
+[1] "covdepGE HP specification scheme:  grid_search"
+> 
+> # check if a filename has been passed
+> if ("filename" %in% ls()){
++ 
++   # a file has been specified; load the associated results
++   load(filename)
++ 
++ }else{
++ 
++   # a filename has not been specified
++ 
++   # create list for storing results
++   trial_list <- list(covdepGE = NA, JGL = NA, mgm = NA)
++   if (experiment == "cont_multi_cov_dep"){
++     trial_list$covdepGE_sortZ <- NA
++   }
++ 
++   results <- replicate(n_trials, trial_list, simplify = F)
++   names(results) <- c(paste0("trial", 1:n_trials))
++ 
++   # create filename for saved results
++   (now <- format(Sys.time(), "%Y%m%d_%H%M%S"))
++   filename <- paste0(c(setdiff(names(trial_list), skips), ""), collapse = "_")
++   filename <- gsub("covdepGE" , paste0("covdepGE", hp_method) ,filename)
++   filename <- paste0(filename, experiment, "_ntrials", n_trials, "_p", p)
++   if (experiment == "cont_multi_cov_dep"){
++     filename <- paste0(filename, "_n_", n, "_", now, ".Rda")
++   }else{
++     filename <- paste0(filename, "_n1_", n1, "_n2_", n2, "_n3_", n3, "_", now,
++                        ".Rda")
++   }
++   (filename <- file.path(save_dir, filename))
++ }
+[1] "./experiments/z1_hp/covdepGEgrid_search_cont_cov_dep_ntrials50_p100_n1_75_n2_75_n3_75_20230202_191252.Rda"
+> 
+> # generate the data
+> set.seed(1)
+> if (experiment == "cont_cov_dep"){
++   data_list <- replicate(n_trials, cont_cov_dep_data(p, n1, n2, n3), F)
++ }else{
++   data_list <- replicate(n_trials, cont_multi_cov_dep_data(p, n), F)
++ }
+> 
+> # DEBUGGING
+> if (interactive()){
++   X_ <- data_list[[1]]$X
++   Z_ <- data_list[[1]]$Z
++   true_ <- data_list[[1]]$true_precision
++   graph_viz(lapply(true_, `!=`, 0))
++   out_ <- covdepGE(X_, Z_)
++   out_$str <- array(unlist(out_$graphs$graphs), dim = c(p, p, nrow(X_)))
++   (perf_ <- eval_est(out_$str, true_))
++ }
+> 
+> # perform trials
+> trials(data_list = data_list,
++        results = results,
++        filename = filename,
++        skips = skips,
++        hp_method = hp_method,
++        max_iter_grid = max_iter_grid)
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:16:20
+
+
+covdepGE trial 1 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:19:28
+
+
+covdepGE trial 2 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:22:41
+
+
+covdepGE trial 3 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:26:05
+
+
+covdepGE trial 4 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:29:29
+
+
+covdepGE trial 5 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:33:02
+
+
+covdepGE trial 6 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:36:34
+
+
+covdepGE trial 7 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:40:49
+
+
+covdepGE trial 8 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:44:25
+
+
+covdepGE trial 9 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:48:14
+
+
+covdepGE trial 10 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:52:13
+
+
+covdepGE trial 11 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 19:56:21
+
+
+covdepGE trial 12 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:00:20
+
+
+covdepGE trial 13 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:04:34
+
+
+covdepGE trial 14 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:09:03
+
+
+covdepGE trial 15 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:13:28
+
+
+covdepGE trial 16 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:17:45
+
+
+covdepGE trial 17 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:22:11
+
+
+covdepGE trial 18 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:26:32
+
+
+covdepGE trial 19 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:31:01
+
+
+covdepGE trial 20 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:35:31
+
+
+covdepGE trial 21 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:39:49
+
+
+covdepGE trial 22 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:44:09
+
+
+covdepGE trial 23 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:48:23
+
+
+covdepGE trial 24 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:52:41
+
+
+covdepGE trial 25 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 20:56:57
+
+
+covdepGE trial 26 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:01:18
+
+
+covdepGE trial 27 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:05:41
+
+
+covdepGE trial 28 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:09:57
+
+
+covdepGE trial 29 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:14:15
+
+
+covdepGE trial 30 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:18:29
+
+
+covdepGE trial 31 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:22:39
+
+
+covdepGE trial 32 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:26:45
+
+
+covdepGE trial 33 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:30:56
+
+
+covdepGE trial 34 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:35:07
+
+
+covdepGE trial 35 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:39:14
+
+
+covdepGE trial 36 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:43:23
+
+
+covdepGE trial 37 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:47:26
+
+
+covdepGE trial 38 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:51:32
+
+
+covdepGE trial 39 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:55:28
+
+
+covdepGE trial 40 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 21:59:31
+
+
+covdepGE trial 41 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 22:03:39
+
+
+covdepGE trial 42 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 22:07:45
+
+
+covdepGE trial 43 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 22:11:51
+
+
+covdepGE trial 44 complete; 3 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 22:16:06
+
+
+covdepGE trial 45 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 22:20:28
+
+
+covdepGE trial 46 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 22:24:54
+
+
+covdepGE trial 47 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 22:29:19
+
+
+covdepGE trial 48 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 22:33:37
+
+
+covdepGE trial 49 complete; 4 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-02-02 22:37:59
+
+
+covdepGE trial 50 complete; 4 minutes elapsed
+
+covdepGE finished 2023-02-02 22:38:45
+> 
+> 
+> proc.time()
+      user     system    elapsed 
+513302.182   3391.252  12403.598 

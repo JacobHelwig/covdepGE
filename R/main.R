@@ -594,7 +594,7 @@ covdepGE <- function(X, Z = NULL, hp_method = "hybrid", ssq = NULL, sbsq = NULL,
                             ind_sum = inds_sum)
   }
 
-  # create a list for graphs and inclusion probabilties
+  # create a list for graphs and inclusion probabilities
   graphs <- list(graphs = graphs, unique_graphs = unique_sum,
                  inclusion_probs_sym = incl_probs,
                  inclusion_probs_asym = incl_probs_asym)
