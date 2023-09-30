@@ -14,9 +14,10 @@ covdepGE.eval <- function(X, Z, hp_method, true, n_workers, max_iter_grid){
   out <- covdepGE(X = X,
                   Z = Z,
                   hp_method = hp_method,
-                  parallel = T,
+                  parallel = n_workers > 1,
                   num_workers = n_workers,
-                  max_iter_grid = max_iter_grid)
+                  max_iter_grid = max_iter_grid,
+                  prog_bar=FALSE)
 
   # record time and get the array of graphs
   out$time <- as.numeric(Sys.time() - start, units = "secs")

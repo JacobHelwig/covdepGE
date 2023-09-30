@@ -124,7 +124,7 @@ trials <- function(data_list, results, filename, skips, trial_skips, hp_method, 
   num_workers <- min(10, parallel::detectCores() - 5)
   n_trials <- length(data_list)
 
-  # check if mgm trials should be performed
+  # check if JGL trials should be performed
   if ("JGL" %in% names(results$trial1) & !("JGL" %in% skips)){
 
     # trials for JGL
@@ -213,6 +213,55 @@ trials <- function(data_list, results, filename, skips, trial_skips, hp_method, 
 
     message(paste("mgm finished", Sys.time()))
   }
+
+  # check if sequential covdepGE trials should be performed
+  if ("covdepGE_seq" %in% names(results$trial1)){
+
+    # trials for covdepGE
+    functions <- c("eval_est", "sp.array", "covdepGE.eval")
+    packages <- c("covdepGE", "Matrix")
+    num_workers <- min(25, parallel::detectCores())
+    doParallel::registerDoParallel(num_workers)
+    results_covdepGE_seq <- foreach(j = 1:n_trials, .export = functions,
+                           .packages = packages)%dopar%
+      {
+
+        if (j %in% trial_skips) return(NULL)
+
+        # record the time the trial started
+        trial_start <- Sys.time()
+
+        # get the data
+        data <- data_list[[j]]
+
+        # covdepGE
+        out_covdepGE_seq <- tryCatch(covdepGE.eval(X = data$X,
+                                                   Z = data$Z,
+                                                   hp_method = hp_method,
+                                                   true = data$true_precision,
+                                                   n_workers = 1,
+                                                   max_iter_grid = max_iter_grid),
+                                     error = function(e) list(error = e))
+        if (!is.null(out_covdepGE_seq$error)){
+          message("covdepGE_seq ERROR:", out_covdepGE_seq$error)
+        }
+
+        time_delta <- round(as.numeric(Sys.time() - trial_start, units = "mins"))
+        message("\ncovdepGE_seq trial ", j, " complete; ", time_delta, " minutes elapsed\n")
+        out_covdepGE_seq
+      }
+
+    # add the covdepGE results to overall results
+    for (j in 1:n_trials){
+      results[[j]]$covdepGE_seq <- results_covdepGE_seq[[j]]
+    }
+
+    # save the results
+    save(results, file = filename)
+
+    message(paste("covdepGE finished", Sys.time()))
+  }
+
 
   doParallel::stopImplicitCluster()
 

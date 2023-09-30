@@ -2,9 +2,11 @@ rm(list=ls())
 setwd("~/TAMU/Research/An approximate Bayesian approach to covariate dependent/covdepGE/TOMS_submission/sim_study")
 library(covdepGE)
 source("data.R")
-set.seed(1)
+set.seed(10)
 data <- cont_cov_dep_sine_data(p=5, n1=75, n2=75, n3=75)
-data <- cont_10_cov_dep_data(p=11, n=225)
+data <- cont_4_cov_dep_data(p=11, n=225)
+# data <- cont_4_cov_dep_data(p=11, Z=matrix(seq(-3,3,by=0.1), length(seq(-3,3,by=0.1)), 4))
+
 # for (i in 100:200){
 #   print(i)
 #   print(matViz(data$true_precision[[i]], incl_val = T) + ggtitle(i))
@@ -46,19 +48,19 @@ for (j in 1:length(unique_graphs)){
                           ind_sum = inds_sum)
 }
 
-ng <- length(unique_sum)
-i <- 0
-for (graph in unique_sum){
-  print(paste0(i,"/",ng))
-  print(matViz(graph$graph) + ggtitle(graph$ind_sum))
-  i <- i + 1
-  if (i == 100){
-    break
-  }
-}
+# ng <- length(unique_sum)
+# i <- 0
+# for (graph in unique_sum){
+#   print(paste0(i,"/",ng))
+#   print(matViz(graph$graph) + ggtitle(graph$ind_sum))
+#   i <- i + 1
+#   if (i == 100){
+#     break
+#   }
+# }
 
 
-out <- covdepGE(data$X, data$Z)
+out <- covdepGE(data$X, data$Z, parallel = T)
 plot(out)
 
 

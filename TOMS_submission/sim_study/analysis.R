@@ -15,7 +15,7 @@ subgroups_list <- list()
 
 # results config; med outputs median in place of mean and univariate is for
 # switching setting from q=1->q=2
-med <- F
+med <- T
 univariate <- T
 sine <- T
 if (univariate){

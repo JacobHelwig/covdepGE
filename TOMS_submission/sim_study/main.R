@@ -81,8 +81,12 @@ if ("filename" %in% ls()){
 
   # create list for storing results
   trial_list <- list(covdepGE = NA, JGL = NA, mgm = NA)
-  if (experiment == "cont_multi_cov_dep"){
+  if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep_data")){
     trial_list$covdepGE_sortZ <- NA
+  }else if ("seq" %in% ls()){
+    if (seq){
+      trial_list <- list(covdepGE_seq = NA) # , covdepGE_seq = NA)
+    }
   }
 
   results <- replicate(n_trials, trial_list, simplify = F)
@@ -104,7 +108,6 @@ if ("filename" %in% ls()){
 
 # generate the data
 set.seed(1)
-set.seed(2)
 if (experiment == "cont_cov_dep"){
   data_list <- replicate(n_trials, cont_cov_dep_data(p, n1, n2, n3), F)
 }else if (experiment == "cont_cov_dep_sine"){

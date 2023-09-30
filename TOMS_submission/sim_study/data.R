@@ -175,7 +175,7 @@ cont_multi_cov_dep_data <- function(p, n){
   return(list(X = data_mat, Z = Z, true_precision = true_precision))
 }
 
-# function for generating 10D continuous covariate dependent data
+# function for generating 4D continuous covariate dependent data
 cont_4_cov_dep_data <- function(p, n){
 
     # create covariate for observations in each of the three intervals
@@ -191,38 +191,29 @@ cont_4_cov_dep_data <- function(p, n){
 
     # define constants for the covariate-dependent structure
     beta1 <- 0.5
-    beta0 <- 0.5
 
     # define precision value for the first 5 values dependent on the first 5
     # covariates, and the next 5 values dependent on the next 5 covariates
-    # p <- 5; by <- 0.25; Z <- seq(-3, 3, by); n <- length(Z); omega <- matrix(Z, length(Z), 10);     common_str <- diag(p)
+    # p <- 5; by <- 0.1; Z <- seq(-3, 3, by); n <- length(Z); omega <- matrix(Z, length(Z), 4);     common_str <- diag(p)
     omega <- Z
     for (i in 1:2){
-      shift <- (i - 1)
-      omega[,i] <- ((omega[,i] - shift) < 1) * pmin(1, 1 - beta0 - beta1 * (omega[,i] - shift))
+      shift <- -0.6 * (1 + 2 * (i - 1))
+      omega[,i] <-  pmax(pmin(1, -beta1 * (omega[,i] + shift)), 0)
       j <- 5-i
-      omega[,j] <- ((omega[,j] + shift) > -1) * pmin(1, 0.5 + 0.5 * (omega[,j] + shift))
+      omega[,j] <-  pmax(pmin(1, beta1 * (omega[,j] - shift)), 0)
     }
-    g <- ggplot()
-    for (i in 1:2){
-      g <- local({
-        j <- i
-        g + geom_line(aes(Z, omega[,j]), col=j) + geom_line(aes(Z, omega[,j+2]), col=j+2)
-
-      })
-    }
-    g
-
-    # g = ggplot() + xlim(-3, 3)
+    # g <- ggplot()
     # for (i in 1:2){
     #   g <- local({
     #     j <- i
-    #     shift <- (j - 1)
-    #     g + stat_function(fun = function(x) ((x - shift) < 1) * pmin(1, 1 - 0.5 - 0.5 * (x - shift)), col = j) +
-    #       stat_function(fun = function(x) ((x + shift) > -1) * pmin(1, 0.5 + 0.5 * (x + shift)), col = j+5)
+    #     g + geom_line(aes(Z, omega[,j]), col=j) + geom_line(aes(Z, omega[,j+2]), col=j+2)
+    #     # g + geom_line(aes(Z, omega[,j+2]), col=j+2)
+    #
     #   })
     # }
-    # g
+    # g + xlim(-3, 3) + scale_x_continuous(breaks=seq(-3, 3, 0.2))
+
+    # ggplot() + geom_function(fun=function(x)pmax(pmin(-0.5*(x-0.6),1),0))+ geom_function(fun=function(x)pmax(pmin(-0.5*(x-1.8),1),0)) + geom_function(fun=function(x)pmax(pmin(0.5*(x+0.6),1),0))+ geom_function(fun=function(x)pmax(pmin(0.5*(x+1.8),1),0)) + xlim(-3,3)
 
     # create the precision matrices
     prec_mats <- vector("list", n)
@@ -251,3 +242,84 @@ cont_4_cov_dep_data <- function(p, n){
     return(list(X = data_mat, Z = Z, true_precision = true_precision))
 }
 
+
+
+# # function for generating 10D continuous covariate dependent data
+# cont_4_cov_dep_data <- function(p, n=NULL, Z=NULL){
+#
+#   # create covariate for observations in each of the three intervals
+#
+#   # define the intervals
+#   limits <- c(-3, 3)
+#
+#   # draw the covariate values
+#   if (is.null(Z)){
+#     Z <- matrix(stats::runif(4 * n, limits[1], limits[2]), n, 4)
+#   }else{
+#     n <- nrow(Z)
+#   }
+#
+#   # the shared part of the structure is a 2 on the diagonal
+#   common_str <- diag(p)
+#
+#   # define constants for the covariate-dependent structure
+#   beta1 <- 0.5
+#
+#   # define precision value for the first 5 values dependent on the first 5
+#   # covariates, and the next 5 values dependent on the next 5 covariates
+#   # p <- 5; by <- 0.1; Z <- seq(-3, 3, by); n <- length(Z); omega <- matrix(Z, length(Z), 4);     common_str <- diag(p)
+#   omega <- Z
+#   for (i in 1:2){
+#     shift <- -1.5 * (i - 1)
+#     omega[,i] <-  pmax(pmin(1, -beta1 * (omega[,i] + shift)), 0)
+#     j <- 5-i
+#     omega[,j] <-  pmax(pmin(1, beta1 * (omega[,j] - shift)), 0)
+#   }
+#   # g <- ggplot()
+#   # for (i in 1:2){
+#   #   g <- local({
+#   #     j <- i
+#   #     g + geom_line(aes(Z, omega[,j]), col=j) + geom_line(aes(Z, omega[,j+2]), col=j+2)
+#   #     # g + geom_line(aes(Z, omega[,j+2]), col=j+2)
+#   #
+#   #   })
+#   # }
+#   # g + xlim(-3, 3) + scale_x_continuous(breaks=seq(-3, 3, 0.2))
+#
+#   # g = ggplot() + xlim(-3, 3)
+#   # for (i in 1:2){
+#   #   g <- local({
+#   #     j <- i
+#   #     shift <- (j - 1)
+#   #     g + stat_function(fun = function(x) ((x - shift) < 1) * pmin(1, 1 - 0.5 - 0.5 * (x - shift)), col = j) +
+#   #       stat_function(fun = function(x) ((x + shift) > -1) * pmin(1, 0.5 + 0.5 * (x + shift)), col = j+5)
+#   #   })
+#   # }
+#   # g
+#
+#   # create the precision matrices
+#   prec_mats <- vector("list", n)
+#   for (i in 1:n){
+#     prec_mats[[i]] <- common_str
+#     for (j in 1:4){
+#       prec_mats[[i]][j, j + 1] <- omega[i, j]
+#     }
+#   }
+#
+#   # symmetrize the precision matrices
+#   true_precision <- lapply(prec_mats, function(mat) t(mat) + mat)
+#
+#   # library(covdepGE)
+#   # for (i in 1:n){
+#   #   print(i)
+#   #   print(matViz(true_precision[[i]], incl_val = T) + ggtitle(i))
+#   # }
+#
+#   # invert the precision matrices to get the covariance matrices
+#   cov_mats <- lapply(true_precision, solve)
+#
+#   # generate the data using the covariance matrices
+#   data_mat <- t(sapply(cov_mats, MASS::mvrnorm, n = 1, mu = rep(0, p)))
+#
+#   return(list(X = data_mat, Z = Z, true_precision = true_precision))
+# }
