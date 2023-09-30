@@ -71,7 +71,7 @@ sort_Z <- function(Z){
 
     # get index of the last observation and corresponding Z
     curr_ind <- sort_inds[length(sort_inds)]
-    curr_Z <- matrix(Z[curr_ind , ], nrow(Z), 2, T)
+    curr_Z <- matrix(Z[curr_ind , ], nrow(Z), ncol(Z), T)
 
     # get norm between current Z and all others; set the norm for those that have
     # already been sorted to Inf so that they are not sorted again

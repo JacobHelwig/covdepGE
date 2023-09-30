@@ -14,7 +14,7 @@ if (interactive()){
   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=3", "n1=5", "n2=5", "n3=5", "n_trials=1")
   # args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=3", "n=2", "n_trials=1")
   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep_sine'", "p=6", "n1=75", "n2=75", "n3=75", "n_trials=1")
-  args <- c("save_dir='./experiments'", "experiment='cont_4_cov_dep_data'", "p=10", "n=225", "n_trials=1")
+  args <- c("save_dir='./experiments'", "experiment='cont_4_cov_dep'", "p=10", "n=225", "n_trials=1")
   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=5", "n1=50", "n2=50", "n3=50", "n_trials=1")
   # args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=11", "n=25", "n_trials=1")
   # args <- c("save_dir='./experiments'", "experiment='disc_cov_dep'", "p=11", "n1=80", "n2=20", "lambda=3", "n_trials=3")
@@ -37,14 +37,14 @@ if (!("experiment" %in% ls())){
 }
 
 # ensure experiment is recognized
-experiment_choices <- c("cont_cov_dep", "cont_cov_dep_sine", "cont_multi_cov_dep", "cont_4_cov_dep_data")
+experiment_choices <- c("cont_cov_dep", "cont_cov_dep_sine", "cont_multi_cov_dep", "cont_4_cov_dep")
 if (!(experiment %in% experiment_choices)){
   stop("Invalid experiment")
 }
 
 # check remaining args
 expected_args <- c("save_dir", "p", "n_trials")
-if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep_data")){
+if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep")){
   expected_args <- c(expected_args, "n")
 }else{
   expected_args <- c(expected_args, "n1", "n2", "n3")
@@ -81,7 +81,7 @@ if ("filename" %in% ls()){
 
   # create list for storing results
   trial_list <- list(covdepGE = NA, JGL = NA, mgm = NA)
-  if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep_data")){
+  if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep")){
     trial_list$covdepGE_sortZ <- NA
   }else if ("seq" %in% ls()){
     if (seq){
@@ -97,7 +97,7 @@ if ("filename" %in% ls()){
   filename <- paste0(c(setdiff(names(trial_list), skips), ""), collapse = "_")
   filename <- gsub("covdepGE" , paste0("covdepGE", hp_method) ,filename)
   filename <- paste0(filename, experiment, "_ntrials", n_trials, "_p", p)
-  if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep_data")){
+  if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep")){
     filename <- paste0(filename, "_n_", n, "_", now, ".Rda")
   }else{
     filename <- paste0(filename, "_n1_", n1, "_n2_", n2, "_n3_", n3, "_", now,
@@ -112,7 +112,7 @@ if (experiment == "cont_cov_dep"){
   data_list <- replicate(n_trials, cont_cov_dep_data(p, n1, n2, n3), F)
 }else if (experiment == "cont_cov_dep_sine"){
   data_list <- replicate(n_trials, cont_cov_dep_sine_data(p, n1, n2, n3), F)
-}else if (experiment == "cont_4_cov_dep_data"){
+}else if (experiment == "cont_4_cov_dep"){
   data_list <- replicate(n_trials, cont_4_cov_dep_data(p, n), F)
 }else{
   data_list <- replicate(n_trials, cont_multi_cov_dep_data(p, n), F)

@@ -154,7 +154,7 @@ tvmgm.eval <- function(X, Z, true){
   start <- Sys.time()
 
   # if the covariate is multidimensional, sort observations in X and ground truth
-  if (ncol(Z) == 2){
+  if (ncol(Z) > 1){
     sort_inds <- sort_Z(Z)
     X <- X[sort_inds, ]
     true <- true[sort_inds]
