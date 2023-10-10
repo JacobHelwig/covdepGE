@@ -1,0 +1,845 @@
+
+R version 4.2.0 (2022-04-22) -- "Vigorous Calisthenics"
+Copyright (C) 2022 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # R CMD BATCH --no-save --no-restore "--args save_dir='./experiments/z2' experiment='cont_multi_cov_dep' p=100 n=25 n_trials=50 skips=c('JGL','mgm','covdepGE') trial_skips=1:49" main.R ./experiments/z2/cont_multi_cov_dep_ntrials50_p100_n_25_2023-02-04_13-15.Rout
+> rm(list = ls())
+> source("models.R")
+Loading required package: igraph
+
+Attaching package: ‘igraph’
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+Package 'mclust' version 5.4.10
+Type 'citation("mclust")' for citing this R package in publications.
+This is mgm 1.2-13
+Please report issues on Github: https://github.com/jmbh/mgm/issues
+> source("data.R")
+> source("utils.R")
+Loading required package: foreach
+Loading required package: iterators
+Loading required package: parallel
+> 
+> # parse command line arguments
+> args <- (commandArgs(TRUE))
+> print(args)
+[1] "save_dir='./experiments/z1_seq'" "experiment='cont_cov_dep'"      
+[3] "p=100"                           "n1=75"                          
+[5] "n2=75"                           "n3=75"                          
+[7] "n_trials=50"                     "seq=TRUE"                       
+> 
+> # DEBUGGING
+> if (interactive()){
++   # args <- c("save_dir='./experiments/z2'", "experiment='cont_multi_cov_dep'", "p=10", "n=10", "n_trials=10")
++   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=3", "n1=5", "n2=5", "n3=5", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=3", "n=2", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep_sine'", "p=6", "n1=75", "n2=75", "n3=75", "n_trials=1")
++   args <- c("save_dir='./experiments'", "experiment='cont_4_cov_dep_data'", "p=10", "n=225", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=5", "n1=50", "n2=50", "n3=50", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=11", "n=25", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='disc_cov_dep'", "p=11", "n1=80", "n2=20", "lambda=3", "n_trials=3")
++   # args <- c("save_dir='./experiments'", "experiment='disc_cov_indep'", "p=11", "n1=50", "n2=50", "lambda=15", "n_trials=3")
++   # args <- c("save_dir='./experiments'", "experiment='disc_cov_free'", "p=11", "n1=50", "n2=50", "lambda=15", "n_trials=3")
++ }
+> 
+> if (length(args) > 0){
++   for(i in 1:length(args)){
++     eval(parse(text = args[[i]]))
++   }
++ }else{
++   stop("No arguments passed")
++ }
+> 
+> # check passed arguments
+> print(args)
+[1] "save_dir='./experiments/z1_seq'" "experiment='cont_cov_dep'"      
+[3] "p=100"                           "n1=75"                          
+[5] "n2=75"                           "n3=75"                          
+[7] "n_trials=50"                     "seq=TRUE"                       
+> if (!("experiment" %in% ls())){
++   stop("Missing experiment")
++ }
+> 
+> # ensure experiment is recognized
+> experiment_choices <- c("cont_cov_dep", "cont_cov_dep_sine", "cont_multi_cov_dep", "cont_4_cov_dep_data")
+> if (!(experiment %in% experiment_choices)){
++   stop("Invalid experiment")
++ }
+> 
+> # check remaining args
+> expected_args <- c("save_dir", "p", "n_trials")
+> if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep_data")){
++   expected_args <- c(expected_args, "n")
++ }else{
++   expected_args <- c(expected_args, "n1", "n2", "n3")
++ }
+> if (!all(expected_args %in% ls())){
++   stop("Missing args")
++ }
+> 
+> # check if any skips have been specified
+> if (!("skips" %in% ls())){
++   skips <- NULL
++ }else{
++   print(paste0(c("Skipping", skips), collapse = " "))
++ }
+> if (!("trial_skips" %in% ls())){
++   trial_skips <- NULL
++ }else{
++   print(paste0(c("Skipping trials", trial_skips), collapse = " "))
++ }
+> # check if a HP method or max_iter_grid for covdepGE has been specified
+> if (!("hp_method" %in% ls())) hp_method <- "hybrid"
+> if (!("max_iter_grid" %in% ls())) max_iter_grid <- 10
+> print(paste0(c("covdepGE HP specification scheme: ", hp_method), collapse = " "))
+[1] "covdepGE HP specification scheme:  hybrid"
+> 
+> # check if a filename has been passed
+> if ("filename" %in% ls()){
++ 
++   # a file has been specified; load the associated results
++   load(filename)
++ 
++ }else{
++ 
++   # a filename has not been specified
++ 
++   # create list for storing results
++   trial_list <- list(covdepGE = NA, JGL = NA, mgm = NA)
++   if (experiment == "cont_multi_cov_dep"){
++     trial_list$covdepGE_sortZ <- NA
++   }else if ("seq" %in% ls()){
++     if (seq){
++       trial_list <- list(covdepGE_seq = NA) # , covdepGE_seq = NA)
++     }
++   }
++ 
++   results <- replicate(n_trials, trial_list, simplify = F)
++   names(results) <- c(paste0("trial", 1:n_trials))
++ 
++   # create filename for saved results
++   (now <- format(Sys.time(), "%Y%m%d_%H%M%S"))
++   filename <- paste0(c(setdiff(names(trial_list), skips), ""), collapse = "_")
++   filename <- gsub("covdepGE" , paste0("covdepGE", hp_method) ,filename)
++   filename <- paste0(filename, experiment, "_ntrials", n_trials, "_p", p)
++   if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep_data")){
++     filename <- paste0(filename, "_n_", n, "_", now, ".Rda")
++   }else{
++     filename <- paste0(filename, "_n1_", n1, "_n2_", n2, "_n3_", n3, "_", now,
++                        ".Rda")
++   }
++   (filename <- file.path(save_dir, filename))
++ }
+[1] "./experiments/z1_seq/covdepGEhybrid_seq_cont_cov_dep_ntrials50_p100_n1_75_n2_75_n3_75_20230913_022903.Rda"
+> 
+> # generate the data
+> set.seed(1)
+> if (experiment == "cont_cov_dep"){
++   data_list <- replicate(n_trials, cont_cov_dep_data(p, n1, n2, n3), F)
++ }else if (experiment == "cont_cov_dep_sine"){
++   data_list <- replicate(n_trials, cont_cov_dep_sine_data(p, n1, n2, n3), F)
++ }else if (experiment == "cont_4_cov_dep_data"){
++   data_list <- replicate(n_trials, cont_4_cov_dep_data(p, n), F)
++ }else{
++   data_list <- replicate(n_trials, cont_multi_cov_dep_data(p, n), F)
++ }
+> 
+> # DEBUGGING
+> if (interactive()){
++   X_ <- data_list[[1]]$X
++   Z_ <- data_list[[1]]$Z
++   true_ <- data_list[[1]]$true_precision
++   graph_viz(lapply(true_, `!=`, 0))
++   out_ <- covdepGE(X_, Z_)
++   plot(out_)
++   out_$str <- array(unlist(out_$graphs$graphs), dim = c(p, p, nrow(X_)))
++   (perf_ <- eval_est(out_$str, true_))
++ }
+> 
+> # perform trials
+> trials(data_list = data_list,
++        results = results,
++        filename = filename,
++        skips = skips,
++        trial_skips = trial_skips,
++        hp_method = hp_method,
++        max_iter_grid = max_iter_grid)
+
+covdepGE complete 2023-09-13 04:01:07
+
+
+covdepGE_seq trial 7 complete; 92 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:02:19
+
+
+covdepGE_seq trial 14 complete; 93 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:02:40
+
+
+covdepGE_seq trial 23 complete; 93 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:03:03
+
+
+covdepGE_seq trial 18 complete; 94 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:03:03
+
+
+covdepGE_seq trial 2 complete; 94 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:03:19
+
+
+covdepGE_seq trial 22 complete; 94 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:03:22
+
+
+covdepGE_seq trial 12 complete; 94 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:03:25
+
+
+covdepGE_seq trial 24 complete; 94 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:03:32
+
+
+covdepGE_seq trial 21 complete; 94 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:03:47
+
+
+covdepGE_seq trial 10 complete; 94 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:03:48
+
+
+covdepGE_seq trial 25 complete; 94 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:03:57
+
+
+covdepGE_seq trial 1 complete; 95 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:04:01
+
+
+covdepGE_seq trial 15 complete; 95 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:04:08
+
+
+covdepGE_seq trial 13 complete; 95 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:04:15
+
+
+covdepGE_seq trial 19 complete; 95 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:04:25
+
+
+covdepGE_seq trial 20 complete; 95 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:04:31
+
+
+covdepGE_seq trial 17 complete; 95 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:04:40
+
+
+covdepGE_seq trial 6 complete; 95 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:05:03
+
+
+covdepGE_seq trial 9 complete; 96 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:05:26
+
+
+covdepGE_seq trial 3 complete; 96 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:05:32
+
+
+covdepGE_seq trial 16 complete; 96 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:05:34
+
+
+covdepGE_seq trial 5 complete; 96 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:05:42
+
+
+covdepGE_seq trial 11 complete; 96 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:06:58
+
+
+covdepGE_seq trial 8 complete; 98 minutes elapsed
+
+
+covdepGE complete 2023-09-13 04:09:27
+
+
+covdepGE_seq trial 4 complete; 100 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:37:19
+
+
+covdepGE_seq trial 40 complete; 93 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:38:24
+
+
+covdepGE_seq trial 32 complete; 97 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:39:00
+
+
+covdepGE_seq trial 39 complete; 97 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:39:20
+
+
+covdepGE_seq trial 26 complete; 95 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:40:03
+
+
+covdepGE_seq trial 45 complete; 96 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:40:09
+
+
+covdepGE_seq trial 49 complete; 97 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:40:43
+
+
+covdepGE_seq trial 27 complete; 98 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:40:53
+
+
+covdepGE_seq trial 28 complete; 95 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:40:56
+
+
+covdepGE_seq trial 50 complete; 97 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:41:05
+
+
+covdepGE_seq trial 44 complete; 97 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:41:32
+
+
+covdepGE_seq trial 38 complete; 97 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:41:33
+
+
+covdepGE_seq trial 30 complete; 96 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:41:50
+
+
+covdepGE_seq trial 37 complete; 98 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:41:58
+
+
+covdepGE_seq trial 36 complete; 96 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:42:11
+
+
+covdepGE_seq trial 41 complete; 97 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:42:39
+
+
+covdepGE_seq trial 35 complete; 99 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:42:41
+
+
+covdepGE_seq trial 33 complete; 96 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:42:45
+
+
+covdepGE_seq trial 43 complete; 100 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:42:59
+
+
+covdepGE_seq trial 31 complete; 98 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:43:02
+
+
+covdepGE_seq trial 48 complete; 100 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:43:05
+
+
+covdepGE_seq trial 34 complete; 98 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:43:24
+
+
+covdepGE_seq trial 42 complete; 99 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:44:01
+
+
+covdepGE_seq trial 46 complete; 100 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:44:07
+
+
+covdepGE_seq trial 29 complete; 95 minutes elapsed
+
+
+covdepGE complete 2023-09-13 05:45:10
+
+
+covdepGE_seq trial 47 complete; 102 minutes elapsed
+
+covdepGE finished 2023-09-13 05:45:55
+Detected 43 workers
+
+covdepGE complete 2023-09-13 05:50:32
+
+
+covdepGE trial 1 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 05:56:24
+
+
+covdepGE trial 2 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 06:02:09
+
+
+covdepGE trial 3 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 06:07:46
+
+
+covdepGE trial 4 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 06:13:26
+
+
+covdepGE trial 5 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 06:19:25
+
+
+covdepGE trial 6 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 06:25:01
+
+
+covdepGE trial 7 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 06:30:51
+
+
+covdepGE trial 8 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 06:36:40
+
+
+covdepGE trial 9 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 06:42:20
+
+
+covdepGE trial 10 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 06:48:13
+
+
+covdepGE trial 11 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 06:53:57
+
+
+covdepGE trial 12 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 06:59:49
+
+
+covdepGE trial 13 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 07:05:28
+
+
+covdepGE trial 14 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 07:11:33
+
+
+covdepGE trial 15 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 07:17:31
+
+
+covdepGE trial 16 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 07:23:40
+
+
+covdepGE trial 17 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 07:29:40
+
+
+covdepGE trial 18 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 07:36:04
+
+
+covdepGE trial 19 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 07:42:04
+
+
+covdepGE trial 20 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 07:48:09
+
+
+covdepGE trial 21 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 07:54:00
+
+
+covdepGE trial 22 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 07:59:55
+
+
+covdepGE trial 23 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 08:07:03
+
+
+covdepGE trial 24 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 08:13:02
+
+
+covdepGE trial 25 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 08:19:28
+
+
+covdepGE trial 26 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 08:25:50
+
+
+covdepGE trial 27 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 08:32:15
+
+
+covdepGE trial 28 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 08:38:37
+
+
+covdepGE trial 29 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 08:45:02
+
+
+covdepGE trial 30 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 08:51:25
+
+
+covdepGE trial 31 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 08:57:51
+
+
+covdepGE trial 32 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 09:04:23
+
+
+covdepGE trial 33 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 09:11:16
+
+
+covdepGE trial 34 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 09:18:17
+
+
+covdepGE trial 35 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 09:25:23
+
+
+covdepGE trial 36 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 09:32:38
+
+
+covdepGE trial 37 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 09:39:36
+
+
+covdepGE trial 38 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 09:46:43
+
+
+covdepGE trial 39 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 09:53:31
+
+
+covdepGE trial 40 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 10:00:30
+
+
+covdepGE trial 41 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 10:07:37
+
+
+covdepGE trial 42 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 10:14:37
+
+
+covdepGE trial 43 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 10:21:30
+
+
+covdepGE trial 44 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 10:28:46
+
+
+covdepGE trial 45 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 10:36:13
+
+
+covdepGE trial 46 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 10:43:15
+
+
+covdepGE trial 47 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 10:50:24
+
+
+covdepGE trial 48 complete; 6 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 10:57:06
+
+
+covdepGE trial 49 complete; 5 minutes elapsed
+
+Detected 43 workers
+
+covdepGE complete 2023-09-13 11:03:32
+
+
+covdepGE trial 50 complete; 5 minutes elapsed
+
+covdepGE finished 2023-09-13 11:05:04
+> 
+> 
+> proc.time()
+      user     system    elapsed 
+824054.223   5301.094  31058.333 
