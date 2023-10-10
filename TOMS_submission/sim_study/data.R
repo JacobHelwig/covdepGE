@@ -176,18 +176,47 @@ cont_multi_cov_dep_data <- function(p, n){
 }
 
 # function for generating 4D continuous covariate dependent data
-cont_4_cov_dep_data <- function(p, n){
+cont_4_cov_dep_data <- function(p, n, Z=NULL){
 
     # create covariate for observations in each of the three intervals
+
+    # # define the intervals
+    # limits1 <- c(-3, -9/5)
+    # limits2 <- c(-9/5, -3/5)
+    # limits3 <- c(-3/5, 3/5)
+    # limits4 <- c(3/5, 9/5)
+    # limits5 <- c(9/5, 3)
+    # intervals <- list(limits1,limits2, limits3,limits4,limits5)
+    #
+    # # draw the covariate values within each interval
+    # Z <- matrix(NA, 0, 4)
+    # for (int_x in intervals){
+    #   for (int_y in intervals){
+    #     for (int_z1 in intervals){
+    #       for (int_z2 in intervals){
+    #         x <- runif(n, int_x[1], int_x[2])
+    #         y <- runif(n, int_y[1], int_y[2])
+    #         z1 <- runif(n, int_z1[1], int_z1[2])
+    #         z2 <- runif(n, int_z2[1], int_z2[2])
+    #         Z <- rbind(Z, cbind(x, y, z1, z2))
+    #       }
+    #     }
+    #   }
+    # }
 
     # define the intervals
     limits <- c(-3, 3)
 
     # draw the covariate values
-    Z <- matrix(stats::runif(4 * n, limits[1], limits[2]), n, 4)
+    if (is.null(Z)){
+      Z <- matrix(stats::runif(4 * n, limits[1], limits[2]), n, 4)
+    }else{
+      n <- nrow(Z)
+    }
 
     # the shared part of the structure is a 2 on the diagonal
     common_str <- diag(p)
+    common_str[2, 3] <- common_str[5, 6] <- 1
 
     # define constants for the covariate-dependent structure
     beta1 <- 0.5
@@ -196,12 +225,16 @@ cont_4_cov_dep_data <- function(p, n){
     # covariates, and the next 5 values dependent on the next 5 covariates
     # p <- 5; by <- 0.1; Z <- seq(-3, 3, by); n <- length(Z); omega <- matrix(Z, length(Z), 4);     common_str <- diag(p)
     omega <- Z
-    for (i in 1:2){
-      shift <- -0.6 * (1 + 2 * (i - 1))
-      omega[,i] <-  pmax(pmin(1, -beta1 * (omega[,i] + shift)), 0)
-      j <- 5-i
-      omega[,j] <-  pmax(pmin(1, beta1 * (omega[,j] - shift)), 0)
-    }
+
+    # 1,2 and 1,3 entries
+    omega[,1] <-  pmax(pmin(1, -beta1 * (omega[,1] - 9/5)), 0)
+    omega[,2] <-  pmax(pmin(1, beta1 * (omega[,2] + 3/5)), 0)
+
+
+    # 4,5 and 4,6 entries
+    omega[,3] <-  pmax(pmin(1, -beta1 * (omega[,3] - 3/5)), 0)
+    omega[,4] <-  pmax(pmin(1, beta1 * (omega[,4] + 9/5)), 0)
+
     # g <- ggplot()
     # for (i in 1:2){
     #   g <- local({
@@ -220,13 +253,14 @@ cont_4_cov_dep_data <- function(p, n){
     for (i in 1:n){
       prec_mats[[i]] <- common_str
       for (j in 1:4){
-        prec_mats[[i]][j, j + 1] <- omega[i, j]
+        shift <- 3 * (j > 2)
+        prec_mats[[i]][1 + shift, j + 1 + (j > 2)] <- omega[i, j]
       }
     }
 
     # symmetrize the precision matrices
     true_precision <- lapply(prec_mats, function(mat) t(mat) + mat)
-
+    # return(true_precision)
     # library(covdepGE)
     # for (i in 1:n){
     #   print(i)
@@ -242,6 +276,54 @@ cont_4_cov_dep_data <- function(p, n){
     return(list(X = data_mat, Z = Z, true_precision = true_precision))
 }
 
+
+# extraneous covariate visualizations
+if (F){
+  rm(list=ls())
+  library(kableExtra)
+  library(ggplot2)
+  library(ggpubr)
+  library(extrafont)
+  library(latex2exp)
+  windowsFonts(Times=windowsFont("TT Times New Roman"))
+  colors <- c("#BC3C29FF", "#0072B5FF", "#E18727FF", "#20854EFF")
+  plots <- list(
+  ggplot() + xlim(-3, 3) + ylim(0,1) +
+    geom_function(fun=function(x)pmax(0, pmin(1, -0.5 * (x - 1))), n=1e4, aes(col="1"), size=1) +
+    geom_function(fun=function(x)pmax(0, pmin(1, 0.5 * (x + 1))), n=1e4, aes(col="2"), size=1) +
+    geom_function(fun=function(x)5, n=1e4, aes(col="3"), size=1) +
+    geom_function(fun=function(x)5, n=1e4, aes(col="4"), size=1) +
+    theme_pubclean() +
+    theme(text = element_text(family = "Times", size = 18),
+          plot.title = element_text(hjust = 0.5)) +
+    scale_color_manual(values=colors, labels = unname(TeX(c("$\\textit{l}=1$", "$\\textit{l}=2$", "$\\textit{l}=3$", "$\\textit{l}=4$"))), name = "") +
+    labs(x = " ", y = TeX("$\\Omega(z_l)$")) + theme(legend.key = element_rect(fill = "white"), legend.position = "right") +
+    ggtitle(TeX("$\\textit{\\Omega(z_l), q}\\in\\{1,2\\}$")),
+  ggplot() + xlim(-3, 3) +
+    geom_function(fun=function(x) pmax(0, pmin(1, -0.5 * (x - 3/5))), n=1e4, aes(col="1"), size=1) +
+    geom_function(fun=function(x) pmax(0, pmin(1, -0.5 * (x - 9/5))), n=1e4, aes(col="2"), size=1) +
+    geom_function(fun=function(x) pmax(0, pmin(1, 0.5 * (x + 9/5))), n=1e4, aes(col="3"), size=1) +
+    geom_function(fun=function(x) pmax(0, pmin(1, 0.5 * (x + 3/5))), n=1e4, aes(col="4"), size=1) +
+    theme_pubclean() +
+    theme(text = element_text(family = "Times", size = 18),
+          plot.title = element_text(hjust = 0.5)) +
+    scale_color_manual(values=colors, labels = unname(TeX(c("$\\textit{l}=1$", "$\\textit{l}=2$", "$\\textit{l}=3$", "$\\textit{l}=4$"))), name = "") +    labs(x = TeX("$\\textit{z_l}$"), y = TeX("$\\Omega(z_l)$")) + theme(legend.key = element_rect(fill = "white"), legend.position = "right") +
+    ggtitle(TeX("$\\textit{\\Omega(z_l), q=4}$")),
+  ggplot() + xlim(-3, 3) +
+    geom_function(fun=function(x)pmax(cospi((x+3)/4),0)+pmax(cospi((x-3)/4),0), n=1e4, aes(col="1"), size=1) +
+    geom_function(fun=function(x)pmax(0,cospi(x/4)), n=1e4, aes(col="2"), size=1) +
+    theme_pubclean() +
+    theme(text = element_text(family = "Times", size = 18),
+          plot.title = element_text(hjust = 0.5)) +
+    scale_color_manual(values=colors, labels = unname(TeX(c("$\\textit{l}=1$", "$\\textit{l}=2$", "$\\textit{l}=3$", "$\\textit{l}=4$"))), name = "") +
+    labs(x = " ", y = TeX("$\\Omega(z_l)$")) + theme(legend.key = element_rect(fill = "white"), legend.position = "right") +
+    ggtitle(TeX("$\\textit{\\Omega(z_l), q=1}$ (non-linear)"))
+  )
+  plots <- lapply(plots, function(plot) plot + rremove("ylab"))
+  fig <- ggarrange(plotlist = plots, nrow=1, common.legend = TRUE,  legend="bottom")
+  fig <- annotate_figure(fig, left = text_grob(TeX("$\\textit{\\Omega(z_l)_{j,k}}$"), family="Times", size = 18, rot=90))
+  ggsave("plots/omega_plots.pdf", fig, height = 4, width = 14)
+}
 
 
 # # function for generating 10D continuous covariate dependent data
