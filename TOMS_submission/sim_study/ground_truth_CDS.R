@@ -10,13 +10,15 @@ loadfonts(device = "win")
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 source("data.R")
 
+colors <- c("#BC3C29FF", "#0072B5FF", "#E18727FF", "#20854EFF")
+
 # z1
 title_font <- 36
 dat <- cont_cov_dep_data(p = 10, n1 = 1, n2 = 1, n3 = 1)
 true_graphs <- lapply(lapply(lapply(dat$true_precision, `!=`, 0), `*`, 1), `-`, diag(10))
 windowsFonts("Times" = windowsFont("Times"))
 true_list <- lapply(1:length(true_graphs), function(k)
-  matViz(true_graphs[[k]]) +
+  matViz(true_graphs[[k]], color2 = colors[1]) +
     ggtitle(paste0("CDS ", k)) +
     coord_cartesian(xlim = c(0, 4), ylim = c(0, 4)) +
     theme(plot.title = element_text(size = 18),
@@ -47,7 +49,7 @@ for (i in 1:length(unique_inds)){
 }
 
 true_list <- lapply(1:length(unique_graphs), function(k)
-  matViz(unique_graphs[[k]], color2 = "steelblue") +
+  matViz(unique_graphs[[k]], color2 = colors[2]) +
     ggtitle(paste0("CDS ", k)) +
     coord_cartesian(xlim = c(0, 4), ylim = c(0, 4)) +
     theme(plot.title = element_text(size = 18),
