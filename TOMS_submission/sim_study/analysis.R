@@ -2,12 +2,17 @@
 # Baseline comparisons
 rm(list = ls())
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+source("data.R")
 library(kableExtra)
 library(ggplot2)
 library(ggpubr)
 library(extrafont)
 library(latex2exp)
 
+# init list for recording statistics for specific subgraphs; only for q=1 settings
+
+
+# init list for recording number of clusters estimated by mclust
 subgroups_list <- list()
 
 # load and store results from each experiment; get sensitivity and specificity
@@ -16,9 +21,9 @@ subgroups_list <- list()
 # results config; med outputs median in place of mean and univariate is for
 # switching setting from q=1->q=2
 med <- F
-univariate <- !F
+univariate <- !T
 sine <- F
-four <- !T
+four <- T
 seq <- F
 if (univariate){
 
@@ -174,11 +179,11 @@ colnames(df) <- c("$p$", "Method", "Sensitivity$(\\%)$", "Specificity$(\\%)$", "
 kbl(df, format = "latex", booktabs = T, escape = FALSE) %>%
   collapse_rows(columns = c(1, 2, 3, 4), latex_hline = "major", valign = "middle")
 
-subgroups_list[[exper]] <- factor(Reduce(c, subgroups), levels = 2:6)
+subgroups_list[[exper]] <- factor(Reduce(c, subgroups), levels = 2:7)
 
 windowsFonts("Times" = windowsFont("Times"))
 colors <- c("#BC3C29FF", "#0072B5FF", "#E18727FF", "#20854EFF")
-plots[[exper]] <- list(x = factor(subgroups, levels = 2:6), plot = NULL)
+# plots[[exper]] <- list(x = factor(subgroups, levels = 2:6), plot = NULL)
 plots <- list(ggplot() +
                 geom_bar(aes(x = subgroups_list[["cont_cov_dep_"]]),
                          color = "black", fill = colors[1]) +
@@ -198,9 +203,29 @@ plots <- list(ggplot() +
                 ggtitle(TeX(paste0("Optimal $\\textit{K}, \\textit{q}=2$"))) +
                 scale_y_continuous(breaks = seq(0, 180, 30), limits = c(0, 180)) +
                 scale_x_discrete(drop=FALSE) +
+                labs(x = TeX("$\\textit{K}$")),
+              ggplot() +
+                geom_bar(aes(x = subgroups_list[["cont_4_cov_dep_"]]),
+                         color = "black", fill = colors[3]) +
+                theme_pubclean() +
+                theme(text = element_text(family = "Times", size = 18),
+                      plot.title = element_text(hjust = 0.5)) +
+                ggtitle(TeX(paste0("Optimal $\\textit{K}, \\textit{q}=4$"))) +
+                scale_y_continuous(breaks = seq(0, 180, 30), limits = c(0, 180)) +
+                scale_x_discrete(drop=FALSE) +
+                labs(x = TeX("$\\textit{K}$")),
+              ggplot() +
+                geom_bar(aes(x = subgroups_list[["cont_cov_dep_sine_"]]),
+                         color = "black", fill = colors[4]) +
+                theme_pubclean() +
+                theme(text = element_text(family = "Times", size = 18),
+                      plot.title = element_text(hjust = 0.5)) +
+                ggtitle(TeX(paste0("Optimal $\\textit{K}, \\textit{q}=1$ (non-linear)"))) +
+                scale_y_continuous(breaks = seq(0, 180, 30), limits = c(0, 180)) +
+                scale_x_discrete(drop=FALSE) +
                 labs(x = TeX("$\\textit{K}$")))
-fig <- ggarrange(plotlist = plots, nrow = 2)
-ggsave("plots/subgroup_bar_newcol.pdf", height = 6, width = 11)
+fig <- ggarrange(plotlist = plots, nrow = 4)
+ggsave("plots/subgroup_bar_newcol.pdf", height = 12, width = 11)
 
 # ------------------------------------------------------------------------------
 # HP comparisons
