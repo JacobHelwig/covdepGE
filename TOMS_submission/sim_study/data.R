@@ -300,10 +300,10 @@ if (F){
     labs(x = " ", y = TeX("$\\Omega(z_l)$")) + theme(legend.key = element_rect(fill = "white"), legend.position = "right") +
     ggtitle(TeX("$\\textit{\\Omega(z_l), q}\\in\\{1,2\\}$")),
   ggplot() + xlim(-3, 3) +
-    geom_function(fun=function(x) pmax(0, pmin(1, -0.5 * (x - 3/5))), n=1e4, aes(col="1"), size=1) +
-    geom_function(fun=function(x) pmax(0, pmin(1, -0.5 * (x - 9/5))), n=1e4, aes(col="2"), size=1) +
-    geom_function(fun=function(x) pmax(0, pmin(1, 0.5 * (x + 9/5))), n=1e4, aes(col="3"), size=1) +
-    geom_function(fun=function(x) pmax(0, pmin(1, 0.5 * (x + 3/5))), n=1e4, aes(col="4"), size=1) +
+    geom_function(fun=function(x) pmax(pmin(1, -0.5 * (x - 9/5)), 0), n=1e4, aes(col="1"), size=1) +
+    geom_function(fun=function(x) pmax(pmin(1, 0.5 * (x + 3/5)), 0), n=1e4, aes(col="2"), size=1) +
+    geom_function(fun=function(x) pmax(pmin(1, -0.5 * (x - 3/5)), 0), n=1e4, aes(col="3"), size=1) +
+    geom_function(fun=function(x) pmax(pmin(1, 0.5 * (x + 9/5)), 0), n=1e4, aes(col="4"), size=1) +
     theme_pubclean() +
     theme(text = element_text(family = "Times", size = 18),
           plot.title = element_text(hjust = 0.5)) +

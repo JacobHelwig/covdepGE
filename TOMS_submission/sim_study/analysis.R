@@ -15,10 +15,10 @@ subgroups_list <- list()
 
 # results config; med outputs median in place of mean and univariate is for
 # switching setting from q=1->q=2
-med <- T
-univariate <- T
-sine <- T
-four <- F
+med <- F
+univariate <- !F
+sine <- F
+four <- !T
 seq <- F
 if (univariate){
 
@@ -50,8 +50,8 @@ trial_str <- paste0("ntrials", ntrials, "_")
 dims <- c(10, 25, 50, 100)
 files <- list.files(path)
 prec <- 2
-df <- subgroups <- htest <- vector("list", length(dims))
-names(df) <- names(subgroups) <- names(htest) <- dims
+df <- subgroups <- htest <- ngraphs <- vector("list", length(dims))
+names(df) <- names(subgroups) <- names(htest) <- names(ngraphs) <- dims
 
 for (p in as.character(dims)){
 
@@ -66,6 +66,9 @@ for (p in as.character(dims)){
   load(file_path)
   print(paste0("n: ", results$sample_data[1], ", p: ", results$sample_data[2]))
   results <- results[setdiff(names(results), "sample_data")]
+
+  # extract number of graphs
+  ngraphs[[p]] <- sapply(results, function(trial)length(trial$covdepGE$graphs$unique_graphs))
 
   # out <- results$trial2$covdepGE
   # for (j in 1:length(out$graphs$unique_graphs)){

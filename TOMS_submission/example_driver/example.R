@@ -4,7 +4,7 @@ library(ggplot2)
 # get the data
 set.seed(2023)
 data <- generateData(p = 5, n1 = 75, n2 = 75, n3 = 75)
-X <- data$X
+# X <- data$X
 Z <- data$Z
 interval <- data$interval
 Omega <- data$true_precision
