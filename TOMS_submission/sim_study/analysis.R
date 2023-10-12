@@ -3,13 +3,12 @@
 rm(list = ls())
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 source("data.R")
+source("utils.R")
 library(kableExtra)
 library(ggplot2)
 library(ggpubr)
 library(extrafont)
 library(latex2exp)
-
-# init list for recording statistics for specific subgraphs; only for q=1 settings
 
 
 # init list for recording number of clusters estimated by mclust
@@ -21,10 +20,11 @@ subgroups_list <- list()
 # results config; med outputs median in place of mean and univariate is for
 # switching setting from q=1->q=2
 med <- F
-univariate <- !T
+univariate <- T
 sine <- F
 four <- T
 seq <- F
+subgr <- T
 if (univariate){
 
   # univariate extraneous covariate
@@ -50,13 +50,26 @@ if (univariate){
   path <- ifelse(four, "./experiments/z4", "./experiments/z2")
 }
 
+dims <- c(10, 25, 50, 100)
 ntrials <- 50
 trial_str <- paste0("ntrials", ntrials, "_")
-dims <- c(10, 25, 50, 100)
 files <- list.files(path)
 prec <- 2
 df <- subgroups <- htest <- ngraphs <- vector("list", length(dims))
 names(df) <- names(subgroups) <- names(htest) <- names(ngraphs) <- dims
+
+if (subgr){
+  set.seed(1)
+  sine <- cont_cov_dep_sine_data(p=3, n1=75, n2=75, n3=75)
+  table(cut(c(sine$Z), c(-3, -2, -1, 1, 2, 3), right=F)) # TODO: update description in paper
+
+  # init list for recording statistics for specific subgraphs; only for q=1 settings
+  subg <- list(pwl=list(), nl=list())
+  for (dim in as.character(dims)){
+    subg$pwl[[dim]] <- cont_cov_dep_data(p=as.numeric(dim), n1=75, n2=75, n3=75)$true_precision
+    subg$nl[[dim]] <- cont_cov_dep_sine_data(p=as.numeric(dim), n1=75, n2=75, n3=75)$true_precision
+  }
+}
 
 for (p in as.character(dims)){
 
@@ -71,6 +84,15 @@ for (p in as.character(dims)){
   load(file_path)
   print(paste0("n: ", results$sample_data[1], ", p: ", results$sample_data[2]))
   results <- results[setdiff(names(results), "sample_data")]
+
+  # process subgraphs
+  for (trial in results){
+    graphs <- list("vector", 225)
+    preds <- trial$covdepGE$graphs$unique_graphs
+    for (pred in preds){
+      graphs[pred$indices] <- replicate(length(pred$indices), as.matrix(pred$graph), F)
+    }
+  }
 
   # extract number of graphs
   ngraphs[[p]] <- sapply(results, function(trial)length(trial$covdepGE$graphs$unique_graphs))
