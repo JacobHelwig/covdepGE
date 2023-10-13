@@ -10,6 +10,8 @@ library(ggpubr)
 library(extrafont)
 library(latex2exp)
 
+# init list for recording statistics for each graph; only for q=1
+graphstats_list <- list(pwl=NA, nl=NA)
 
 # init list for recording number of clusters estimated by mclust
 subgroups_list <- list()
@@ -59,15 +61,29 @@ df <- subgroups <- htest <- ngraphs <- vector("list", length(dims))
 names(df) <- names(subgroups) <- names(htest) <- names(ngraphs) <- dims
 
 if (subgr){
+  stats_name <- ifelse(sine, "nl", "pwl")
+
   set.seed(1)
-  sine <- cont_cov_dep_sine_data(p=3, n1=75, n2=75, n3=75)
-  table(cut(c(sine$Z), c(-3, -2, -1, 1, 2, 3), right=F)) # TODO: update description in paper
+  sine_data <- cont_cov_dep_sine_data(p=3, n1=75, n2=75, n3=75)
+  table(cut(c(sine_data$Z), c(-3, -2, -1, 1, 2, 3), right=F)) # TODO: update description in paper
 
   # init list for recording statistics for specific subgraphs; only for q=1 settings
   subg <- list(pwl=list(), nl=list())
+  get_lab <- function(g) paste0("CDS", which(sapply(ugraphs, function(gr) isTRUE(all.equal(g, gr)))))
   for (dim in as.character(dims)){
-    subg$pwl[[dim]] <- cont_cov_dep_data(p=as.numeric(dim), n1=75, n2=75, n3=75)$true_precision
-    subg$nl[[dim]] <- cont_cov_dep_sine_data(p=as.numeric(dim), n1=75, n2=75, n3=75)$true_precision
+
+    # get precision
+    subg$pwl[[dim]] <- list(true=cont_cov_dep_data(p=as.numeric(dim), n1=75, n2=75, n3=75)$true_precision)
+    subg$nl[[dim]] <- list(true=cont_cov_dep_sine_data(p=as.numeric(dim), n1=75, n2=75, n3=75)$true_precision)
+
+    # get graphs
+    graphs_pwl <- lapply(lapply(subg$pwl[[dim]]$true, `!=`, 0), `-`, diag(dim))
+    ugraphs <- unique(graphs_pwl)
+    graphs_nl <- lapply(lapply(subg$nl[[dim]]$true, `!=`, 0), `-`, diag(dim))
+
+    # get labels (CDS1,2,3)
+    subg$pwl[[dim]]$label <- sapply(graphs_pwl, get_lab)
+    subg$nl[[dim]]$label <- sapply(graphs_nl, get_lab)
   }
 }
 
@@ -85,13 +101,44 @@ for (p in as.character(dims)){
   print(paste0("n: ", results$sample_data[1], ", p: ", results$sample_data[2]))
   results <- results[setdiff(names(results), "sample_data")]
 
-  # process subgraphs
-  for (trial in results){
-    graphs <- list("vector", 225)
-    preds <- trial$covdepGE$graphs$unique_graphs
-    for (pred in preds){
-      graphs[pred$indices] <- replicate(length(pred$indices), as.matrix(pred$graph), F)
+  # get graph stats
+  if (subgr){
+
+    graphs <- vector("list", length(results))
+
+    # CDS masks
+    true_graphs <- subg[[stats_name]][[p]]$true
+    labels <- subg[[stats_name]][[p]]$label
+    ints <- c("CDS1", "CDS2", "CDS3")
+    masks <- lapply(ints, `==`, labels)
+    names(masks) <- ints
+
+    # reconstruct graphs
+    for (i in 1:length(results)){
+      graphs[[i]] <- vector("list", 225)
+      preds <- results[[i]]$covdepGE$graphs$unique_graphs
+      for (pred in preds){
+        graphs[[i]][pred$indices] <- replicate(length(pred$indices), as.matrix(pred$graph), F)
+      }
+
+      graphs[[i]] <- array(unlist(graphs[[i]]), c(p, p, 3 * n))
+
+      # check for correct reconstruction
+      full_stats <- eval_est(graphs[[i]], true_graphs)
+      if (!all.equal(unlist(results[[i]]$covdepGE[names(full_stats)]), unlist(full_stats))){
+        stop(paste0(i, " not equal"))
+      }
+
+      # get stats in each interval
+      subg[[stats_name]][[p]]$est <- vector("list", 3)
+      names(subg[[stats_name]][[p]]$est) <- ints
+      for (int in ints){
+        mask <- masks[[int]]
+        subg[[stats_name]][[p]]$est[[int]] <- eval_est(graphs[[i]][,,mask], true_graphs[mask])
+      }
     }
+
+
   }
 
   # extract number of graphs
