@@ -11,7 +11,10 @@ library(extrafont)
 library(latex2exp)
 
 # init list for recording statistics for each graph; only for q=1
-graphstats_list <- list(pwl=NA, nl=NA)
+int_res <- list(CDS1=NA, CDS2=NA, CDS3=NA)
+graphstats_list <- replicate(50, list(pwl=int_res, nl=int_res), F)
+graphstats_list <- list("10"=graphstats_list, "25"=graphstats_list,
+                        "50"=graphstats_list, "100"=graphstats_list)
 
 # init list for recording number of clusters estimated by mclust
 subgroups_list <- list()
@@ -87,6 +90,8 @@ if (subgr){
   }
 }
 
+p="10"
+
 for (p in as.character(dims)){
 
   # format file name
@@ -130,14 +135,37 @@ for (p in as.character(dims)){
       }
 
       # get stats in each interval
-      subg[[stats_name]][[p]]$est <- vector("list", 3)
-      names(subg[[stats_name]][[p]]$est) <- ints
       for (int in ints){
         mask <- masks[[int]]
-        subg[[stats_name]][[p]]$est[[int]] <- eval_est(graphs[[i]][,,mask], true_graphs[mask])
+        graphstats_list[[p]][[i]][[stats_name]][[int]] <- eval_est(graphs[[i]][,,mask], true_graphs[mask])
       }
+
+      # check for construct calculation
+      if (stats_name == "pwl"){
+        full_stats2 <- as.list(rowMeans(matrix(unlist(graphstats_list[[p]][[i]][[stats_name]]), ncol=3)))
+        names(full_stats2) <- names(full_stats)
+        full_stats <- unlist(full_stats[setdiff(names(full_stats), c("sens", "spec"))])
+        full_stats2 <- unlist(full_stats2[setdiff(names(full_stats2), c("sens", "spec"))])
+        if (!all.equal(full_stats, full_stats2)){
+          stop(paste0(i, " not equal"))
+        }
+      }
+
     }
 
+    stats_list <- lapply(graphstats_list[[p]], `[[`, stats_name)
+
+    # process sensitivity results
+    sens <- sapply(stats_list, sapply, `[[`, "sens")
+    sens_mean <- rowMeans(sens) * 100
+    sens_sd  <- apply(sens * 100, 1, sd)
+    graphstats_list[[p]]$sens <- list(data=sens, mean=sens_mean, sd=sens_sd)
+
+    # process specificity results
+    spec <- sapply(stats_list, sapply, `[[`, "spec")
+    spec_mean <- rowMeans(spec) * 100
+    spec_sd  <- apply(spec * 100, 1, sd)
+    graphstats_list[[p]]$spec <- list(data=spec, mean=spec_mean, sd=spec_sd)
 
   }
 
@@ -224,6 +252,9 @@ for (p in as.character(dims)){
 
   rm("results")
 }
+
+sapply(lapply(graphstats_list, `[[`, "sens"), `[[`, "mean")
+sapply(lapply(graphstats_list, `[[`, "sens"), `[[`, "sd")
 
 if (seq){
   df <- Reduce(rbind, df)
