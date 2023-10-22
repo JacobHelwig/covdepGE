@@ -11,10 +11,9 @@ library(extrafont)
 library(latex2exp)
 
 # init list for recording statistics for each graph; only for q=1
-int_res <- list(CDS1=NA, CDS2=NA, CDS3=NA)
-graphstats_list <- replicate(50, list(pwl=int_res, nl=int_res), F)
-graphstats_list <- list("10"=graphstats_list, "25"=graphstats_list,
-                        "50"=graphstats_list, "100"=graphstats_list)
+graphstats_list <- vector("list", 4)
+names(graphstats_list) <- c("10", "25", "50", "100")
+graphstats_list <- list(nl=graphstats_list, pwl=graphstats_list)
 
 # init list for recording number of clusters estimated by mclust
 subgroups_list <- list()
@@ -24,12 +23,12 @@ subgroups_list <- list()
 
 # results config; med outputs median in place of mean and univariate is for
 # switching setting from q=1->q=2
-med <- F
-univariate <- T
-sine <- F
-four <- T
-seq <- F
-subgr <- T
+med <- F # median aggregate results
+univariate <- T # T for q=1, F for q=2,4
+sine <- F # q=1 w non-linear covariate
+four <- T # q=4
+seq <- F # aggregate times for sequentials
+subgr <- T # analyze performance for each graph
 if (univariate){
 
   # univariate extraneous covariate
@@ -118,7 +117,10 @@ for (p in as.character(dims)){
     masks <- lapply(ints, `==`, labels)
     names(masks) <- ints
 
-    # reconstruct graphs
+    # reconstruct graphs and get stats
+    int_res <- vector("list", 3)
+    names(int_res) <- sapply(1:3, function(i) paste0("CDS", i))
+    stats_list <- replicate(50, int_res, F)
     for (i in 1:length(results)){
       graphs[[i]] <- vector("list", 225)
       preds <- results[[i]]$covdepGE$graphs$unique_graphs
@@ -137,12 +139,12 @@ for (p in as.character(dims)){
       # get stats in each interval
       for (int in ints){
         mask <- masks[[int]]
-        graphstats_list[[p]][[i]][[stats_name]][[int]] <- eval_est(graphs[[i]][,,mask], true_graphs[mask])
+        stats_list[[i]][[int]] <- eval_est(graphs[[i]][,,mask], true_graphs[mask])
       }
 
       # check for construct calculation
       if (stats_name == "pwl"){
-        full_stats2 <- as.list(rowMeans(matrix(unlist(graphstats_list[[p]][[i]][[stats_name]]), ncol=3)))
+        full_stats2 <- as.list(rowMeans(matrix(unlist(stats_list[[i]]), ncol=3)))
         names(full_stats2) <- names(full_stats)
         full_stats <- unlist(full_stats[setdiff(names(full_stats), c("sens", "spec"))])
         full_stats2 <- unlist(full_stats2[setdiff(names(full_stats2), c("sens", "spec"))])
@@ -153,19 +155,17 @@ for (p in as.character(dims)){
 
     }
 
-    stats_list <- lapply(graphstats_list[[p]], `[[`, stats_name)
-
     # process sensitivity results
     sens <- sapply(stats_list, sapply, `[[`, "sens")
     sens_mean <- rowMeans(sens) * 100
     sens_sd  <- apply(sens * 100, 1, sd)
-    graphstats_list[[p]]$sens <- list(data=sens, mean=sens_mean, sd=sens_sd)
+    graphstats_list[[stats_name]][[p]]$sens <- list(data=sens, mean=sens_mean, sd=sens_sd)
 
     # process specificity results
     spec <- sapply(stats_list, sapply, `[[`, "spec")
     spec_mean <- rowMeans(spec) * 100
     spec_sd  <- apply(spec * 100, 1, sd)
-    graphstats_list[[p]]$spec <- list(data=spec, mean=spec_mean, sd=spec_sd)
+    graphstats_list[[stats_name]][[p]]$spec <- list(data=spec, mean=spec_mean, sd=spec_sd)
 
   }
 
@@ -253,8 +253,20 @@ for (p in as.character(dims)){
   rm("results")
 }
 
-sapply(lapply(graphstats_list, `[[`, "sens"), `[[`, "mean")
-sapply(lapply(graphstats_list, `[[`, "sens"), `[[`, "sd")
+if (subgr){
+
+  # gather data for each graph into a dataframe where the columns are the
+  # covariate type, p, CDS index, and the data for that choice
+  stats <- lapply(graphstats_list, lapply, lapply, `[[`, "data")
+  sens <- lapply(stats, lapply, `[[`, "sens")
+  sens <- Reduce(rbind, lapply(c("nl", "pwl") , function(cov_type) Reduce(rbind, lapply(names(sens[[cov_type]]), function(p) data.frame(cov_type, p,t(sens[[cov_type]][[p]]))))))
+  sens <- reshape(sens, direction="long", varying=3:5, v.names="CDS")
+  names(sens) <-c("cov_type", "p", "CDS", "sens", "id")
+  sens <- sens[, setdiff(names(sens), "id")]
+  sens_pwl <- sens[sens$cov_type == "pwl",]
+  sens_nl <- sens[sens$cov_type == "nl",]
+
+}
 
 if (seq){
   df <- Reduce(rbind, df)
