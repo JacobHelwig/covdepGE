@@ -254,6 +254,9 @@ for (p in as.character(dims)){
 }
 
 if (subgr){
+  graphstats_list_backup <- graphstats_list
+
+  # https://stackoverflow.com/questions/18165863/multirow-axis-labels-with-nested-grouping-variables
 
   # gather data for each graph into a dataframe where the columns are the
   # covariate type, p, CDS index, and the data for that choice
@@ -265,6 +268,69 @@ if (subgr){
   sens <- sens[, setdiff(names(sens), "id")]
   sens_pwl <- sens[sens$cov_type == "pwl",]
   sens_nl <- sens[sens$cov_type == "nl",]
+  ggplot(data = sens, aes(x = p, y = sens, fill = cov_type)) +
+    geom_boxplot() +
+    facet_wrap(~CDS, strip.position = "bottom", scales = "free_x") +
+    theme(panel.spacing = unit(0, "lines"),
+          strip.background = element_blank(),
+          strip.placement = "outside")
+
+
+  # gather data for each graph into a dataframe where the columns are the
+  # covariate type, p, CDS index, and the data for that choice
+  stats <- lapply(c("mean", "sd"), function(stat) lapply(graphstats_list, lapply, lapply, `[[`, stat))
+  names(stats) <- c("mean", "sd")
+  sens <- lapply(stats, lapply, lapply, `[[`, "sens")
+  sens <- lapply(sens, function(stat_list) Reduce(rbind, lapply(c("nl", "pwl") , function(cov_type) Reduce(rbind, lapply(names(stat_list[[cov_type]]), function(p) data.frame(cov_type, p,t(stat_list[[cov_type]][[p]])))))))
+  sens <- lapply(sens, function(stat_list) reshape(stat_list, direction="long", varying=3:5, v.names="CDS"))
+  names(sens$mean) <- names(sens$sd) <- c("cov_type", "p", "CDS", "sens", "id")
+  sens$mean <- sens$mean[, setdiff(names(sens$mean), "id")]
+  sens$sd <- sens$sd[, setdiff(names(sens$sd), "id")]
+  sens$mean$p <- as.numeric(sens$mean$p)
+
+  ggplot(data = sens$mean, aes(x = CDS, y = sens, fill = cov_type)) +
+    geom_bar(stat = "identity", width = 1, position = 'dodge') +
+    facet_wrap(~p, strip.position = "bottom", scales = "free_x") +
+    theme(panel.spacing = unit(0, "lines"),
+          strip.background = element_blank(),
+          strip.placement = "outside")
+
+  # gather data for each graph into a dataframe where the columns are the
+  # covariate type, p, CDS index, and the data for that choice
+  stats <- lapply(c("mean", "sd"), function(stat) lapply(graphstats_list, lapply, lapply, `[[`, stat))
+  names(stats) <- c("mean", "sd")
+  sens <- lapply(stats, lapply, lapply, `[[`, "sens")
+  sens <- lapply(sens, function(stat_list) Reduce(rbind, lapply(c("nl", "pwl") , function(cov_type) Reduce(rbind, lapply(names(stat_list[[cov_type]]), function(p) data.frame(cov_type, p,t(stat_list[[cov_type]][[p]])))))))
+  sens <- lapply(sens, function(stat_list) reshape(stat_list, direction="long", varying=3:5, v.names="CDS"))
+  names(sens$mean) <- c("cov_type", "p", "CDS", "mean", "id")
+  names(sens$sd) <- c("cov_type", "p", "CDS", "sd", "id")
+  sens$mean <- sens$mean[, setdiff(names(sens$mean), "id")]
+  sens$sd <- sens$sd[, setdiff(names(sens$sd), "id")]
+  n <- ncol(graphstats_list$nl$`10`$sens$data)
+  sens <- merge(sens$mean, sens$sd)
+  sens$se <- sens$sd / sqrt(n)
+  sens$p <- as.numeric(sens$p)
+  sens$CDS <- paste("CDS", sens$CDS)
+
+  windowsFonts("Times" = windowsFont("Times"))
+  library(ggsci)
+  ggplot(data = sens, aes(x = CDS, y = mean, fill = cov_type)) +
+    geom_bar(stat = "identity", width = 1, position = 'dodge') +
+    geom_errorbar(aes(ymin=mean-2 * se, ymax=mean+2 * se),
+                  size=.3,    # Thinner lines
+                  width=.2,
+                  position=position_dodge(1)) +
+    facet_wrap(~p, strip.position = "bottom", scales = "free_x") +
+    theme_pubclean() +
+    theme(text = element_text(family = "Times", size = 18),
+          plot.title = element_text(hjust = 0.5), panel.spacing = unit(0, "lines"),
+          strip.background = element_blank(),
+          strip.placement = "outside") +
+    ggtitle(TeX(paste0("Sensitivity for PWL and NL Covariate"))) +
+    scale_y_continuous(breaks = seq(0, 180, 30), limits = c(0, 180)) +
+    labs(x=NULL, y="Sensitivity (%)") + ggsci::scale_fill_nejm()
+
+
 
 }
 
@@ -294,7 +360,7 @@ kbl(df, format = "latex", booktabs = T, escape = FALSE) %>%
 subgroups_list[[exper]] <- factor(Reduce(c, subgroups), levels = 2:7)
 
 windowsFonts("Times" = windowsFont("Times"))
-colors <- c("#BC3C29FF", "#0072B5FF", "#E18727FF", "#20854EFF")
+colors <- c("#BC3C29FF", "#0072B5FF", "#E18727FF", "#20854EFF") # https://nanx.me/ggsci/reference/pal_nejm.html
 # plots[[exper]] <- list(x = factor(subgroups, levels = 2:6), plot = NULL)
 plots <- list(ggplot() +
                 geom_bar(aes(x = subgroups_list[["cont_cov_dep_"]]),
