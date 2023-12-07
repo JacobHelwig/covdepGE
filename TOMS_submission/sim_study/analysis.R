@@ -15,6 +15,30 @@ graphstats_list <- vector("list", 4)
 names(graphstats_list) <- c("10", "25", "50", "100")
 graphstats_list <- list(nl=graphstats_list, pwl=graphstats_list)
 
+# init list for counting number of graphs estimated in each experiment
+graph_cts <- list(
+  cont_cov_dep_=list(`10`=rep(3,50), `25`=rep(3,50), `50`=rep(3,50), `100`=rep(3,50)),
+  cont_cov_dep_sine_=list(`10`=rep(3,50), `25`=rep(3,50), `50`=rep(3,50), `100`=rep(3,50)),
+  cont_multi_cov_dep_=list(`10`=rep(4,50), `25`=rep(4,50), `50`=rep(4,50), `100`=rep(4,50)),
+  cont_4_cov_dep_=list(`10`=c(16, 15, 14, 16, 16, 16, 16, 15, 15, 15, 14, 14, 16, 16, 16,
+                              15, 16, 15, 16, 16, 16, 15, 15, 16, 14, 16, 15, 16, 16, 16, 15,
+                              16, 15, 15, 16, 16, 16, 13, 16, 16, 14, 16, 16, 16, 14, 16, 15,
+                              14, 15, 15),
+                       `25`=c(16, 15, 16, 15, 15, 16, 16, 16, 16, 16, 16, 15, 16, 16, 15,
+                              16, 16, 15, 15, 16, 16, 16, 16, 16, 16, 15, 16, 15, 15, 15, 15,
+                              16, 14, 16, 16, 16, 16, 16, 15, 16, 16, 16, 16, 16, 16, 16, 16,
+                              16, 16, 16),
+                       `50`=c(16, 16, 16, 16, 16, 16, 15, 15, 16, 16, 16, 15, 16, 16, 15,
+                              16, 14, 15, 14, 16, 15, 16, 16, 16, 16, 14, 16, 16, 16, 14, 16,
+                              14, 16, 15, 16, 16, 15, 16, 15, 16, 15, 14, 15, 14, 16, 16, 15,
+                              15, 14, 16),
+                       `100`=c(16, 16, 15, 16, 16, 15, 15, 16, 16, 16, 16, 15, 15, 15, 16,
+                               16, 16, 15, 16, 16, 14, 16, 15, 15, 16, 16, 16, 16, 16, 16, 15,
+                               16, 15, 16, 15, 16, 15, 15, 16, 16, 16, 16, 16, 16, 15, 15, 16,
+                               16, 16, 16))
+)
+ngraphs <- lapply(graph_cts, lapply, function(x) NULL)
+
 # init list for recording number of clusters estimated by mclust
 subgroups_list <- list()
 
@@ -24,11 +48,11 @@ subgroups_list <- list()
 # results config; med outputs median in place of mean and univariate is for
 # switching setting from q=1->q=2
 med <- F # median aggregate results
-univariate <- T # T for q=1, F for q=2,4
+univariate <- F # T for q=1, F for q=2,4
 sine <- T # q=1 w non-linear covariate
-four <- T # q=4
+four <- F # q=4
 seq <- F # aggregate times for sequentials
-subgr <- T # analyze performance for each graph
+subgr <- F # analyze performance for each graph
 if (univariate){
 
   # univariate extraneous covariate
@@ -59,8 +83,9 @@ ntrials <- 50
 trial_str <- paste0("ntrials", ntrials, "_")
 files <- list.files(path)
 prec <- 2
-df <- subgroups <- htest <- ngraphs <- vector("list", length(dims))
-names(df) <- names(subgroups) <- names(htest) <- names(ngraphs) <- dims
+df <- subgroups <- htest <- vector("list", length(dims))
+names(df) <- names(subgroups) <- names(htest) <- dims
+
 
 if (subgr){
   stats_name <- ifelse(sine, "nl", "pwl")
@@ -170,7 +195,9 @@ for (p in as.character(dims)){
   }
 
   # extract number of graphs
-  ngraphs[[p]] <- sapply(results, function(trial)length(trial$covdepGE$graphs$unique_graphs))
+  ngraphs[[exper]][[p]] <- list(pred=sapply(results, function(trial)length(trial$covdepGE$graphs$unique_graphs)),
+                                true=graph_cts[[exper]][[p]])
+  ngraphs[[exper]][[p]]$perc <- ngraphs[[exper]][[p]]$pred / ngraphs[[exper]][[p]]$true
 
   # out <- results$trial2$covdepGE
   # for (j in 1:length(out$graphs$unique_graphs)){
@@ -252,6 +279,25 @@ for (p in as.character(dims)){
 
   rm("results")
 }
+library(scales)
+colors <- c("#BC3C29FF", "#0072B5FF", "#E18727FF", "#20854EFF") # https://nanx.me/ggsci/reference/pal_nejm.html
+exp_map <- list("$\\textit{q}=1$, PWL", "$\\textit{q}=1$, NL", "$\\textit{q}=2$", "$\\textit{q}=4$")
+names(exp_map) <- names(ngraphs)
+plots <- lapply(1:length(ngraphs), function(exp_ind) lapply(1:4, function(p_ind) ggplot() +
+    geom_histogram(aes(x = ngraphs[[exp_ind]][[p_ind]]$pred),
+                   color = "black", fill = colors[exp_ind], binwidth = ifelse(max(ngraphs[[exp_ind]][[p_ind]]$pred) < 10, 1, ifelse(max(ngraphs[[exp_ind]][[p_ind]]$pred) < 40, 2, 4))) +
+    theme_pubclean() +
+    theme(text = element_text(family = "Times", size = 14),
+          plot.title = element_text(hjust = 0.5)) +
+    ggtitle(TeX(paste0("$\\textit{p}=", names(ngraphs[[exp_ind]])[p_ind], "$, ", exp_map[[exp_ind]]))) +
+    labs(x = TeX("Number of Unique Graphs")) + scale_y_continuous(breaks = scales::pretty_breaks()) + scale_x_continuous(breaks = scales::pretty_breaks())
+))
+all_plots <- lapply(unlist(plots, recursive = F), function(g) g + rremove("ylab") + rremove("xlab"))
+# all_plots <- unlist(plots, recursive = F)
+arplots <- ggarrange(plotlist=all_plots, nrow=4, ncol=4)
+annotate_figure(arplots, left=text_grob("Number of Trials",  size = 18, family="Times", rot = 90),
+                bottom=text_grob("Number of Unique Graphs",  size = 18, family="Times"))
+ggsave("plots/unique_graphs.pdf", height = 10, width = 10)
 
 if (subgr){
   graphstats_list_backup <- graphstats_list
