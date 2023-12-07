@@ -25,7 +25,7 @@ subgroups_list <- list()
 # switching setting from q=1->q=2
 med <- F # median aggregate results
 univariate <- T # T for q=1, F for q=2,4
-sine <- F # q=1 w non-linear covariate
+sine <- T # q=1 w non-linear covariate
 four <- T # q=4
 seq <- F # aggregate times for sequentials
 subgr <- T # analyze performance for each graph
@@ -258,42 +258,42 @@ if (subgr){
 
   # https://stackoverflow.com/questions/18165863/multirow-axis-labels-with-nested-grouping-variables
 
-  # gather data for each graph into a dataframe where the columns are the
-  # covariate type, p, CDS index, and the data for that choice
-  stats <- lapply(graphstats_list, lapply, lapply, `[[`, "data")
-  sens <- lapply(stats, lapply, `[[`, "sens")
-  sens <- Reduce(rbind, lapply(c("nl", "pwl") , function(cov_type) Reduce(rbind, lapply(names(sens[[cov_type]]), function(p) data.frame(cov_type, p,t(sens[[cov_type]][[p]]))))))
-  sens <- reshape(sens, direction="long", varying=3:5, v.names="CDS")
-  names(sens) <-c("cov_type", "p", "CDS", "sens", "id")
-  sens <- sens[, setdiff(names(sens), "id")]
-  sens_pwl <- sens[sens$cov_type == "pwl",]
-  sens_nl <- sens[sens$cov_type == "nl",]
-  ggplot(data = sens, aes(x = p, y = sens, fill = cov_type)) +
-    geom_boxplot() +
-    facet_wrap(~CDS, strip.position = "bottom", scales = "free_x") +
-    theme(panel.spacing = unit(0, "lines"),
-          strip.background = element_blank(),
-          strip.placement = "outside")
-
-
-  # gather data for each graph into a dataframe where the columns are the
-  # covariate type, p, CDS index, and the data for that choice
-  stats <- lapply(c("mean", "sd"), function(stat) lapply(graphstats_list, lapply, lapply, `[[`, stat))
-  names(stats) <- c("mean", "sd")
-  sens <- lapply(stats, lapply, lapply, `[[`, "sens")
-  sens <- lapply(sens, function(stat_list) Reduce(rbind, lapply(c("nl", "pwl") , function(cov_type) Reduce(rbind, lapply(names(stat_list[[cov_type]]), function(p) data.frame(cov_type, p,t(stat_list[[cov_type]][[p]])))))))
-  sens <- lapply(sens, function(stat_list) reshape(stat_list, direction="long", varying=3:5, v.names="CDS"))
-  names(sens$mean) <- names(sens$sd) <- c("cov_type", "p", "CDS", "sens", "id")
-  sens$mean <- sens$mean[, setdiff(names(sens$mean), "id")]
-  sens$sd <- sens$sd[, setdiff(names(sens$sd), "id")]
-  sens$mean$p <- as.numeric(sens$mean$p)
-
-  ggplot(data = sens$mean, aes(x = CDS, y = sens, fill = cov_type)) +
-    geom_bar(stat = "identity", width = 1, position = 'dodge') +
-    facet_wrap(~p, strip.position = "bottom", scales = "free_x") +
-    theme(panel.spacing = unit(0, "lines"),
-          strip.background = element_blank(),
-          strip.placement = "outside")
+  # # gather data for each graph into a dataframe where the columns are the
+  # # covariate type, p, CDS index, and the data for that choice
+  # stats <- lapply(graphstats_list, lapply, lapply, `[[`, "data")
+  # sens <- lapply(stats, lapply, `[[`, "sens")
+  # sens <- Reduce(rbind, lapply(c("nl", "pwl") , function(cov_type) Reduce(rbind, lapply(names(sens[[cov_type]]), function(p) data.frame(cov_type, p,t(sens[[cov_type]][[p]]))))))
+  # sens <- reshape(sens, direction="long", varying=3:5, v.names="CDS")
+  # names(sens) <-c("cov_type", "p", "CDS", "sens", "id")
+  # sens <- sens[, setdiff(names(sens), "id")]
+  # sens_pwl <- sens[sens$cov_type == "pwl",]
+  # sens_nl <- sens[sens$cov_type == "nl",]
+  # ggplot(data = sens, aes(x = p, y = sens, fill = cov_type)) +
+  #   geom_boxplot() +
+  #   facet_wrap(~CDS, strip.position = "bottom", scales = "free_x") +
+  #   theme(panel.spacing = unit(0, "lines"),
+  #         strip.background = element_blank(),
+  #         strip.placement = "outside")
+  #
+  #
+  # # gather data for each graph into a dataframe where the columns are the
+  # # covariate type, p, CDS index, and the data for that choice
+  # stats <- lapply(c("mean", "sd"), function(stat) lapply(graphstats_list, lapply, lapply, `[[`, stat))
+  # names(stats) <- c("mean", "sd")
+  # sens <- lapply(stats, lapply, lapply, `[[`, "sens")
+  # sens <- lapply(sens, function(stat_list) Reduce(rbind, lapply(c("nl", "pwl") , function(cov_type) Reduce(rbind, lapply(names(stat_list[[cov_type]]), function(p) data.frame(cov_type, p,t(stat_list[[cov_type]][[p]])))))))
+  # sens <- lapply(sens, function(stat_list) reshape(stat_list, direction="long", varying=3:5, v.names="CDS"))
+  # names(sens$mean) <- names(sens$sd) <- c("cov_type", "p", "CDS", "sens", "id")
+  # sens$mean <- sens$mean[, setdiff(names(sens$mean), "id")]
+  # sens$sd <- sens$sd[, setdiff(names(sens$sd), "id")]
+  # sens$mean$p <- as.numeric(sens$mean$p)
+  #
+  # ggplot(data = sens$mean, aes(x = CDS, y = sens, fill = cov_type)) +
+  #   geom_bar(stat = "identity", width = 1, position = 'dodge') +
+  #   facet_wrap(~p, strip.position = "bottom", scales = "free_x") +
+  #   theme(panel.spacing = unit(0, "lines"),
+  #         strip.background = element_blank(),
+  #         strip.placement = "outside")
 
   # gather data for each graph into a dataframe where the columns are the
   # covariate type, p, CDS index, and the data for that choice
@@ -309,28 +309,32 @@ if (subgr){
   n <- ncol(graphstats_list$nl$`10`$sens$data)
   sens <- merge(sens$mean, sens$sd)
   sens$se <- sens$sd / sqrt(n)
-  sens$p <- as.numeric(sens$p)
+  sens$p <- factor(sens$p, levels = c(10, 25, 50, 100), labels=c("10"=parse(text=TeX("$\\textit{p}=10$")),
+                                    "25"=parse(text=TeX("$\\textit{p}=25$")),
+                                    "50"=parse(text=TeX("$\\textit{p}=50$")),
+                                    "100"=parse(text=TeX("$\\textit{p}=100$"))))
   sens$CDS <- paste("CDS", sens$CDS)
+  sens$cov_type <- factor(toupper(sens$cov_type), levels = c("PWL", "NL"))
 
   windowsFonts("Times" = windowsFont("Times"))
   library(ggsci)
+  library(scales)
   ggplot(data = sens, aes(x = CDS, y = mean, fill = cov_type)) +
     geom_bar(stat = "identity", width = 1, position = 'dodge') +
     geom_errorbar(aes(ymin=mean-2 * se, ymax=mean+2 * se),
-                  size=.3,    # Thinner lines
+                  # size=.3,    # Thinner lines
                   width=.2,
                   position=position_dodge(1)) +
-    facet_wrap(~p, strip.position = "bottom", scales = "free_x") +
+    facet_wrap(~p, strip.position = "bottom", scales = "free_x", labeller=label_parsed) +
     theme_pubclean() +
     theme(text = element_text(family = "Times", size = 18),
           plot.title = element_text(hjust = 0.5), panel.spacing = unit(0, "lines"),
           strip.background = element_blank(),
-          strip.placement = "outside") +
-    ggtitle(TeX(paste0("Sensitivity for PWL and NL Covariate"))) +
-    scale_y_continuous(breaks = seq(0, 180, 30), limits = c(0, 180)) +
-    labs(x=NULL, y="Sensitivity (%)") + ggsci::scale_fill_nejm()
-
-
+          strip.placement = "outside", legend.title=element_blank()) +
+    ggtitle(TeX(paste0("Sensitivity by CDS"))) +
+    scale_y_continuous(limits = c(40, 100), oob=rescale_none) +
+    labs(x=NULL, y="Sensitivity (%)", legend=NULL) + ggsci::scale_fill_nejm()
+  ggsave("plots/q1_sens.pdf", height = 8, width = 12)
 
 }
 
