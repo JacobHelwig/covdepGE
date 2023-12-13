@@ -1,4 +1,5 @@
 library(covdepGE)
+library(loggle)
 library(JGL)
 library(mclust)
 library(mgm)
@@ -207,5 +208,75 @@ tvmgm.eval <- function(X, Z, true){
   perf <- eval_est(out$str, true)
   out[names(perf)] <- perf
   out$str <- sp.array(out$str, n)
+  out
+}
+
+# function to fit and evaluate results for loggle
+loggle.eval <- function(X, Z, true, n_workers){
+
+  start <- Sys.time()
+
+  # if the covariate is multidimensional, sort observations in X and ground truth
+  if (ncol(Z) > 1){
+    sort_inds <- sort_Z(Z)
+    X <- X[sort_inds, ]
+    true <- true[sort_inds]
+  }
+
+  # get dimensions of the data
+  n <- nrow(X)
+  p <- ncol(X)
+
+  # determine if the covariate is discrete
+  Z_star <- unique(Z)
+  discrete <- length(Z_star) <= 2
+
+  # there are issues with estimating graphs at the end points of the time
+  # interval; don't estimate these
+  cutoff <- 20
+  pos <- cutoff:(n - cutoff)
+
+  # fit loggle
+  # out <- R.utils::withTimeout(
+  #   quiet(loggle.cv(t(X),
+  #                   pos = pos,
+  #                   d.list = c(0, 0.001, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2),
+  #                   num.thread = n_workers)),
+  #   timeout = 2 * 60 * 60 * n_workers)
+  out <- R.utils::withTimeout(
+    quiet(loggle.cv(t(X),
+                    pos = pos,
+                    d.list = c(0, 0.001, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2),
+                    num.thread = n_workers)),
+    timeout = 24 * 60 * 60)
+  closeAllConnections()
+
+  # record time and get the array of graphs
+  out$time <- as.numeric(Sys.time() - start, units = "secs")
+  out$str <- array(NA, dim = c(p, p, n))
+
+
+  for (j in 1:n){
+
+    # if the observation is in the cutoff region, assign the graph for the last
+    # observation outside of the cutoff region
+    if (j < cutoff){
+      graph_j <- out$cv.select.result$adj.mat.opt[[1]]
+    }else if (j > n - cutoff){
+      graph_j <- out$cv.select.result$adj.mat.opt[[n - 2 * cutoff + 1]]
+    }else{
+      graph_j <- out$cv.select.result$adj.mat.opt[[j - cutoff + 1]]
+    }
+    out$str[,, j] <- as.matrix(graph_j - diag(p))
+  }
+
+  # remove large objects
+  out$cv.result.h <- NULL
+
+  # get performance, convert graphs to a sparse array, and return
+  perf <- eval_est(out$str, true)
+  out[names(perf)] <- perf
+  out$str <- sp.array(out$str, n)
+  message("\nloggle complete ", Sys.time(), "\n")
   out
 }

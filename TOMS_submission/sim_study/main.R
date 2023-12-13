@@ -13,8 +13,8 @@ if (interactive()){
   # args <- c("save_dir='./experiments/z2'", "experiment='cont_multi_cov_dep'", "p=10", "n=10", "n_trials=10")
   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=3", "n1=5", "n2=5", "n3=5", "n_trials=1")
   # args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=3", "n=2", "n_trials=1")
-  # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep_sine'", "p=6", "n1=75", "n2=75", "n3=75", "n_trials=1")
-  args <- c("save_dir='./experiments'", "experiment='cont_4_cov_dep'", "p=10", "n=225", "n_trials=1")
+  args <- c("save_dir='./experiments'", "experiment='cont_cov_dep_sine'", "p=10", "n1=75", "n2=75", "n3=75", "n_trials=1")
+  # args <- c("save_dir='./experiments'", "experiment='cont_4_cov_dep'", "p=10", "n=225", "n_trials=1")
   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=5", "n1=50", "n2=50", "n3=50", "n_trials=1")
   # args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=11", "n=25", "n_trials=1")
   # args <- c("save_dir='./experiments'", "experiment='disc_cov_dep'", "p=11", "n1=80", "n2=20", "lambda=3", "n_trials=3")
@@ -80,7 +80,7 @@ if ("filename" %in% ls()){
   # a filename has not been specified
 
   # create list for storing results
-  trial_list <- list(covdepGE = NA, JGL = NA, mgm = NA)
+  trial_list <- list(covdepGE = NA, JGL = NA, mgm = NA, loggle = NA)
   if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep")){
     trial_list$covdepGE_sortZ <- NA
   }else if ("seq" %in% ls()){

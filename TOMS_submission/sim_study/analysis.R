@@ -49,7 +49,7 @@ subgroups_list <- list()
 # switching setting from q=1->q=2
 med <- F # median aggregate results
 univariate <- F # T for q=1, F for q=2,4
-sine <- T # q=1 w non-linear covariate
+sine <- F # q=1 w non-linear covariate
 four <- F # q=4
 seq <- F # aggregate times for sequentials
 subgr <- F # analyze performance for each graph
@@ -82,6 +82,8 @@ dims <- c(10, 25, 50, 100)
 ntrials <- 50
 trial_str <- paste0("ntrials", ntrials, "_")
 files <- list.files(path)
+loggle_path <- paste0(path, '/loggle')
+loggle_files <- list.files(loggle_path)
 prec <- 2
 df <- subgroups <- htest <- vector("list", length(dims))
 names(df) <- names(subgroups) <- names(htest) <- dims
@@ -121,6 +123,13 @@ for (p in as.character(dims)){
   # format file name
   exp_name <- paste0(exper, trial_str, "p", p, samp_str)
 
+  # load loggle results
+  file_name <- loggle_files[grepl(exp_name, loggle_files) & endsWith(loggle_files, ".Rda")]
+  if (length(file_name) != 1) stop(paste(length(file_name), "files found for", exp_name))
+  file_path <- file.path(loggle_path, file_name)
+  load(file_path)
+  loggle_results <- results
+
   # load results
   # mean(sapply(results, function(trial)length(trial$covdepGE$graphs$unique_graphs)))
   file_name <- files[grepl(exp_name, files) & endsWith(files, ".Rda")]
@@ -129,6 +138,11 @@ for (p in as.character(dims)){
   load(file_path)
   print(paste0("n: ", results$sample_data[1], ", p: ", results$sample_data[2]))
   results <- results[setdiff(names(results), "sample_data")]
+
+  # add loggle results
+  for (i in 1:length(results)){
+    results[[i]]$loggle <- loggle_results[[i]]$loggle
+  }
 
   # get graph stats
   if (subgr){
@@ -279,26 +293,27 @@ for (p in as.character(dims)){
 
   rm("results")
 }
-library(scales)
-colors <- c("#BC3C29FF", "#0072B5FF", "#E18727FF", "#20854EFF") # https://nanx.me/ggsci/reference/pal_nejm.html
-exp_map <- list("$\\textit{q}=1$, PWL", "$\\textit{q}=1$, NL", "$\\textit{q}=2$", "$\\textit{q}=4$")
-names(exp_map) <- names(ngraphs)
-plots <- lapply(1:length(ngraphs), function(exp_ind) lapply(1:4, function(p_ind) ggplot() +
-    geom_histogram(aes(x = ngraphs[[exp_ind]][[p_ind]]$pred),
-                   color = "black", fill = colors[exp_ind], binwidth = ifelse(max(ngraphs[[exp_ind]][[p_ind]]$pred) < 10, 1, ifelse(max(ngraphs[[exp_ind]][[p_ind]]$pred) < 40, 2, 4))) +
-    theme_pubclean() +
-    theme(text = element_text(family = "Times", size = 14),
-          plot.title = element_text(hjust = 0.5)) +
-    ggtitle(TeX(paste0("$\\textit{p}=", names(ngraphs[[exp_ind]])[p_ind], "$, ", exp_map[[exp_ind]]))) +
-    labs(x = TeX("Number of Unique Graphs")) + scale_y_continuous(breaks = scales::pretty_breaks()) + scale_x_continuous(breaks = scales::pretty_breaks())
-))
-all_plots <- lapply(unlist(plots, recursive = F), function(g) g + rremove("ylab") + rremove("xlab"))
-# all_plots <- unlist(plots, recursive = F)
-arplots <- ggarrange(plotlist=all_plots, nrow=4, ncol=4)
-annotate_figure(arplots, left=text_grob("Number of Trials",  size = 18, family="Times", rot = 90),
-                bottom=text_grob("Number of Unique Graphs",  size = 18, family="Times"))
-ggsave("plots/unique_graphs.pdf", height = 10, width = 10)
-
+if (F){
+  library(scales)
+  colors <- c("#BC3C29FF", "#0072B5FF", "#E18727FF", "#20854EFF") # https://nanx.me/ggsci/reference/pal_nejm.html
+  exp_map <- list("$\\textit{q}=1$, PWL", "$\\textit{q}=1$, NL", "$\\textit{q}=2$", "$\\textit{q}=4$")
+  names(exp_map) <- names(ngraphs)
+  plots <- lapply(1:length(ngraphs), function(exp_ind) lapply(1:4, function(p_ind) ggplot() +
+      geom_histogram(aes(x = ngraphs[[exp_ind]][[p_ind]]$pred),
+                     color = "black", fill = colors[exp_ind], binwidth = ifelse(max(ngraphs[[exp_ind]][[p_ind]]$pred) < 10, 1, ifelse(max(ngraphs[[exp_ind]][[p_ind]]$pred) < 40, 2, 4))) +
+      theme_pubclean() +
+      theme(text = element_text(family = "Times", size = 14),
+            plot.title = element_text(hjust = 0.5)) +
+      ggtitle(TeX(paste0("$\\textit{p}=", names(ngraphs[[exp_ind]])[p_ind], "$, ", exp_map[[exp_ind]]))) +
+      labs(x = TeX("Number of Unique Graphs")) + scale_y_continuous(breaks = scales::pretty_breaks()) + scale_x_continuous(breaks = scales::pretty_breaks())
+  ))
+  all_plots <- lapply(unlist(plots, recursive = F), function(g) g + rremove("ylab") + rremove("xlab"))
+  # all_plots <- unlist(plots, recursive = F)
+  arplots <- ggarrange(plotlist=all_plots, nrow=4, ncol=4)
+  annotate_figure(arplots, left=text_grob("Number of Trials",  size = 18, family="Times", rot = 90),
+                  bottom=text_grob("Number of Unique Graphs",  size = 18, family="Times"))
+  ggsave("plots/unique_graphs.pdf", height = 10, width = 10)
+}
 if (subgr){
   graphstats_list_backup <- graphstats_list
 
@@ -396,8 +411,8 @@ if (seq){
     collapse_rows(columns = c(1, 2, 3, 4), latex_hline = "major", valign = "middle")
 }
 
-htest_df <- Reduce(rbind, htest)
-colnames(htest_df) <- c("\\texttt{covdepGE}", "\\texttt{JGL}", "Standard Error", "T-statistic", "DF", "p-value")
+htest_df <- cbind(p=names(htest), Reduce(rbind, htest))
+colnames(htest_df) <- c("$p$", "\\texttt{covdepGE}", "\\texttt{JGL}", "Standard Error", "T-statistic", "DF", "p-value")
 kbl(htest_df, format = "latex", booktabs = T, escape = FALSE)
 
 df <- Reduce(rbind, df)
