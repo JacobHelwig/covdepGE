@@ -287,6 +287,7 @@ if (F){
   library(latex2exp)
   windowsFonts(Times=windowsFont("TT Times New Roman"))
   colors <- c("#BC3C29FF", "#0072B5FF", "#E18727FF", "#20854EFF")
+  legend <- unname(TeX(c("$($ $\\textit{j,k)}=(1,2),(2,1)$", "$($ $\\textit{j,k)}=(1,3),(3,1)$", "$($ $\\textit{j,k)}=(4,5),(5,4)$", "$($ $\\textit{j,k)}=(4,6),(6,4)$")))
   plots <- list(
   ggplot() + xlim(-3, 3) + ylim(0,1) +
     geom_function(fun=function(x)pmax(0, pmin(1, -0.5 * (x - 1))), n=1e4, aes(col="1"), size=1) +
@@ -296,19 +297,19 @@ if (F){
     theme_pubclean() +
     theme(text = element_text(family = "Times", size = 18),
           plot.title = element_text(hjust = 0.5)) +
-    scale_color_manual(values=colors, labels = unname(TeX(c("$\\textit{l}=1$", "$\\textit{l}=2$", "$\\textit{l}=3$", "$\\textit{l}=4$"))), name = "") +
+    scale_color_manual(values=colors, labels = legend, name = "") +
     labs(x = " ", y = TeX("$\\Omega(z_l)$")) + theme(legend.key = element_rect(fill = "white"), legend.position = "right") +
-    ggtitle(TeX("$\\textit{\\Omega(z_l), q}\\in\\{1,2\\}$")),
+    ggtitle(TeX("$\\textit{\\Omega(z_{l}), q}\\in\\{1,2\\}$")),
   ggplot() + xlim(-3, 3) +
     geom_function(fun=function(x) pmax(pmin(1, -0.5 * (x - 9/5)), 0), n=1e4, aes(col="1"), size=1) +
-    # geom_function(fun=function(x) pmax(pmin(1, 0.5 * (x + 3/5)), 0), n=1e4, aes(col="2"), size=1) +
-    # geom_function(fun=function(x) pmax(pmin(1, -0.5 * (x - 3/5)), 0), n=1e4, aes(col="3"), size=1) +
-    # geom_function(fun=function(x) pmax(pmin(1, 0.5 * (x + 9/5)), 0), n=1e4, aes(col="4"), size=1) +
+    geom_function(fun=function(x) pmax(pmin(1, 0.5 * (x + 3/5)), 0), n=1e4, aes(col="2"), size=1) +
+    geom_function(fun=function(x) pmax(pmin(1, -0.5 * (x - 3/5)), 0), n=1e4, aes(col="3"), size=1) +
+    geom_function(fun=function(x) pmax(pmin(1, 0.5 * (x + 9/5)), 0), n=1e4, aes(col="4"), size=1) +
     theme_pubclean() +
     theme(text = element_text(family = "Times", size = 18),
           plot.title = element_text(hjust = 0.5)) +
     scale_color_manual(values=colors, labels = unname(TeX(c("$\\textit{l}=1$", "$\\textit{l}=2$", "$\\textit{l}=3$", "$\\textit{l}=4$"))), name = "") +    labs(x = TeX("$\\textit{z_l}$"), y = TeX("$\\Omega(z_l)$")) + theme(legend.key = element_rect(fill = "white"), legend.position = "right") +
-    ggtitle(TeX("$\\textit{\\Omega(z_l), q=4}$")),
+    ggtitle(TeX("$\\textit{\\Omega(z_{l}), q=4}$")),
   ggplot() + xlim(-3, 3) +
     geom_function(fun=function(x)pmax(cospi((x+3)/4),0)+pmax(cospi((x-3)/4),0), n=1e4, aes(col="1"), size=1) +
     geom_function(fun=function(x)pmax(0,cospi(x/4)), n=1e4, aes(col="2"), size=1) +
@@ -317,7 +318,7 @@ if (F){
           plot.title = element_text(hjust = 0.5)) +
     scale_color_manual(values=colors, labels = unname(TeX(c("$\\textit{l}=1$", "$\\textit{l}=2$", "$\\textit{l}=3$", "$\\textit{l}=4$"))), name = "") +
     labs(x = " ", y = TeX("$\\Omega(z_l)$")) + theme(legend.key = element_rect(fill = "white"), legend.position = "right") +
-    ggtitle(TeX("$\\textit{\\Omega(z_l), q=1}$ (non-linear)"))
+    ggtitle(TeX("$\\textit{\\Omega(z_{l}), q=1}$ (non-linear)"))
   )
   plots <- lapply(plots, function(plot) plot + rremove("ylab"))
   fig <- ggarrange(plotlist = plots, nrow=1, common.legend = TRUE,  legend="bottom")
