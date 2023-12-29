@@ -212,7 +212,7 @@ tvmgm.eval <- function(X, Z, true){
 }
 
 # function to fit and evaluate results for loggle
-loggle.eval <- function(X, Z, true, n_workers){
+loggle.eval <- function(X, Z, true, n_workers, cutoff){
 
   start <- Sys.time()
 
@@ -233,8 +233,8 @@ loggle.eval <- function(X, Z, true, n_workers){
 
   # there are issues with estimating graphs at the end points of the time
   # interval; don't estimate these
-  cutoff <- 20
-  pos <- cutoff:(n - cutoff)
+  pos <- (cutoff + 1):(n - cutoff)
+  # pos <- cutoff:(n - cutoff)
 
   # fit loggle
   # out <- R.utils::withTimeout(
@@ -243,12 +243,10 @@ loggle.eval <- function(X, Z, true, n_workers){
   #                   d.list = c(0, 0.001, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2),
   #                   num.thread = n_workers)),
   #   timeout = 2 * 60 * 60 * n_workers)
-  out <- R.utils::withTimeout(
-    quiet(loggle.cv(t(X),
-                    pos = pos,
-                    d.list = c(0, 0.001, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2),
-                    num.thread = n_workers)),
-    timeout = 24 * 60 * 60)
+  out <- quiet(loggle.cv(t(X),
+                         pos = pos,
+                         d.list = c(0, 0.001, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2),
+                         num.thread = n_workers))
   closeAllConnections()
 
   # record time and get the array of graphs
@@ -260,12 +258,17 @@ loggle.eval <- function(X, Z, true, n_workers){
 
     # if the observation is in the cutoff region, assign the graph for the last
     # observation outside of the cutoff region
-    if (j < cutoff){
+    if (j %in% pos){
+      graph_j <- out$cv.select.result$adj.mat.opt[[j - cutoff]]
+      # print(paste('in', j, j-cutoff))
+    }else if (j < cutoff + 1){
+      # print(j)
       graph_j <- out$cv.select.result$adj.mat.opt[[1]]
     }else if (j > n - cutoff){
-      graph_j <- out$cv.select.result$adj.mat.opt[[n - 2 * cutoff + 1]]
+      # print(paste(j, n - 2 * cutoff, length(pos)))
+      graph_j <- out$cv.select.result$adj.mat.opt[[n - 2 * cutoff]]
     }else{
-      graph_j <- out$cv.select.result$adj.mat.opt[[j - cutoff + 1]]
+      stop(paste0('Error in resolving cutoff regions for j=', j))
     }
     out$str[,, j] <- as.matrix(graph_j - diag(p))
   }

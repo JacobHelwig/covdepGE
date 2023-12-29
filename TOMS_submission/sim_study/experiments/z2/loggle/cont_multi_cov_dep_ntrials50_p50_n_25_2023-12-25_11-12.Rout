@@ -1,0 +1,1494 @@
+
+R version 4.2.0 (2022-04-22) -- "Vigorous Calisthenics"
+Copyright (C) 2022 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # R CMD BATCH --no-save --no-restore "--args save_dir='./experiments/z2' experiment='cont_multi_cov_dep' p=100 n=25 n_trials=50 skips=c('JGL','mgm','covdepGE') trial_skips=1:49" main.R ./experiments/z2/cont_multi_cov_dep_ntrials50_p100_n_25_2023-02-04_13-15.Rout
+> rm(list = ls())
+> source("models.R")
+Loading required package: igraph
+
+Attaching package: ‘igraph’
+
+The following objects are masked from ‘package:stats’:
+
+    decompose, spectrum
+
+The following object is masked from ‘package:base’:
+
+    union
+
+Package 'mclust' version 5.4.10
+Type 'citation("mclust")' for citing this R package in publications.
+This is mgm 1.2-13
+Please report issues on Github: https://github.com/jmbh/mgm/issues
+> source("data.R")
+> source("utils.R")
+Loading required package: foreach
+Loading required package: iterators
+Loading required package: parallel
+> 
+> # parse command line arguments
+> args <- (commandArgs(TRUE))
+> print(args)
+[1] "save_dir='./experiments/z2'"     "experiment='cont_multi_cov_dep'"
+[3] "p=50"                            "n=25"                           
+[5] "n_trials=50"                    
+> 
+> # DEBUGGING
+> if (interactive()){
++   # args <- c("save_dir='./experiments/z2'", "experiment='cont_multi_cov_dep'", "p=10", "n=10", "n_trials=10")
++   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=3", "n1=5", "n2=5", "n3=5", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=3", "n=2", "n_trials=1")
++   args <- c("save_dir='./experiments'", "experiment='cont_cov_dep_sine'", "p=10", "n1=75", "n2=75", "n3=75", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='cont_4_cov_dep'", "p=10", "n=225", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='cont_cov_dep'", "p=5", "n1=50", "n2=50", "n3=50", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='cont_multi_cov_dep'", "p=11", "n=25", "n_trials=1")
++   # args <- c("save_dir='./experiments'", "experiment='disc_cov_dep'", "p=11", "n1=80", "n2=20", "lambda=3", "n_trials=3")
++   # args <- c("save_dir='./experiments'", "experiment='disc_cov_indep'", "p=11", "n1=50", "n2=50", "lambda=15", "n_trials=3")
++   # args <- c("save_dir='./experiments'", "experiment='disc_cov_free'", "p=11", "n1=50", "n2=50", "lambda=15", "n_trials=3")
++ }
+> 
+> if (length(args) > 0){
++   for(i in 1:length(args)){
++     eval(parse(text = args[[i]]))
++   }
++ }else{
++   stop("No arguments passed")
++ }
+> 
+> # check passed arguments
+> print(args)
+[1] "save_dir='./experiments/z2'"     "experiment='cont_multi_cov_dep'"
+[3] "p=50"                            "n=25"                           
+[5] "n_trials=50"                    
+> if (!("experiment" %in% ls())){
++   stop("Missing experiment")
++ }
+> 
+> # ensure experiment is recognized
+> experiment_choices <- c("cont_cov_dep", "cont_cov_dep_sine", "cont_multi_cov_dep", "cont_4_cov_dep")
+> if (!(experiment %in% experiment_choices)){
++   stop("Invalid experiment")
++ }
+> 
+> # check remaining args
+> expected_args <- c("save_dir", "p", "n_trials")
+> if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep")){
++   expected_args <- c(expected_args, "n")
++ }else{
++   expected_args <- c(expected_args, "n1", "n2", "n3")
++ }
+> if (!all(expected_args %in% ls())){
++   stop("Missing args")
++ }
+> 
+> # check if any skips have been specified
+> if (!("skips" %in% ls())){
++   skips <- NULL
++ }else{
++   print(paste0(c("Skipping", skips), collapse = " "))
++ }
+> if (!("trial_skips" %in% ls())){
++   trial_skips <- NULL
++ }else{
++   print(paste0(c("Skipping trials", trial_skips), collapse = " "))
++ }
+> # check if a HP method or max_iter_grid for covdepGE has been specified
+> if (!("hp_method" %in% ls())) hp_method <- "hybrid"
+> if (!("max_iter_grid" %in% ls())) max_iter_grid <- 10
+> print(paste0(c("covdepGE HP specification scheme: ", hp_method), collapse = " "))
+[1] "covdepGE HP specification scheme:  hybrid"
+> 
+> # check if a filename has been passed
+> if ("filename" %in% ls()){
++ 
++   # a file has been specified; load the associated results
++   load(filename)
++ 
++ }else{
++ 
++   # a filename has not been specified
++ 
++   # create list for storing results
++   trial_list <- list(covdepGE = NA, JGL = NA, mgm = NA, loggle = NA)
++   if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep")){
++     trial_list$covdepGE_sortZ <- NA
++   }else if ("seq" %in% ls()){
++     if (seq){
++       trial_list <- list(covdepGE_seq = NA) # , covdepGE_seq = NA)
++     }
++   }
++ 
++   results <- replicate(n_trials, trial_list, simplify = F)
++   names(results) <- c(paste0("trial", 1:n_trials))
++ 
++   # create filename for saved results
++   (now <- format(Sys.time(), "%Y%m%d_%H%M%S"))
++   filename <- paste0(c(setdiff(names(trial_list), skips), ""), collapse = "_")
++   filename <- gsub("covdepGE" , paste0("covdepGE", hp_method) ,filename)
++   filename <- paste0(filename, experiment, "_ntrials", n_trials, "_p", p)
++   if (experiment %in% c("cont_multi_cov_dep", "cont_4_cov_dep")){
++     filename <- paste0(filename, "_n_", n, "_", now, ".Rda")
++   }else{
++     filename <- paste0(filename, "_n1_", n1, "_n2_", n2, "_n3_", n3, "_", now,
++                        ".Rda")
++   }
++   (filename <- file.path(save_dir, filename))
++ }
+[1] "./experiments/z2/covdepGEhybrid_JGL_mgm_loggle_covdepGEhybrid_sortZ_cont_multi_cov_dep_ntrials50_p50_n_25_20231225_111206.Rda"
+> 
+> # generate the data
+> set.seed(1)
+> if (experiment == "cont_cov_dep"){
++   data_list <- replicate(n_trials, cont_cov_dep_data(p, n1, n2, n3), F)
++ }else if (experiment == "cont_cov_dep_sine"){
++   data_list <- replicate(n_trials, cont_cov_dep_sine_data(p, n1, n2, n3), F)
++ }else if (experiment == "cont_4_cov_dep"){
++   data_list <- replicate(n_trials, cont_4_cov_dep_data(p, n), F)
++ }else{
++   data_list <- replicate(n_trials, cont_multi_cov_dep_data(p, n), F)
++ }
+> 
+> # DEBUGGING
+> if (interactive()){
++   X_ <- data_list[[1]]$X
++   Z_ <- data_list[[1]]$Z
++   true_ <- data_list[[1]]$true_precision
++   graph_viz(lapply(true_, `!=`, 0))
++   out_ <- covdepGE(X_, Z_)
++   plot(out_)
++   out_$str <- array(unlist(out_$graphs$graphs), dim = c(p, p, nrow(X_)))
++   (perf_ <- eval_est(out_$str, true_))
++ }
+> 
+> # perform trials
+> trials(data_list = data_list,
++        results = results,
++        filename = filename,
++        skips = skips,
++        trial_skips = trial_skips,
++        hp_method = hp_method,
++        max_iter_grid = max_iter_grid)
+[1] "p=50"
+[1] "cutoff=10"
+
+loggle complete 2023-12-25 11:29:48
+
+
+loggle trial 1 complete; 18 minutes elapsed;2023-12-25 11:29:49
+
+
+loggle complete 2023-12-25 11:48:18
+
+
+loggle trial 2 complete; 19 minutes elapsed;2023-12-25 11:48:20
+
+
+loggle complete 2023-12-25 12:06:25
+
+
+loggle trial 3 complete; 18 minutes elapsed;2023-12-25 12:06:27
+
+
+loggle complete 2023-12-25 12:24:14
+
+
+loggle trial 4 complete; 18 minutes elapsed;2023-12-25 12:24:15
+
+
+loggle complete 2023-12-25 12:41:56
+
+
+loggle trial 5 complete; 18 minutes elapsed;2023-12-25 12:41:57
+
+
+loggle complete 2023-12-25 12:59:56
+
+
+loggle trial 6 complete; 18 minutes elapsed;2023-12-25 12:59:57
+
+
+loggle complete 2023-12-25 13:17:59
+
+
+loggle trial 7 complete; 18 minutes elapsed;2023-12-25 13:18:00
+
+
+loggle complete 2023-12-25 13:36:14
+
+
+loggle trial 8 complete; 18 minutes elapsed;2023-12-25 13:36:15
+
+
+loggle complete 2023-12-25 13:54:54
+
+
+loggle trial 9 complete; 19 minutes elapsed;2023-12-25 13:54:56
+
+
+loggle complete 2023-12-25 14:13:19
+
+
+loggle trial 10 complete; 18 minutes elapsed;2023-12-25 14:13:20
+
+
+loggle complete 2023-12-25 14:32:10
+
+
+loggle trial 11 complete; 19 minutes elapsed;2023-12-25 14:32:11
+
+
+loggle complete 2023-12-25 14:50:03
+
+
+loggle trial 12 complete; 18 minutes elapsed;2023-12-25 14:50:04
+
+
+loggle complete 2023-12-25 15:08:26
+
+
+loggle trial 13 complete; 18 minutes elapsed;2023-12-25 15:08:27
+
+
+loggle complete 2023-12-25 15:26:48
+
+
+loggle trial 14 complete; 18 minutes elapsed;2023-12-25 15:26:49
+
+
+loggle complete 2023-12-25 15:45:14
+
+
+loggle trial 15 complete; 18 minutes elapsed;2023-12-25 15:45:16
+
+
+loggle complete 2023-12-25 16:04:07
+
+
+loggle trial 16 complete; 19 minutes elapsed;2023-12-25 16:04:08
+
+
+loggle complete 2023-12-25 16:22:49
+
+
+loggle trial 17 complete; 19 minutes elapsed;2023-12-25 16:22:51
+
+
+loggle complete 2023-12-25 16:41:16
+
+
+loggle trial 18 complete; 18 minutes elapsed;2023-12-25 16:41:17
+
+
+loggle complete 2023-12-25 16:59:27
+
+
+loggle trial 19 complete; 18 minutes elapsed;2023-12-25 16:59:28
+
+
+loggle complete 2023-12-25 17:17:37
+
+
+loggle trial 20 complete; 18 minutes elapsed;2023-12-25 17:17:39
+
+
+loggle complete 2023-12-25 17:35:47
+
+
+loggle trial 21 complete; 18 minutes elapsed;2023-12-25 17:35:48
+
+
+loggle complete 2023-12-25 17:54:15
+
+
+loggle trial 22 complete; 18 minutes elapsed;2023-12-25 17:54:16
+
+
+loggle complete 2023-12-25 18:12:50
+
+
+loggle trial 23 complete; 19 minutes elapsed;2023-12-25 18:12:51
+
+
+loggle complete 2023-12-25 18:30:53
+
+
+loggle trial 24 complete; 18 minutes elapsed;2023-12-25 18:30:54
+
+
+loggle complete 2023-12-25 18:49:37
+
+
+loggle trial 25 complete; 19 minutes elapsed;2023-12-25 18:49:38
+
+
+loggle complete 2023-12-25 19:07:44
+
+
+loggle trial 26 complete; 18 minutes elapsed;2023-12-25 19:07:45
+
+
+loggle complete 2023-12-25 19:26:21
+
+
+loggle trial 27 complete; 19 minutes elapsed;2023-12-25 19:26:23
+
+
+loggle complete 2023-12-25 19:45:10
+
+
+loggle trial 28 complete; 19 minutes elapsed;2023-12-25 19:45:12
+
+
+loggle complete 2023-12-25 20:03:35
+
+
+loggle trial 29 complete; 18 minutes elapsed;2023-12-25 20:03:36
+
+
+loggle complete 2023-12-25 20:22:02
+
+
+loggle trial 30 complete; 18 minutes elapsed;2023-12-25 20:22:03
+
+
+loggle complete 2023-12-25 20:40:32
+
+
+loggle trial 31 complete; 19 minutes elapsed;2023-12-25 20:40:33
+
+
+loggle complete 2023-12-25 20:59:04
+
+
+loggle trial 32 complete; 19 minutes elapsed;2023-12-25 20:59:06
+
+
+loggle complete 2023-12-25 21:17:16
+
+
+loggle trial 33 complete; 18 minutes elapsed;2023-12-25 21:17:17
+
+
+loggle complete 2023-12-25 21:35:28
+
+
+loggle trial 34 complete; 18 minutes elapsed;2023-12-25 21:35:29
+
+
+loggle complete 2023-12-25 21:53:35
+
+
+loggle trial 35 complete; 18 minutes elapsed;2023-12-25 21:53:36
+
+
+loggle complete 2023-12-25 22:12:06
+
+
+loggle trial 36 complete; 19 minutes elapsed;2023-12-25 22:12:08
+
+
+loggle complete 2023-12-25 22:30:48
+
+
+loggle trial 37 complete; 19 minutes elapsed;2023-12-25 22:30:50
+
+
+loggle complete 2023-12-25 22:49:33
+
+
+loggle trial 38 complete; 19 minutes elapsed;2023-12-25 22:49:34
+
+
+loggle complete 2023-12-25 23:08:19
+
+
+loggle trial 39 complete; 19 minutes elapsed;2023-12-25 23:08:21
+
+
+loggle complete 2023-12-25 23:26:45
+
+
+loggle trial 40 complete; 18 minutes elapsed;2023-12-25 23:26:47
+
+
+loggle complete 2023-12-25 23:45:20
+
+
+loggle trial 41 complete; 19 minutes elapsed;2023-12-25 23:45:21
+
+
+loggle complete 2023-12-26 00:03:48
+
+
+loggle trial 42 complete; 18 minutes elapsed;2023-12-26 00:03:50
+
+
+loggle complete 2023-12-26 00:22:25
+
+
+loggle trial 43 complete; 19 minutes elapsed;2023-12-26 00:22:26
+
+
+loggle complete 2023-12-26 00:41:03
+
+
+loggle trial 44 complete; 19 minutes elapsed;2023-12-26 00:41:04
+
+
+loggle complete 2023-12-26 00:59:21
+
+
+loggle trial 45 complete; 18 minutes elapsed;2023-12-26 00:59:23
+
+
+loggle complete 2023-12-26 01:18:00
+
+
+loggle trial 46 complete; 19 minutes elapsed;2023-12-26 01:18:02
+
+
+loggle complete 2023-12-26 01:36:05
+
+
+loggle trial 47 complete; 18 minutes elapsed;2023-12-26 01:36:06
+
+
+loggle complete 2023-12-26 01:54:31
+
+
+loggle trial 48 complete; 18 minutes elapsed;2023-12-26 01:54:33
+
+
+loggle complete 2023-12-26 02:13:37
+
+
+loggle trial 49 complete; 19 minutes elapsed;2023-12-26 02:13:38
+
+
+loggle complete 2023-12-26 02:32:25
+
+
+loggle trial 50 complete; 19 minutes elapsed;2023-12-26 02:32:27
+
+loggle finished 2023-12-26 02:32:27
+
+JGL trial 8 complete; 1 minutes elapsed
+
+
+JGL trial 22 complete; 1 minutes elapsed
+
+
+JGL trial 21 complete; 3 minutes elapsed
+
+
+JGL trial 10 complete; 4 minutes elapsed
+
+
+JGL trial 15 complete; 4 minutes elapsed
+
+
+JGL trial 24 complete; 5 minutes elapsed
+
+
+JGL trial 2 complete; 7 minutes elapsed
+
+
+JGL trial 6 complete; 7 minutes elapsed
+
+
+JGL trial 46 complete; 5 minutes elapsed
+
+
+JGL trial 19 complete; 9 minutes elapsed
+
+
+JGL trial 27 complete; 2 minutes elapsed
+
+
+JGL trial 16 complete; 9 minutes elapsed
+
+
+JGL trial 9 complete; 10 minutes elapsed
+
+
+JGL trial 14 complete; 10 minutes elapsed
+
+
+JGL trial 1 complete; 10 minutes elapsed
+
+
+JGL trial 13 complete; 10 minutes elapsed
+
+
+JGL trial 25 complete; 10 minutes elapsed
+
+
+JGL trial 20 complete; 10 minutes elapsed
+
+
+JGL trial 7 complete; 10 minutes elapsed
+
+
+JGL trial 40 complete; 6 minutes elapsed
+
+
+JGL trial 23 complete; 10 minutes elapsed
+
+
+JGL trial 3 complete; 10 minutes elapsed
+
+
+JGL trial 17 complete; 10 minutes elapsed
+
+
+JGL trial 18 complete; 10 minutes elapsed
+
+
+JGL trial 47 complete; 9 minutes elapsed
+
+
+JGL trial 38 complete; 0 minutes elapsed
+
+
+JGL trial 35 complete; 7 minutes elapsed
+
+
+JGL trial 4 complete; 10 minutes elapsed
+
+
+JGL trial 33 complete; 10 minutes elapsed
+
+
+JGL trial 44 complete; 2 minutes elapsed
+
+
+JGL trial 11 complete; 11 minutes elapsed
+
+
+JGL trial 41 complete; 2 minutes elapsed
+
+
+JGL trial 5 complete; 11 minutes elapsed
+
+
+JGL trial 30 complete; 0 minutes elapsed
+
+
+JGL trial 45 complete; 2 minutes elapsed
+
+
+JGL trial 50 complete; 2 minutes elapsed
+
+
+JGL trial 34 complete; 2 minutes elapsed
+
+
+JGL trial 39 complete; 2 minutes elapsed
+
+
+JGL trial 26 complete; 2 minutes elapsed
+
+
+JGL trial 43 complete; 2 minutes elapsed
+
+
+JGL trial 32 complete; 2 minutes elapsed
+
+
+JGL trial 29 complete; 2 minutes elapsed
+
+
+JGL trial 49 complete; 8 minutes elapsed
+
+
+JGL trial 48 complete; 2 minutes elapsed
+
+
+JGL trial 28 complete; 2 minutes elapsed
+
+
+JGL trial 31 complete; 5 minutes elapsed
+
+
+JGL trial 36 complete; 1 minutes elapsed
+
+
+JGL trial 42 complete; 3 minutes elapsed
+
+JGL finished 2023-12-26 02:45:53
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 10 complete; 58 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 23 complete; 58 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 14 complete; 58 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 22 complete; 58 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 1 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 18 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 17 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 9 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 11 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 8 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 25 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 13 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 15 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 4 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 5 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 24 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 6 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 2 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 20 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 7 complete; 61 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 21 complete; 61 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 12 complete; 61 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 3 complete; 61 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 16 complete; 63 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 19 complete; 63 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 35 complete; 57 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 48 complete; 58 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 39 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 26 complete; 58 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 36 complete; 58 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 43 complete; 58 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 42 complete; 58 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 47 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 50 complete; 58 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 33 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 34 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 30 complete; 58 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 29 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 40 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 38 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 31 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 45 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 28 complete; 59 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 49 complete; 61 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 37 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 46 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 27 complete; 61 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 32 complete; 61 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 41 complete; 60 minutes elapsed
+
+Note that the sign of parameter estimates is stored separately; see ?tvmgm
+mgm trial 44 complete; 60 minutes elapsed
+
+mgm finished 2023-12-26 04:48:45
+Detected 51 workers
+
+covdepGE complete 2023-12-26 04:50:15
+
+
+covdepGE trial 1 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 04:52:15
+
+
+covdepGE trial 2 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 04:54:16
+
+
+covdepGE trial 3 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 04:56:22
+
+
+covdepGE trial 4 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 04:58:22
+
+
+covdepGE trial 5 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:00:27
+
+
+covdepGE trial 6 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:02:35
+
+
+covdepGE trial 7 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:04:41
+
+
+covdepGE trial 8 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:06:46
+
+
+covdepGE trial 9 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:08:44
+
+
+covdepGE trial 10 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:10:48
+
+
+covdepGE trial 11 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:13:00
+
+
+covdepGE trial 12 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:14:54
+
+
+covdepGE trial 13 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:16:54
+
+
+covdepGE trial 14 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:18:55
+
+
+covdepGE trial 15 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:21:05
+
+
+covdepGE trial 16 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:23:09
+
+
+covdepGE trial 17 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:25:17
+
+
+covdepGE trial 18 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:27:28
+
+
+covdepGE trial 19 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:29:34
+
+
+covdepGE trial 20 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:31:46
+
+
+covdepGE trial 21 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:33:58
+
+
+covdepGE trial 22 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:36:07
+
+
+covdepGE trial 23 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:38:23
+
+
+covdepGE trial 24 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:40:33
+
+
+covdepGE trial 25 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:42:43
+
+
+covdepGE trial 26 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:44:58
+
+
+covdepGE trial 27 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:47:13
+
+
+covdepGE trial 28 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:49:30
+
+
+covdepGE trial 29 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:51:35
+
+
+covdepGE trial 30 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:53:42
+
+
+covdepGE trial 31 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:55:51
+
+
+covdepGE trial 32 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 05:58:05
+
+
+covdepGE trial 33 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:00:23
+
+
+covdepGE trial 34 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:02:38
+
+
+covdepGE trial 35 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:04:51
+
+
+covdepGE trial 36 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:07:05
+
+
+covdepGE trial 37 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:09:22
+
+
+covdepGE trial 38 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:11:35
+
+
+covdepGE trial 39 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:13:49
+
+
+covdepGE trial 40 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:16:03
+
+
+covdepGE trial 41 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:18:21
+
+
+covdepGE trial 42 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:20:30
+
+
+covdepGE trial 43 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:22:47
+
+
+covdepGE trial 44 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:24:59
+
+
+covdepGE trial 45 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:27:14
+
+
+covdepGE trial 46 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:29:27
+
+
+covdepGE trial 47 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:31:43
+
+
+covdepGE trial 48 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:34:00
+
+
+covdepGE trial 49 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:36:11
+
+
+covdepGE trial 50 complete; 2 minutes elapsed
+
+covdepGE finished 2023-12-26 06:36:26
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:38:33
+
+
+covdepGE_sortZ trial 1 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:40:55
+
+
+covdepGE_sortZ trial 2 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:43:19
+
+
+covdepGE_sortZ trial 3 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:45:37
+
+
+covdepGE_sortZ trial 4 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:47:49
+
+
+covdepGE_sortZ trial 5 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:50:09
+
+
+covdepGE_sortZ trial 6 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:52:30
+
+
+covdepGE_sortZ trial 7 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:54:42
+
+
+covdepGE_sortZ trial 8 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:57:05
+
+
+covdepGE_sortZ trial 9 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 06:59:17
+
+
+covdepGE_sortZ trial 10 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:01:37
+
+
+covdepGE_sortZ trial 11 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:03:59
+
+
+covdepGE_sortZ trial 12 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:06:18
+
+
+covdepGE_sortZ trial 13 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:08:33
+
+
+covdepGE_sortZ trial 14 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:10:47
+
+
+covdepGE_sortZ trial 15 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:13:15
+
+
+covdepGE_sortZ trial 16 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:15:44
+
+
+covdepGE_sortZ trial 17 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:18:11
+
+
+covdepGE_sortZ trial 18 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:20:38
+
+
+covdepGE_sortZ trial 19 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:23:06
+
+
+covdepGE_sortZ trial 20 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:25:34
+
+
+covdepGE_sortZ trial 21 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:28:01
+
+
+covdepGE_sortZ trial 22 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:30:20
+
+
+covdepGE_sortZ trial 23 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:32:41
+
+
+covdepGE_sortZ trial 24 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:35:09
+
+
+covdepGE_sortZ trial 25 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:37:32
+
+
+covdepGE_sortZ trial 26 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:39:53
+
+
+covdepGE_sortZ trial 27 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:42:19
+
+
+covdepGE_sortZ trial 28 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:44:43
+
+
+covdepGE_sortZ trial 29 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:47:08
+
+
+covdepGE_sortZ trial 30 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:49:37
+
+
+covdepGE_sortZ trial 31 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:52:02
+
+
+covdepGE_sortZ trial 32 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:54:30
+
+
+covdepGE_sortZ trial 33 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:57:01
+
+
+covdepGE_sortZ trial 34 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 07:59:31
+
+
+covdepGE_sortZ trial 35 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:01:59
+
+
+covdepGE_sortZ trial 36 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:04:30
+
+
+covdepGE_sortZ trial 37 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:06:54
+
+
+covdepGE_sortZ trial 38 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:09:13
+
+
+covdepGE_sortZ trial 39 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:11:43
+
+
+covdepGE_sortZ trial 40 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:14:11
+
+
+covdepGE_sortZ trial 41 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:16:42
+
+
+covdepGE_sortZ trial 42 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:19:07
+
+
+covdepGE_sortZ trial 43 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:21:36
+
+
+covdepGE_sortZ trial 44 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:24:05
+
+
+covdepGE_sortZ trial 45 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:26:28
+
+
+covdepGE_sortZ trial 46 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:28:50
+
+
+covdepGE_sortZ trial 47 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:31:13
+
+
+covdepGE_sortZ trial 48 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:33:47
+
+
+covdepGE_sortZ trial 49 complete; 2 minutes elapsed
+
+Detected 51 workers
+
+covdepGE complete 2023-12-26 08:36:22
+
+
+covdepGE_sortZ trial 50 complete; 2 minutes elapsed
+
+Warning message:
+In mclapply(argsList, FUN, mc.preschedule = preschedule, mc.set.seed = set.seed,  :
+  scheduled core 12 did not deliver a result, all values of the job will be affected
+> 
+> 
+> proc.time()
+      user     system    elapsed 
+1037709.53  105890.64   77110.06 

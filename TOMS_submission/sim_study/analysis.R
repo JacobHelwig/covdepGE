@@ -48,8 +48,8 @@ subgroups_list <- list()
 # results config; med outputs median in place of mean and univariate is for
 # switching setting from q=1->q=2
 med <- F # median aggregate results
-univariate <- F # T for q=1, F for q=2,4
-sine <- F # q=1 w non-linear covariate
+univariate <- T # T for q=1, F for q=2,4
+sine <- T # q=1 w non-linear covariate
 four <- F # q=4
 seq <- F # aggregate times for sequentials
 subgr <- F # analyze performance for each graph
@@ -57,7 +57,7 @@ if (univariate){
 
   # univariate extraneous covariate
   exper <- "cont_cov_dep_"
-  methods <- c("covdepGE" , "JGL", "mgm")
+  methods <- c("covdepGE" , "JGL", "loggle", "mgm")
   n <- 75
   samp_str <- paste0("_n1_", n, "_n2_", n, "_n3_", n)
   path <- "./experiments/z1"
@@ -65,14 +65,15 @@ if (univariate){
     path <- paste0(path, "_sine")
     exper <- paste0(exper, "sine_")
   }else if (seq){
-    path <- paste0(path, "_seq")
+    seq_path <- paste0(path, "_seq")
+    seq_files <- list.files(seq_path)
     methods <- c("covdepGE", "covdepGE_seq")
   }
 }else{
 
   # multivariate extraneous covariate
   exper <- ifelse(four, "cont_4_cov_dep_", "cont_multi_cov_dep_")
-  methods <- c("covdepGE" , "JGL", "mgm", "covdepGE_sortZ")
+  methods <- c("covdepGE" , "covdepGE_sortZ", "JGL", "loggle", "mgm")
   n <- 25 + 200 * four
   samp_str <- paste0("_n_", n)
   path <- ifelse(four, "./experiments/z4", "./experiments/z2")
@@ -115,33 +116,49 @@ if (subgr){
     subg$nl[[dim]]$label <- sapply(graphs_nl, get_lab)
   }
 }
-
-p="10"
+loggle <- F
+p <- "10"
 
 for (p in as.character(dims)){
 
   # format file name
   exp_name <- paste0(exper, trial_str, "p", p, samp_str)
 
-  # load loggle results
-  file_name <- loggle_files[grepl(exp_name, loggle_files) & endsWith(loggle_files, ".Rda")]
-  if (length(file_name) != 1) stop(paste(length(file_name), "files found for", exp_name))
-  file_path <- file.path(loggle_path, file_name)
-  load(file_path)
-  loggle_results <- results
+  # load loggle/seq results
+  if (!seq){
+    file_name <- loggle_files[grepl(exp_name, loggle_files) & endsWith(loggle_files, ".Rda")]
+    if (length(file_name) != 1) stop(paste(length(file_name), "files found for", exp_name))
+    file_path <- file.path(loggle_path, file_name)
+    load(file_path)
+    loggle_results <- results
+  }else{
+    file_name <- seq_files[grepl(exp_name, seq_files) & endsWith(seq_files, ".Rda")]
+    if (length(file_name) != 1) stop(paste(length(file_name), "files found for", exp_name))
+    file_path <- file.path(seq_path, file_name)
+    load(file_path)
+    seq_results <- results
+  }
 
   # load results
   # mean(sapply(results, function(trial)length(trial$covdepGE$graphs$unique_graphs)))
-  file_name <- files[grepl(exp_name, files) & endsWith(files, ".Rda")]
-  if (length(file_name) != 1) stop(paste(length(file_name), "files found for", exp_name))
-  file_path <- file.path(path, file_name)
-  load(file_path)
+  if (!loggle){
+    file_name <- files[grepl(exp_name, files) & endsWith(files, ".Rda")]
+    if (length(file_name) != 1) stop(paste(length(file_name), "files found for", exp_name))
+    file_path <- file.path(path, file_name)
+    load(file_path)
+  }
   print(paste0("n: ", results$sample_data[1], ", p: ", results$sample_data[2]))
   results <- results[setdiff(names(results), "sample_data")]
 
-  # add loggle results
-  for (i in 1:length(results)){
-    results[[i]]$loggle <- loggle_results[[i]]$loggle
+  # add loggle/seq results
+  if (!seq){
+    for (i in 1:length(results)){
+      results[[i]]$loggle <- loggle_results[[i]]$loggle
+    }
+  }else{
+    for (i in 1:length(results)){
+      results[[i]]$covdepGE_seq <- seq_results[[i]]$covdepGE_seq
+    }
   }
 
   # get graph stats
@@ -221,7 +238,7 @@ for (p in as.character(dims)){
 
   # process sensitivity results
   sens <- sapply(results, sapply, `[[`, "sens")
-  sens_mean <- rowMeans(sens)
+  sens_mean <- sens_mean_hyp <- rowMeans(sens)
   if (med) sens_mean <- apply(sens, 1, median)
   max_sens_ind <- which.max(sens_mean)
   sens_mean <- sprintf(paste0("%.", prec, "f"), sens_mean * 100)
@@ -232,7 +249,8 @@ for (p in as.character(dims)){
 
   # hypothesis testing
   if (!seq){
-    t_test <- t.test(sens['covdepGE',], sens['JGL',], alternative="greater")
+    max_baseline <- names(which.max(sens_mean_hyp[!sapply(names(sens_mean_hyp), function(x) grepl("covdepGE", x))]))
+    t_test <- t.test(sens['covdepGE',], sens[max_baseline,], alternative="greater")
     pval <- sprintf(paste0("%.", prec + 1, "f"), t_test$p.value)
     pval <- ifelse(round(t_test$p.value,prec+1) == 0, paste0(c("<0.",rep(0, prec), 1), collapse=""), pval)
     # pval <- ifelse(t_test$p.value < 0.05, paste0("\\mathbf{", pval, "}"), pval)
@@ -243,7 +261,8 @@ for (p in as.character(dims)){
     # mean_JGL <- paste0("$", sprintf(paste0("%.", prec, "f"), t_test$estimate[2] * 100), "$")
     se <- paste0("$", sprintf(paste0("%.", prec, "f"), t_test$stderr * 100), "$")
     htest[[p]] <- data.frame(covdepGE=paste0("$", sens_str[row.names(sens) == "covdepGE"], "$"),
-                             JGL=paste0("$", sens_str[row.names(sens) == "JGL"], "$"),
+                             baseline_mean=paste0("$", sens_str[row.names(sens) == max_baseline], "$"),
+                             baseline=paste0("\\texttt{", max_baseline, "}"),
                              stderr=se, stat=stat, df=degf, p=pval)
   }
 
@@ -412,9 +431,13 @@ if (seq){
 }
 
 htest_df <- cbind(p=names(htest), Reduce(rbind, htest))
-colnames(htest_df) <- c("$p$", "\\texttt{covdepGE}", "\\texttt{JGL}", "Standard Error", "T-statistic", "DF", "p-value")
+colnames(htest_df) <- c("$p$", "\\texttt{covdepGE}", "Baseline", "Baseline Name", "Standard Error", "T-statistic", "DF", "p-value")
 kbl(htest_df, format = "latex", booktabs = T, escape = FALSE)
 
+for (p in names(df)){
+  df[[p]][df[[p]]$method == "loggle", setdiff(names(df[[p]]), 'p')] <- sapply(
+    df[[p]][df[[p]]$method == "loggle", setdiff(names(df[[p]]), 'p')], function(x)paste0("\\new{", x, "}"))
+}
 df <- Reduce(rbind, df)
 df$method <- gsub("_sortZ", "\\\\_time", df$method)
 df$method <- paste0("\\texttt{", df$method, "}")

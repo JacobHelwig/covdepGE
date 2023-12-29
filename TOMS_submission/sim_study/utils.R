@@ -119,7 +119,8 @@ trials <- function(data_list, results, filename, skips, trial_skips, hp_method, 
 
   # save sample data to results
   results$sample_data <- dim(data_list[[1]]$X)
-
+  p <- results$sample_data[2]
+  print(paste0('p=', p))
   # get number of available workers and trials
   num_workers <- parallel::detectCores() - 5 # min(10, parallel::detectCores() - 5)
   n_trials <- length(data_list)
@@ -127,11 +128,13 @@ trials <- function(data_list, results, filename, skips, trial_skips, hp_method, 
   # check if loggle trials should be performed
   if ("loggle" %in% names(results$trial1) & !("loggle" %in% skips)){
 
+    cutoff <- 10 # ifelse(p == 100, 10, 10)
+    print(paste0('cutoff=', cutoff))
+
     # trials for loggle
     functions <- c("eval_est", "loggle.eval", "sp.array")
     packages <- c("loggle")
-    num_workers <- parallel::detectCores() - 5 # min(10, parallel::detectCores() - 5)
-    # num_workers <- min(25, parallel::detectCores())
+    num_workers <- min(15, parallel::detectCores())
     doParallel::registerDoParallel(num_workers)
     for (j in 1:n_trials){
     # results_loggle <- foreach(j = 1:n_trials, .export = functions,
@@ -149,7 +152,8 @@ trials <- function(data_list, results, filename, skips, trial_skips, hp_method, 
       out_loggle <- tryCatch(loggle.eval(X = data$X,
                                          Z = data$Z,
                                          true = data$true_precision,
-                                         n_workers = num_workers),
+                                         n_workers = num_workers,
+                                         cutoff = cutoff),
                              error = function(e) list(error = e))
       if (!is.null(out_loggle$error)){
         message("loggle ERROR:", out_loggle$error)
