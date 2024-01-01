@@ -29,6 +29,8 @@ There is extensive GGM literature and many R packages for GGM, however, all make
 
 To facilitate information sharing while managing complexity, `covdepGE` uses an efficient variational approximation conducted under the novel weighted pseudo-likelihood framework proposed by (1). `covdepGE` further accelerates inference by employing parallelism and executing expensive iterative computations in  C++. Additionally, `covdepGE` offers a principled, data-driven approach for hyperparameter specification that only requires the user to input data and extraneous covariates to perform inference. Finally, `covdepGE` offers several wrappers around `ggplot2` for seamless visualization of resulting estimates, such as `matViz`, `inclusionCurve`, and the S3 method `plot.covdepGE`. 
 
+Basic usage of `covdepGE` is demonstrated below in the **Example** section using simulated data, while https://github.com/JacobHelwig/covdepGE/blob/master/examples/TCGA_analysis.md demonstrates usage on real-world data.
+
 ## Installation
 
 You can install the released version of covdepGE from [CRAN](https://cran.r-project.org/package=covdepGE) with:
@@ -156,6 +158,6 @@ The similarity weight for observation $k$ with respect to observation $l$ is $\p
 
 ### Bibliography 
 
-(1) Sutanoy Dasgupta, Peng Zhao, Prasenjit Ghosh, Debdeep Pati, and Bani Mallick. An approximate Bayesian approach to covariate-dependent graphical modeling. pages 1–59, 2022.
+(1) Dasgupta, Sutanoy, Peng Zhao, Jacob Helwig, Prasenjit Ghosh, Debdeep Pati, and Bani K. Mallick. "An Approximate Bayesian Approach to Covariate-dependent Graphical Modeling." arXiv preprint arXiv:2303.08979 (2023).
 
-(2) Sutanoy Dasgupta, Debdeep Pati, and Anuj Srivastava. A Two-Step Geometric Framework For Density Modeling. *Statistica Sinica*, 30(4):2155–2177, 2020.
+(2) Dasgupta, Sutanoy, Debdeep Pati, and Anuj Srivastava. "A two-step geometric framework for density modeling." Statistica Sinica 30, no. 4 (2020): 2155-2177.

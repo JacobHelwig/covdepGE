@@ -1,13 +1,36 @@
+---
+output: github_document
+---
 
-``` r
+Here we demonstrate an application of `covdepGE` to real-world data similar to that which was used in (1). In both cases, the protein expression values for genes from patients with Breast Invasive Carcinoma (BRCA) are modeled, with data sourced from The Cancer Genome Atlas (TCGA). (1) considers the following genes :
+
+- CTNNB1
+- BRCA2
+- MET
+- **E-cadherin**
+- **N-cadherin**
+- **NFkB1**
+- snail
+- **STAT3**
+
+Here, we consider the genes:
+
+- STAT3_pY705
+- E-Cadherin
+- N-Cadherin
+- NF-kB-p65_pS536
+
+While (1) models the precision matrix for these genes as a function of the FOXC2 gene, here we use FOXO3a. After fitting the model, we visualize each of the estimated graphs (left column) alongside the corresponding FOXO3a values (right column). 
+
+```{r, fig.height=15, warning=F, message=F}
 # BiocManager::install("RTCGA.BRCA")
-library(RTCGA.RPPA)
 library(covdepGE)
 library(ggpubr)
 
 # load data
 dat <- RTCGA.RPPA::BRCA.RPPA
-Z <- dat$FOXO3a
+zvar <- "FOXO3a"
+Z <- dat[ , zvar]
 vars <- c("STAT3_pY705",
           "E-Cadherin",
           "N-Cadherin",
@@ -17,15 +40,7 @@ X <- dat[ , vars]
 # fit model
 out <- covdepGE(X, Z, parallel = T, num_workers = 4)
 out
-```
 
-    ##                       Covariate Dependent Graphical Model
-    ## 
-    ## ELBO: -427095.08                                             # Unique Graphs: 5
-    ## n: 410, variables: 4                       Hyperparameter grid size: 125 points
-    ## Model fit completed in 5.535 secs
-
-``` r
 # returns graph visualization and histogram
 plot_brca <- function(graph, z, xlim, ylim, color, labs, labz, bw){
   graph_viz <- matViz(graph, color2 = color) + 
@@ -48,36 +63,12 @@ colors <- ggsci::pal_nejm('default')(length(ord))
 # plot results
 get_graphs <- function(i){
   plot_brca(graph=graphs[[i]], z=Z[inds[[i]]], xlim=range(Z), ylim=25, color=colors[i], 
-            labs=vars, labz="FOXO3a", bw=0.04)
+            labs=vars, labz=zvar, bw=0.04)
 }
 plots_list <- Reduce(c, lapply(ord, get_graphs))
-ggarrange(plotlist = plots_list, ncol=2)
+ggarrange(plotlist = plots_list, ncol=2, nrow=length(ord))
 ```
 
-    ## $`1`
+### Bibliography 
 
-![](TCGA_analysis_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
-
-    ## 
-    ## $`2`
-
-![](TCGA_analysis_files/figure-gfm/unnamed-chunk-1-2.png)<!-- -->
-
-    ## 
-    ## $`3`
-
-![](TCGA_analysis_files/figure-gfm/unnamed-chunk-1-3.png)<!-- -->
-
-    ## 
-    ## $`4`
-
-![](TCGA_analysis_files/figure-gfm/unnamed-chunk-1-4.png)<!-- -->
-
-    ## 
-    ## $`5`
-
-![](TCGA_analysis_files/figure-gfm/unnamed-chunk-1-5.png)<!-- -->
-
-    ## 
-    ## attr(,"class")
-    ## [1] "list"      "ggarrange"
+(1) Dasgupta, Sutanoy, Peng Zhao, Jacob Helwig, Prasenjit Ghosh, Debdeep Pati, and Bani K. Mallick. "An Approximate Bayesian Approach to Covariate-dependent Graphical Modeling." arXiv preprint arXiv:2303.08979 (2023).

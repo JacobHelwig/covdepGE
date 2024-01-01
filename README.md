@@ -43,6 +43,11 @@ perform inference. Finally, `covdepGE` offers several wrappers around
 `ggplot2` for seamless visualization of resulting estimates, such as
 `matViz`, `inclusionCurve`, and the S3 method `plot.covdepGE`.
 
+Basic usage of `covdepGE` is demonstrated below in the **Example**
+section using simulated data, while
+<https://github.com/JacobHelwig/covdepGE/blob/master/examples/TCGA_analysis.md>
+demonstrates usage on real-world data.
+
 ## Installation
 
 You can install the released version of covdepGE from
@@ -71,7 +76,9 @@ issue](https://github.com/JacobHelwig/covdepGE/issues).
 
 ``` r
 library(covdepGE)
+#> Warning: package 'covdepGE' was built under R version 4.2.2
 library(ggplot2)
+#> Warning: package 'ggplot2' was built under R version 4.2.3
 
 # get the data
 set.seed(12)
@@ -151,7 +158,7 @@ matViz(prec[[length(prec)]], incl_val = TRUE) +
 #> 
 #> ELBO: -171501.68                                             # Unique Graphs: 3
 #> n: 180, variables: 5                       Hyperparameter grid size: 125 points
-#> Model fit completed in 3.328 secs
+#> Model fit completed in 2.35 secs
 plot(out)
 #> [[1]]
 ```
@@ -360,10 +367,11 @@ of $Z$, and the updated bandwidths from the second step are used for
 
 ### Bibliography
 
-1)  Sutanoy Dasgupta, Peng Zhao, Prasenjit Ghosh, Debdeep Pati, and Bani
-    Mallick. An approximate Bayesian approach to covariate-dependent
-    graphical modeling. pages 1–59, 2022.
+1)  Dasgupta, Sutanoy, Peng Zhao, Jacob Helwig, Prasenjit Ghosh, Debdeep
+    Pati, and Bani K. Mallick. “An Approximate Bayesian Approach to
+    Covariate-dependent Graphical Modeling.” arXiv preprint
+    arXiv:2303.08979 (2023).
 
-2)  Sutanoy Dasgupta, Debdeep Pati, and Anuj Srivastava. A Two-Step
-    Geometric Framework For Density Modeling. *Statistica Sinica*,
-    30(4):2155–2177, 2020.
+2)  Dasgupta, Sutanoy, Debdeep Pati, and Anuj Srivastava. “A two-step
+    geometric framework for density modeling.” Statistica Sinica 30, no.
+    4 (2020): 2155-2177.
