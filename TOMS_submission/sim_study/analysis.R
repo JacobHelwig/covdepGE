@@ -9,6 +9,9 @@ library(ggplot2)
 library(ggpubr)
 library(extrafont)
 library(latex2exp)
+library(scales)
+windowsFonts("Times" = windowsFont("Times"))
+windowsFonts("Courier" = windowsFont("Courier New"))
 
 # init list for recording statistics for each graph; only for q=1
 graphstats_list <- vector("list", 4)
@@ -49,9 +52,9 @@ subgroups_list <- list()
 # switching setting from q=1->q=2
 med <- F # median aggregate results
 univariate <- T # T for q=1, F for q=2,4
-sine <- T # q=1 w non-linear covariate
+sine <- F # q=1 w non-linear covariate
 four <- F # q=4
-seq <- F # aggregate times for sequentials
+seq <- T # aggregate times for sequentials
 subgr <- F # analyze performance for each graph
 if (univariate){
 
@@ -88,7 +91,7 @@ loggle_files <- list.files(loggle_path)
 prec <- 2
 df <- subgroups <- htest <- vector("list", length(dims))
 names(df) <- names(subgroups) <- names(htest) <- dims
-
+df_num <- list(sens=data.frame(), spec=data.frame(), time=data.frame())
 
 if (subgr){
   stats_name <- ifelse(sine, "nl", "pwl")
@@ -237,15 +240,17 @@ for (p in as.character(dims)){
   # plot(out)
 
   # process sensitivity results
-  sens <- sapply(results, sapply, `[[`, "sens")
+  sens <- sapply(results, sapply, `[[`, "sens") * 100
   sens_mean <- sens_mean_hyp <- rowMeans(sens)
   if (med) sens_mean <- apply(sens, 1, median)
   max_sens_ind <- which.max(sens_mean)
-  sens_mean <- sprintf(paste0("%.", prec, "f"), sens_mean * 100)
-  sens_mean[max_sens_ind] <- paste0("\\mathbf{", sens_mean[max_sens_ind], "}")
-  sens_sd  <- sprintf(paste0("%.", prec, "f"), apply(sens * 100, 1, sd))
-  if (med) sens_sd <- sprintf(paste0("%.", prec, "f"), apply(sens * 100, 1, IQR))
-  sens_str <- paste0(sens_mean, " (", sens_sd, ")")
+  sens_mean_str <- sprintf(paste0("%.", prec, "f"), sens_mean)
+  sens_mean_str[max_sens_ind] <- paste0("\\mathbf{", sens_mean_str[max_sens_ind], "}")
+  sens_sd  <- apply(sens, 1, sd)
+  sens_se <- sens_sd / sqrt(ntrials)
+  sens_se_str <- sprintf(paste0("%.", prec, "f"), sens_se)
+  if (med) sens_se_str <- sprintf(paste0("%.", prec, "f"), apply(sens, 1, IQR))
+  sens_str <- paste0(sens_mean_str, " (\\new{", sens_se_str, "})")
 
   # hypothesis testing
   if (!seq){
@@ -259,7 +264,7 @@ for (p in as.character(dims)){
     degf <- paste0("$", sprintf(paste0("%.", prec, "f"), t_test$parameter), "$")
     mean_covdepGE <- paste0("$", sprintf(paste0("%.", prec, "f"), t_test$estimate[1] * 100), "$")
     # mean_JGL <- paste0("$", sprintf(paste0("%.", prec, "f"), t_test$estimate[2] * 100), "$")
-    se <- paste0("$", sprintf(paste0("%.", prec, "f"), t_test$stderr * 100), "$")
+    se <- paste0("$", sprintf(paste0("%.", prec, "f"), t_test$stderr), "$")
     htest[[p]] <- data.frame(covdepGE=paste0("$", sens_str[row.names(sens) == "covdepGE"], "$"),
                              baseline_mean=paste0("$", sens_str[row.names(sens) == max_baseline], "$"),
                              baseline=paste0("\\texttt{", max_baseline, "}"),
@@ -267,15 +272,17 @@ for (p in as.character(dims)){
   }
 
   # process specificity results
-  spec <- sapply(results, sapply, `[[`, "spec")
+  spec <- sapply(results, sapply, `[[`, "spec") * 100
   spec_mean <- rowMeans(spec)
   if (med) spec_mean <- apply(spec, 1, median)
   max_spec_ind <- which.max(spec_mean)
-  spec_mean <- sprintf(paste0("%.", prec, "f"), spec_mean * 100)
-  spec_mean[max_spec_ind] <- paste0("\\mathbf{", spec_mean[max_spec_ind], "}")
-  spec_sd  <- sprintf(paste0("%.", prec, "f"), apply(spec * 100, 1, sd))
-  if (med) spec_sd <- sprintf(paste0("%.", prec, "f"), apply(spec * 100, 1, IQR))
-  spec_str <- paste0(spec_mean, " (", spec_sd, ")")
+  spec_mean_str <- sprintf(paste0("%.", prec, "f"), spec_mean)
+  spec_mean_str[max_spec_ind] <- paste0("\\mathbf{", spec_mean_str[max_spec_ind], "}")
+  spec_sd  <- apply(spec, 1, sd)
+  spec_se <- spec_sd / sqrt(ntrials)
+  spec_se_str  <- sprintf(paste0("%.", prec, "f"), spec_se)
+  if (med) spec_se_str <- sprintf(paste0("%.", prec, "f"), apply(spec, 1, IQR))
+  spec_str <- paste0(spec_mean_str, " (\\new{", spec_se_str, "})")
 
   # process time results
   time <- sapply(results, sapply, `[[`, "time")
@@ -283,25 +290,33 @@ for (p in as.character(dims)){
   if (seq){
     time_ratios <- time['covdepGE_seq',] / time['covdepGE',]
     ratio_mean <- sprintf(paste0("%.", prec, "f"), mean(time_ratios))
-    ratio_sd <- sprintf(paste0("%.", prec, "f"), sd(time_ratios))
-    ratio_str <- paste0(ratio_mean, " (", ratio_sd, ")")
+    ratio_sd <- sd(time_ratios)
+    ratio_se <- ratio_sd / sqrt(ntrials)
+    ratio_se <- sprintf(paste0("%.", prec, "f"), ratio_se)
+    ratio_str <- paste0(ratio_mean, " (\\new{", ratio_se, "})")
   }
   if (med) time_mean <- apply(time, 1, median)
   min_time_ind <- which.min(time_mean)
-  time_mean <- sprintf(paste0("%.", prec, "f"), time_mean)
-  time_mean[min_time_ind] <- paste0("\\mathbf{", time_mean[min_time_ind], "}")
-  time_sd  <- sprintf(paste0("%.", prec, "f"), apply(time, 1, sd))
-  if (med) time_sd <- sprintf(paste0("%.", prec, "f"), apply(time, 1, IQR))
-  time_str <- paste0(time_mean, " (", time_sd, ")")
+  time_mean_str <- sprintf(paste0("%.", prec, "f"), time_mean)
+  time_mean_str[min_time_ind] <- paste0("\\mathbf{", time_mean_str[min_time_ind], "}")
+  time_sd <- apply(time, 1, sd)
+  time_se <- time_sd / sqrt(ntrials)
+  time_se_str  <- sprintf(paste0("%.", prec, "f"), time_se)
+  if (med) time_se_str <- sprintf(paste0("%.", prec, "f"), apply(time, 1, IQR))
+  time_str <- paste0(time_mean_str, " (\\new{", time_se_str, "})")
 
   # combine summary strings
   perf_str <- cbind(sens_str, spec_str, time_str)
   perf_str <- matrix(paste0("$", perf_str, "$"), dim(perf_str))
   row.names(perf_str) <- row.names(spec)
 
+  # combine summary numerics
+  df_num[["sens"]] <- rbind.data.frame(df_num[["sens"]],data.frame(p=p, Method=names(sens_mean), mean=sens_mean, se=sens_se))
+  df_num[["spec"]] <- rbind.data.frame(df_num[["spec"]],data.frame(p=p, Method=names(spec_mean), mean=spec_mean, se=spec_se))
+  df_num[["time"]] <- rbind.data.frame(df_num[["time"]],data.frame(p=p, Method=names(time_mean), mean=time_mean, se=time_se))
+
   # create storage
-  df_exp <- data.frame(p = p, method = methods,
-                       sens = NA, spec = NA, time = NA)
+  df_exp <- data.frame(p = p, method = methods, sens = NA, spec = NA, time = NA)
   df_exp[ , c("sens", "spec", "time")] <- perf_str[df_exp$method, ]
   if (seq){
     df_exp$time_ratio <- ratio_str
@@ -313,7 +328,6 @@ for (p in as.character(dims)){
   rm("results")
 }
 if (F){
-  library(scales)
   colors <- c("#BC3C29FF", "#0072B5FF", "#E18727FF", "#20854EFF") # https://nanx.me/ggsci/reference/pal_nejm.html
   exp_map <- list("$\\textit{q}=1$, PWL", "$\\textit{q}=1$, NL", "$\\textit{q}=2$", "$\\textit{q}=4$")
   names(exp_map) <- names(ngraphs)
@@ -445,6 +459,82 @@ colnames(df) <- c("$p$", "Method", "Sensitivity$(\\%)$", "Specificity$(\\%)$", "
 kbl(df, format = "latex", booktabs = T, escape = FALSE) %>%
   collapse_rows(columns = c(1, 2, 3, 4), latex_hline = "major", valign = "middle")
 
+for (metric in names(df_num)){
+  df_num[[metric]]$p <- factor(df_num[[metric]]$p, levels=c(10, 25, 50, 100))
+  df_num[[metric]]$Method <- gsub("_sortZ", "_time", df_num[[metric]]$Method)
+  # df_num[[metric]]$Method <- paste0("\\textit{", df_num[[metric]]$Method, "}")
+  levels <- unique(df_num[[metric]]$Method)[order(unique(df_num[[metric]]$Method))]
+  colors <- ggsci::pal_nejm()
+  if (!univariate){
+    pal_colors <- colors(5)[c(1,5,2,3,4)]
+  }else{
+    pal_colors <- colors(4)
+  }
+  df_num[[metric]]$Method <- factor(df_num[[metric]]$Method, levels = levels)
+  dodge <- unique(as.numeric(df_num[[metric]]$Method)/20)-mean(unique(as.numeric(df_num[[metric]]$Method)/20))
+  df_num[[metric]]$p2 <- as.numeric(df_num[[metric]]$p) + dodge
+}
+
+plt_res <- function(data, ylab, xlab="", log=F, breaks=NULL, sz=0.75){
+  plt <- ggplot(data, aes(x=p2, y=mean, group=Method, color=Method)) +
+    theme_pubclean() + scale_color_manual(values = pal_colors, drop=FALSE) +
+    theme(plot.title = element_text(size = 18),
+          axis.text = element_text(size = 18),
+          text = element_text(family = "Times", size=18),
+          legend.title=element_blank(), legend.key=element_blank(),
+          legend.text=element_text(family="Courier", size=18)) +
+    labs(x=xlab, y=ylab) +
+    lapply(rev(levels), function(method) {
+      list(
+        geom_errorbar(data = ~ subset(., Method == method),
+                      aes(ymin = mean - ifelse((log & mean - 2 * se < 0), se, 2 * se), ymax = mean + 2 * se),
+                      width = 0.2, size = sz),
+        geom_point(data = ~ subset(., Method == method), size = 2, aes()),
+        geom_line(data = ~ subset(., Method == method), size = sz)
+      )
+    }) + scale_x_continuous(labels=c(10, 25, 50, 100), breaks = 1:4)
+
+  if (log){
+    plt <- plt + scale_y_continuous(trans='log10')
+  }
+  if (!is.null(breaks)){
+    plt <- plt + scale_y_continuous(breaks = breaks)
+  }
+  plt
+}
+
+sens_breaks <- NULL # ifelse(univariate, ifelse(sine, NULL, NULL), ifelse(four, NULL, NULL))
+spec_breaks <- NULL # ifelse(univariate, ifelse(sine, NULL, NULL), ifelse(four, NULL, NULL))
+sens_plot <- plt_res(df_num$sens, "Sensitivity (%)", breaks = sens_breaks)
+spec_plot <- plt_res(df_num$spec, "Specificity (%)", TeX("$\\textit{p}$"), breaks = spec_breaks)
+time_plot <- plt_res(df_num$time, "Time (seconds)", log=T)
+
+title <- "Results: $\\textit{q}="
+plotname <-"q"
+if (univariate){
+  title <- paste0(title, "1$, ")
+  plotname <- paste0(plotname, "1")
+  if (sine){
+    title <- paste0(title, "Non-Linear")
+    plotname <- paste0(plotname, "NL")
+  }else{
+    title <- paste0(title, "Piece-Wise Linear")
+    plotname <- paste0(plotname, "PWL")
+  }
+}else{
+  if (four){
+    title <- paste0(title, "4$")
+    plotname <- paste0(plotname, "4")
+  }else{
+    title <- paste0(title, "2$")
+    plotname <- paste0(plotname, "2")
+  }
+}
+res_plots <- ggarrange(sens_plot, spec_plot, time_plot, ncol=3, common.legend = TRUE,  legend="bottom")
+res_plots <- annotate_figure(res_plots, top = text_grob(TeX(title), size = 18, family = "Times"))
+res_plots
+ggsave(paste0("plots/", plotname, ".pdf"), height = 4, width = 14)
+
 subgroups_list[[exper]] <- factor(Reduce(c, subgroups), levels = 2:7)
 
 windowsFonts("Times" = windowsFont("Times"))
@@ -531,7 +621,10 @@ prec <- 2
 df <- list(grid_search = NA, hybrid = NA, model_average = NA)
 df <- replicate(length(dims), df, simplify = F)
 names(df) <- dims
+df_num <- list(sens=data.frame(), spec=data.frame(), time=data.frame())
 
+p <- "10"
+hp_method <- names(df[[p]])[1]
 for (p in as.character(dims)){
 
   best_sens <- best_spec <- 0
@@ -563,26 +656,30 @@ for (p in as.character(dims)){
     results <- lapply(results, `[`, "covdepGE")
 
     # process sensitivity results
-    sens <- sapply(results, sapply, `[[`, "sens")
+    sens <- sapply(results, sapply, `[[`, "sens") * 100
     sens_mean <- mean(sens)
     if (sens_mean > best_sens){
       best_sens <- sens_mean
       sens_method <- hp_method
     }
-    sens_mean <- sprintf(paste0("%.", prec, "f"), sens_mean * 100)
-    sens_sd  <- sprintf(paste0("%.", prec, "f"), sd(sens * 100))
-    sens_str <- paste0(sens_mean, " (", sens_sd, ")")
+    sens_mean_str <- sprintf(paste0("%.", prec, "f"), sens_mean)
+    sens_sd <- sd(sens)
+    sens_se <- sens_sd / sqrt(ntrials)
+    sens_se_str  <- sprintf(paste0("%.", prec, "f"), sens_se)
+    sens_str <- paste0(sens_mean_str, " (\\new{", sens_se_str, "})")
 
     # process specificity results
-    spec <- sapply(results, sapply, `[[`, "spec")
+    spec <- sapply(results, sapply, `[[`, "spec") * 100
     spec_mean <- mean(spec)
     if (spec_mean > best_spec){
       best_spec <- spec_mean
       spec_method <- hp_method
     }
-    spec_mean <- sprintf(paste0("%.", prec, "f"), spec_mean * 100)
-    spec_sd  <- sprintf(paste0("%.", prec, "f"), sd(spec * 100))
-    spec_str <- paste0(spec_mean, " (", spec_sd, ")")
+    spec_mean_str <- sprintf(paste0("%.", prec, "f"), spec_mean)
+    spec_sd <-  sd(spec)
+    spec_se <- spec_sd / sqrt(ntrials)
+    spec_se_str  <- sprintf(paste0("%.", prec, "f"), spec_se)
+    spec_str <- paste0(spec_mean_str, " (\\new{", spec_se_str, "})")
 
     # process time results
     time <- sapply(results, sapply, `[[`, "time")
@@ -591,14 +688,22 @@ for (p in as.character(dims)){
       best_time <- time_mean
       time_method <- hp_method
     }
-    time_mean <- sprintf(paste0("%.", prec, "f"), time_mean)
-    time_sd  <- sprintf(paste0("%.", prec, "f"), sd(time))
-    time_str <- paste0(time_mean, " (", time_sd, ")")
+    time_mean_str <- sprintf(paste0("%.", prec, "f"), time_mean)
+    time_sd <- sd(time)
+    time_se <- time_sd / sqrt(ntrials)
+    time_se_str  <- sprintf(paste0("%.", prec, "f"), time_se)
+    time_str <- paste0(time_mean_str, " (\\new{", time_se_str, "})")
 
     # combine summary strings
     perf_str <- cbind(sens_str, spec_str, time_str)
     perf_str <- matrix(paste0("$", perf_str, "$"), dim(perf_str))
     row.names(perf_str) <- row.names(spec)
+
+    # combine summary numerics
+    df_num[["sens"]] <- rbind.data.frame(df_num[["sens"]],data.frame(p=p, Method=hp_method, mean=sens_mean, se=sens_se))
+    df_num[["spec"]] <- rbind.data.frame(df_num[["spec"]],data.frame(p=p, Method=hp_method, mean=spec_mean, se=spec_se))
+    df_num[["time"]] <- rbind.data.frame(df_num[["time"]],data.frame(p=p, Method=hp_method, mean=time_mean, se=time_se))
+
 
     # create storage
     df_exp <- data.frame(p = p, method = hp_method,
@@ -624,3 +729,56 @@ df$method <- paste0("\\texttt{", df$method, "}")
 colnames(df) <- c("$p$", "HP Method", "Sensitivity$(\\%)$", "Specificity$(\\%)$", "Time (seconds)")
 kbl(df, format = "latex", booktabs = T, escape = FALSE) %>%
   collapse_rows(columns = c(1, 2, 3, 4), latex_hline = "major", valign = "middle")
+
+df_num
+
+for (metric in names(df_num)){
+  df_num[[metric]]$p <- factor(df_num[[metric]]$p, levels=c(10, 25, 50, 100))
+  df_num[[metric]]$Method <- gsub("_sortZ", "_time", df_num[[metric]]$Method)
+  # df_num[[metric]]$Method <- paste0("\\textit{", df_num[[metric]]$Method, "}")
+  levels <- unique(df_num[[metric]]$Method)[order(unique(df_num[[metric]]$Method))]
+  colors <- ggsci::pal_nejm()
+  pal_colors <- colors(3)
+  df_num[[metric]]$Method <- factor(df_num[[metric]]$Method, levels = levels)
+  dodge <- unique(as.numeric(df_num[[metric]]$Method)/20)-mean(unique(as.numeric(df_num[[metric]]$Method)/20))
+  df_num[[metric]]$p2 <- as.numeric(df_num[[metric]]$p) + dodge
+}
+
+plt_res <- function(data, ylab, xlab="", log=F, breaks=NULL, sz=0.75){
+  plt <- ggplot(data, aes(x=p2, y=mean, group=Method, color=Method)) +
+    theme_pubclean() + scale_color_manual(values = pal_colors, drop=FALSE) +
+    theme(plot.title = element_text(size = 18),
+          axis.text = element_text(size = 18),
+          text = element_text(family = "Times", size=18),
+          legend.title=element_blank(), legend.key=element_blank(),
+          legend.text=element_text(family="Courier", size=18)) +
+    labs(x=xlab, y=ylab) +
+    lapply(rev(levels), function(method) {
+      list(
+        geom_errorbar(data = ~ subset(., Method == method),
+                      aes(ymin = mean - ifelse((log & mean - 2 * se < 0), se, 2 * se), ymax = mean + 2 * se),
+                      width = 0.2, size = sz),
+        geom_point(data = ~ subset(., Method == method), size = 2, aes()),
+        geom_line(data = ~ subset(., Method == method), size = sz)
+      )
+    }) + scale_x_continuous(labels=c(10, 25, 50, 100), breaks = 1:4)
+
+  if (log){
+    plt <- plt + scale_y_continuous(trans='log10')
+  }
+  if (!is.null(breaks)){
+    plt <- plt + scale_y_continuous(breaks = breaks)
+  }
+  plt
+}
+
+sens_plot <- plt_res(df_num$sens, "Sensitivity (%)")
+spec_plot <- plt_res(df_num$spec, "Specificity (%)", TeX("$\\textit{p}$"))
+time_plot <- plt_res(df_num$time, "Time (seconds)", log=T)
+
+title <- "Results: Hyperparameter Specification Strategy Comparison"
+plotname <-"hp_comp_plt"
+res_plots <- ggarrange(sens_plot, spec_plot, time_plot, ncol=3, common.legend = TRUE,  legend="bottom")
+res_plots <- annotate_figure(res_plots, top = text_grob(TeX(title), size = 18, family = "Times"))
+res_plots
+ggsave(paste0("plots/", plotname, ".pdf"), height = 4, width = 14)
