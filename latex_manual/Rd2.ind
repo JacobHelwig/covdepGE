@@ -1,0 +1,29 @@
+\begin{theindex}
+
+  \item \texttt  {\_PACKAGE} \textit  {(\texttt  {covdepGE-package})}, 
+		\hyperpage{2}
+
+  \indexspace
+
+  \item \texttt  {covdepGE}, \hyperpage{3}
+  \item \texttt  {covdepGE-method} \textit  {(\texttt  {covdepGE})}, 
+		\hyperpage{3}
+  \item \texttt  {covdepGE-package}, \hyperpage{2}
+
+  \indexspace
+
+  \item \texttt  {generateData}, \hyperpage{8}
+
+  \indexspace
+
+  \item \texttt  {inclusionCurve}, \hyperpage{10}
+
+  \indexspace
+
+  \item \texttt  {matViz}, \hyperpage{12}
+
+  \indexspace
+
+  \item \texttt  {plot.covdepGE}, \hyperpage{14}
+
+\end{theindex}

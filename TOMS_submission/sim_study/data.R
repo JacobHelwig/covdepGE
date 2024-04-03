@@ -308,7 +308,7 @@ if (F){
     theme_pubclean() +
     theme(text = element_text(family = "Times", size = 18),
           plot.title = element_text(hjust = 0.5)) +
-    scale_color_manual(values=colors, labels = unname(TeX(c("$\\textit{l}=1$", "$\\textit{l}=2$", "$\\textit{l}=3$", "$\\textit{l}=4$"))), name = "") +    labs(x = TeX("$\\textit{z_l}$"), y = TeX("$\\Omega(z_l)$")) + theme(legend.key = element_rect(fill = "white"), legend.position = "right") +
+    # scale_color_manual(values=colors, labels = unname(TeX(c("$\\textit{l}=1$", "$\\textit{l}=2$", "$\\textit{l}=3$", "$\\textit{l}=4$"))), name = "") +    labs(x = TeX("$\\textit{z_l}$"), y = TeX("$\\Omega(z_l)$")) + theme(legend.key = element_rect(fill = "white"), legend.position = "right") +
     ggtitle(TeX("$\\textit{\\Omega(z_{l}), q=4}$")),
   ggplot() + xlim(-3, 3) +
     geom_function(fun=function(x)pmax(cospi((x+3)/4),0)+pmax(cospi((x-3)/4),0), n=1e4, aes(col="1"), size=1) +
