@@ -356,9 +356,9 @@ inclusionCurve(out, 1, 3)
 }
 }
 \references{
-(1) Sutanoy Dasgupta, Peng Zhao, Prasenjit Ghosh, Debdeep Pati, and Bani
-Mallick. An approximate Bayesian approach to covariate-dependent graphical
-modeling. pages 1–59, 2022.
+(1) Sutanoy Dasgupta, Peng Zhao, Jacob Helwig, Prasenjit Ghosh, Debdeep Pati,
+and Bani Mallick. An Approximate Bayesian Approach to Covariate-dependent
+Graphical Modeling. \emph{arXiv preprint}, 1–64, 2023.
 
 (2) Sutanoy Dasgupta, Debdeep Pati, and Anuj Srivastava. A Two-Step Geometric
 Framework For Density Modeling. \emph{Statistica Sinica}, 30(4):2155–2177, 2020.
