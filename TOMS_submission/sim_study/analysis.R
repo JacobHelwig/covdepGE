@@ -52,10 +52,10 @@ subgroups_list <- list()
 # switching setting from q=1->q=2
 med <- F # median aggregate results
 univariate <- T # T for q=1, F for q=2,4
-sine <- F # q=1 w non-linear covariate
+sine <- T # q=1 w non-linear covariate
 four <- F # q=4
-seq <- T # aggregate times for sequentials
-subgr <- F # analyze performance for each graph
+seq <- F # aggregate times for sequentials
+subgr <- T # analyze performance for each graph for comparing sensitivity/specificity in each setting
 if (univariate){
 
   # univariate extraneous covariate
@@ -414,7 +414,7 @@ if (subgr){
   library(ggsci)
   library(scales)
   ggplot(data = sens, aes(x = CDS, y = mean, fill = cov_type)) +
-    geom_bar(stat = "identity", width = 1, position = 'dodge') +
+    geom_bar(stat = "identity", width = 1, position = 'dodge', color="black") +
     geom_errorbar(aes(ymin=mean-2 * se, ymax=mean+2 * se),
                   # size=.3,    # Thinner lines
                   width=.2,
@@ -428,7 +428,7 @@ if (subgr){
     ggtitle(TeX(paste0("Sensitivity by CDS"))) +
     scale_y_continuous(limits = c(40, 100), oob=rescale_none) +
     labs(x=NULL, y="Sensitivity (%)", legend=NULL) + ggsci::scale_fill_nejm()
-  ggsave("plots/q1_sens.pdf", height = 8, width = 12)
+  ggsave("plots/q1_sens_black_outl.pdf", height = 8, width = 12)
 
 }
 

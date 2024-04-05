@@ -1,8 +1,7 @@
-# q=1 PWL hyperparameter comparison with max_iter_grid=100 experiment
 cd ../
 
 # save dir
-save_dir="./experiments/z1_hp_full"
+save_dir="./experiments/z1_hp"
 
 # experiment name
 exp=cont_cov_dep
@@ -13,7 +12,7 @@ ntrials=50
 dims=( 10 25 50 100 )
 n=75
 
-hp_methods=( grid_search hybrid )
+hp_methods=( grid_search model_average )
 
 for hp_method in ${hp_methods[@]}; do
   for (( i=0; i<${#dims[@]}; i++ )); do
@@ -32,7 +31,6 @@ for hp_method in ${hp_methods[@]}; do
     n3=$n \
     n_trials=$ntrials \
     hp_method='$hp_method' \
-    max_iter_grid=100 \
     skips=c('JGL','mgm')" \
     main.R $out_name
     duration=$SECONDS

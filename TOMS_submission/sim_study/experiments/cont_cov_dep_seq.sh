@@ -1,3 +1,4 @@
+# q=1 PWL with sequential execution experiment
 cd ../
 
 # save dir

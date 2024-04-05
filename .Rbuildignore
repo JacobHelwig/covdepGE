@@ -2,6 +2,7 @@
 ^\.Rproj\.user$
 ^dev$
 ^simulation_study$
+^latex_manual$
 ^graph_learning_simulation_study$
 ^TOMS_simulation_study$
 ^LICENSE\.md$

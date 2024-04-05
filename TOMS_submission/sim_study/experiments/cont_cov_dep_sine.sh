@@ -1,3 +1,4 @@
+# q=1 NL experiment
 cd ../
 
 # save dir
