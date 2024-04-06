@@ -9,9 +9,9 @@
 A covariate-dependent approach to Gaussian graphical modeling as described in Dasgupta et al. (2022). Employs a novel weighted pseudo-likelihood approach to model the conditional dependence structure of data as a continuous function of an extraneous covariate. The main function, covdepGE::covdepGE(), estimates a graphical representation of the conditional dependence structure via a block mean-field variational approximation, while several auxiliary functions (inclusionCurve(), matViz(), and plot.covdepGE()) are included for visualizing the resulting estimates.
 }
 \references{
-(1) Sutanoy Dasgupta, Peng Zhao, Prasenjit Ghosh, Debdeep Pati, and Bani
-Mallick. An approximate Bayesian approach to covariate-dependent graphical
-modeling. pages 1–59, 2022.
+(1) Sutanoy Dasgupta, Peng Zhao, Jacob Helwig, Prasenjit Ghosh, Debdeep Pati,
+and Bani Mallick. An Approximate Bayesian Approach to Covariate-dependent
+Graphical Modeling. \emph{arXiv preprint}, 1–64, 2023.
 }
 \seealso{
 Useful links:

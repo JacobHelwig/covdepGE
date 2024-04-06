@@ -1,4 +1,5 @@
 library(covdepGE)
+library(loggle)
 library(JGL)
 library(mclust)
 library(mgm)
@@ -14,9 +15,10 @@ covdepGE.eval <- function(X, Z, hp_method, true, n_workers, max_iter_grid){
   out <- covdepGE(X = X,
                   Z = Z,
                   hp_method = hp_method,
-                  parallel = T,
+                  parallel = n_workers > 1,
                   num_workers = n_workers,
-                  max_iter_grid = max_iter_grid)
+                  max_iter_grid = max_iter_grid,
+                  prog_bar=FALSE)
 
   # record time and get the array of graphs
   out$time <- as.numeric(Sys.time() - start, units = "secs")
@@ -153,7 +155,7 @@ tvmgm.eval <- function(X, Z, true){
   start <- Sys.time()
 
   # if the covariate is multidimensional, sort observations in X and ground truth
-  if (ncol(Z) == 2){
+  if (ncol(Z) > 1){
     sort_inds <- sort_Z(Z)
     X <- X[sort_inds, ]
     true <- true[sort_inds]
@@ -206,5 +208,78 @@ tvmgm.eval <- function(X, Z, true){
   perf <- eval_est(out$str, true)
   out[names(perf)] <- perf
   out$str <- sp.array(out$str, n)
+  out
+}
+
+# function to fit and evaluate results for loggle
+loggle.eval <- function(X, Z, true, n_workers, cutoff){
+
+  start <- Sys.time()
+
+  # if the covariate is multidimensional, sort observations in X and ground truth
+  if (ncol(Z) > 1){
+    sort_inds <- sort_Z(Z)
+    X <- X[sort_inds, ]
+    true <- true[sort_inds]
+  }
+
+  # get dimensions of the data
+  n <- nrow(X)
+  p <- ncol(X)
+
+  # determine if the covariate is discrete
+  Z_star <- unique(Z)
+  discrete <- length(Z_star) <= 2
+
+  # there are issues with estimating graphs at the end points of the time
+  # interval; don't estimate these
+  pos <- (cutoff + 1):(n - cutoff)
+  # pos <- cutoff:(n - cutoff)
+
+  # fit loggle
+  # out <- R.utils::withTimeout(
+  #   quiet(loggle.cv(t(X),
+  #                   pos = pos,
+  #                   d.list = c(0, 0.001, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2),
+  #                   num.thread = n_workers)),
+  #   timeout = 2 * 60 * 60 * n_workers)
+  out <- quiet(loggle.cv(t(X),
+                         pos = pos,
+                         d.list = c(0, 0.001, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2),
+                         num.thread = n_workers))
+  closeAllConnections()
+
+  # record time and get the array of graphs
+  out$time <- as.numeric(Sys.time() - start, units = "secs")
+  out$str <- array(NA, dim = c(p, p, n))
+
+
+  for (j in 1:n){
+
+    # if the observation is in the cutoff region, assign the graph for the last
+    # observation outside of the cutoff region
+    if (j %in% pos){
+      graph_j <- out$cv.select.result$adj.mat.opt[[j - cutoff]]
+      # print(paste('in', j, j-cutoff))
+    }else if (j < cutoff + 1){
+      # print(j)
+      graph_j <- out$cv.select.result$adj.mat.opt[[1]]
+    }else if (j > n - cutoff){
+      # print(paste(j, n - 2 * cutoff, length(pos)))
+      graph_j <- out$cv.select.result$adj.mat.opt[[n - 2 * cutoff]]
+    }else{
+      stop(paste0('Error in resolving cutoff regions for j=', j))
+    }
+    out$str[,, j] <- as.matrix(graph_j - diag(p))
+  }
+
+  # remove large objects
+  out$cv.result.h <- NULL
+
+  # get performance, convert graphs to a sparse array, and return
+  perf <- eval_est(out$str, true)
+  out[names(perf)] <- perf
+  out$str <- sp.array(out$str, n)
+  message("\nloggle complete ", Sys.time(), "\n")
   out
 }

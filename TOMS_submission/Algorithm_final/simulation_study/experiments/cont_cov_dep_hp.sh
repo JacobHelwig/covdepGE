@@ -1,3 +1,4 @@
+# q=1 PWL hyperparameter specification scheme comparison experiment
 cd ../
 
 # save dir

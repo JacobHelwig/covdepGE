@@ -71,7 +71,7 @@ sort_Z <- function(Z){
 
     # get index of the last observation and corresponding Z
     curr_ind <- sort_inds[length(sort_inds)]
-    curr_Z <- matrix(Z[curr_ind , ], nrow(Z), 2, T)
+    curr_Z <- matrix(Z[curr_ind , ], nrow(Z), ncol(Z), T)
 
     # get norm between current Z and all others; set the norm for those that have
     # already been sorted to Inf so that they are not sorted again
@@ -119,12 +119,68 @@ trials <- function(data_list, results, filename, skips, trial_skips, hp_method, 
 
   # save sample data to results
   results$sample_data <- dim(data_list[[1]]$X)
-
+  p <- results$sample_data[2]
+  print(paste0('p=', p))
   # get number of available workers and trials
-  num_workers <- min(10, parallel::detectCores() - 5)
+  num_workers <- parallel::detectCores() - 5 # min(10, parallel::detectCores() - 5)
   n_trials <- length(data_list)
 
-  # check if mgm trials should be performed
+  # check if loggle trials should be performed
+  if ("loggle" %in% names(results$trial1) & !("loggle" %in% skips)){
+
+    cutoff <- 10 # ifelse(p == 100, 10, 10)
+    print(paste0('cutoff=', cutoff))
+
+    # trials for loggle
+    functions <- c("eval_est", "loggle.eval", "sp.array")
+    packages <- c("loggle")
+    num_workers <- min(15, parallel::detectCores())
+    doParallel::registerDoParallel(num_workers)
+    for (j in 1:n_trials){
+    # results_loggle <- foreach(j = 1:n_trials, .export = functions,
+    #                        .packages = packages)%dopar%
+    #   {
+
+
+      # record the time the trial started
+      trial_start <- Sys.time()
+
+      # get the data
+      data <- data_list[[j]]
+
+      # loggle
+      out_loggle <- tryCatch(loggle.eval(X = data$X,
+                                         Z = data$Z,
+                                         true = data$true_precision,
+                                         n_workers = num_workers,
+                                         cutoff = cutoff),
+                             error = function(e) list(error = e))
+      if (!is.null(out_loggle$error)){
+        message("loggle ERROR:", out_loggle$error)
+      }
+
+      results[[j]]$loggle <- out_loggle
+      rm(list = "out_loggle")
+      gc()
+
+      # save the trial
+      time_delta <- round(as.numeric(Sys.time() - trial_start, units = "mins"))
+      message("\nloggle trial ", j, " complete; ", time_delta, " minutes elapsed;", Sys.time(), "\n")
+      save(results, file = filename)
+      # out_loggle
+    }
+
+    # add loggle results to overall results
+    # for (j in 1:n_trials){
+    #   results[[j]]$loggle <- results_loggle[[j]]
+    # }
+
+    # save the results
+    save(results, file = filename)
+    message(paste("loggle finished", Sys.time()))
+  }
+
+  # check if JGL trials should be performed
   if ("JGL" %in% names(results$trial1) & !("JGL" %in% skips)){
 
     # trials for JGL
@@ -213,6 +269,55 @@ trials <- function(data_list, results, filename, skips, trial_skips, hp_method, 
 
     message(paste("mgm finished", Sys.time()))
   }
+
+  # check if sequential covdepGE trials should be performed
+  if ("covdepGE_seq" %in% names(results$trial1)){
+
+    # trials for covdepGE
+    functions <- c("eval_est", "sp.array", "covdepGE.eval")
+    packages <- c("covdepGE", "Matrix")
+    num_workers <- min(25, parallel::detectCores())
+    doParallel::registerDoParallel(num_workers)
+    results_covdepGE_seq <- foreach(j = 1:n_trials, .export = functions,
+                           .packages = packages)%dopar%
+      {
+
+        if (j %in% trial_skips) return(NULL)
+
+        # record the time the trial started
+        trial_start <- Sys.time()
+
+        # get the data
+        data <- data_list[[j]]
+
+        # covdepGE
+        out_covdepGE_seq <- tryCatch(covdepGE.eval(X = data$X,
+                                                   Z = data$Z,
+                                                   hp_method = hp_method,
+                                                   true = data$true_precision,
+                                                   n_workers = 1,
+                                                   max_iter_grid = max_iter_grid),
+                                     error = function(e) list(error = e))
+        if (!is.null(out_covdepGE_seq$error)){
+          message("covdepGE_seq ERROR:", out_covdepGE_seq$error)
+        }
+
+        time_delta <- round(as.numeric(Sys.time() - trial_start, units = "mins"))
+        message("\ncovdepGE_seq trial ", j, " complete; ", time_delta, " minutes elapsed\n")
+        out_covdepGE_seq
+      }
+
+    # add the covdepGE results to overall results
+    for (j in 1:n_trials){
+      results[[j]]$covdepGE_seq <- results_covdepGE_seq[[j]]
+    }
+
+    # save the results
+    save(results, file = filename)
+
+    message(paste("covdepGE finished", Sys.time()))
+  }
+
 
   doParallel::stopImplicitCluster()
 

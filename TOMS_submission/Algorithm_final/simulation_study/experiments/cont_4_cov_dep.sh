@@ -1,17 +1,17 @@
-# q=2 experiment
+# q=4 experiment
 cd ../
 
 # save dir
-save_dir="./experiments/z2"
+save_dir="./experiments/z4"
 
 # experiment name
-exp=cont_multi_cov_dep
+exp=cont_4_cov_dep
 
 # number of trials
 ntrials=50
 
 dims=( 10 25 50 100 )
-n=25
+n=225
 
 for (( i=0; i<${#dims[@]}; i++ )); do
 

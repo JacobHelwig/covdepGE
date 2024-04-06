@@ -1,3 +1,4 @@
+# q=1 PWL hyperparameter comparison with max_iter_grid=100 experiment
 cd ../
 
 # save dir
