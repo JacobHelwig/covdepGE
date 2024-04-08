@@ -5,7 +5,6 @@
 *.knit.md
 *.log
 *.out
-*.tex
 *.toc
 *.tex.bak
 .Rhistory
