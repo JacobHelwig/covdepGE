@@ -27,7 +27,7 @@ Useful links:
 Authors:
 \itemize{
   \item Sutanoy Dasgupta \email{sutanoy@stat.tamu.edu}
-  \item Peng Zhao \email{pzhao@stat.tamu.edu}
+  \item Peng Zhao \email{pzhao@udel.edu}
   \item Bani Mallick \email{bmallick@stat.tamu.edu}
   \item Debdeep Pati \email{debdeep@stat.tamu.edu}
 }

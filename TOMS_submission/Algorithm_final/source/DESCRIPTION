@@ -4,7 +4,7 @@ Version: 1.0.1
 Authors@R: 
     c(person("Jacob", "Helwig", email = "jacob.a.helwig@tamu.edu", role = c("cre", "aut")),
     person("Sutanoy", "Dasgupta", email = "sutanoy@stat.tamu.edu", role = c("aut")),
-    person("Peng", "Zhao", email = "pzhao@stat.tamu.edu", role = c("aut")),
+    person("Peng", "Zhao", email = "pzhao@udel.edu", role = c("aut")),
     person("Bani", "Mallick", email = "bmallick@stat.tamu.edu", role = c("aut")),
     person("Debdeep", "Pati", email = "debdeep@stat.tamu.edu", role = c("aut")))
 Date: 2022-09-16
