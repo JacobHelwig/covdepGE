@@ -1,5 +1,5 @@
 # ******************************************************************************
-# From https://github.com/jmbh/mgmDocumentation/blob/master/examples_tvmgm.R
+# From https://github.com/jmbh/mgmDocumentation/blob/22af97a621a1a240b68d5731886d542fb588915a/examples_tvmgm.R
 # An example of applying mgm::tvmgm to Gaussian data of dimension 67x150
 # ******************************************************************************
 
@@ -33,13 +33,13 @@ head(fruitfly_data$data[,1:5])
 set.seed(1)
 # Note: This can take a while ~1h on a MacBook Pro
 p <- ncol(fruitfly_data$data)
-bw_tvmgm <- bwSelect(data = fruitfly_data$data,
-                     type = rep('g', p),
-                     level = rep(1, p),
-                     bwSeq = c(0.1, 0.2, 0.3, 0.4),
+bw_tvmgm <- bwSelect(data = fruitfly_data$data, 
+                     type = rep('g', p), 
+                     level = rep(1, p), 
+                     bwSeq = c(0.1, 0.2, 0.3, 0.4), 
                      bwFolds = 5,
                      bwFoldsize = 5,
-                     modeltype = 'mgm', k = 2,
+                     modeltype = 'mgm', k = 2, 
                      threshold = 'none', ruleReg = 'OR',
                      timepoints = fruitfly_data$timevector)
 
@@ -53,14 +53,14 @@ which.min(bw_tvmgm$meanError)
 # -------------------- Estimating time-varying MGM --------------------
 
 set.seed(1)
-fit_tvmgm <- tvmgm(data = fruitfly_data$data,
-                   type = rep("g", p),
-                   level = rep(1, p),
+fit_tvmgm <- tvmgm(data = fruitfly_data$data, 
+                   type = rep("g", p), 
+                   level = rep(1, p), 
                    timepoints = fruitfly_data$timevector,
                    estpoints = seq(0, 1, length=20),
                    k = 2,
-                   bandwidth = 0.3,
-                   threshold = "none",
+                   bandwidth = 0.3, 
+                   threshold = "none", 
                    ruleReg = "OR")
 
 # saveRDS(fit_tvmgm, file = paste0(codeDir, 'fit_tvmgm.RDS'))
@@ -79,7 +79,7 @@ n_edges <- apply(adj, 3, sum)/2
 # -------------------- Make Predictions from time-varying MGM --------------------
 
 pred_tvmgm <- predict(object = fit_tvmgm,
-                      data = fruitfly_data$data,
+                      data = fruitfly_data$data, 
                       tvMethod = "weighted")
 
 
@@ -88,7 +88,7 @@ pred_tvmgm <- predict(object = fit_tvmgm,
 n <- nrow( fruitfly_data$data)
 estpoints <- seq(0, n, length=20)
 
-# Selected estimation points
+# Selected estimation points 
 E_select <- c(2, 6, 13)
 round(E_select / 20 * 67, 2) # estimation points on true time scale
 
@@ -191,12 +191,12 @@ legend(.6, 210, c('Number of Edges', 'Local n'), lty=1:2, pch=20:21, bty='n', ce
 # c) Bottom: Graphs at three different time points
 
 # preliminary plotting
-for(i in E_select) qgraph(adj[,,i],
-                          layout='spring',
-                          repulsion=1.05,
-                          labels = F,
+for(i in E_select) qgraph(adj[,,i], 
+                          layout='spring', 
+                          repulsion=1.05, 
+                          labels = F, 
                           # edge.color = fit_tvmgm_nTH$pairwise$edgecolor[,,i],
-                          color = node_cols[wDegree[[i]]],
+                          color = node_cols[wDegree[[i]]], 
                           mar = c(6, 6, 6, 6))
 
 
