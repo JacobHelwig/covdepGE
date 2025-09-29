@@ -52,7 +52,7 @@ subgroups_list <- list()
 # switching setting from q=1->q=2
 med <- F # median aggregate results
 univariate <- T # T for q=1, F for q=2,4
-sine <- T # q=1 w non-linear covariate
+sine <- F # q=1 w non-linear covariate
 four <- F # q=4
 seq <- F # aggregate times for sequentials
 subgr <- T # analyze performance for each graph for comparing sensitivity/specificity in each setting
@@ -415,13 +415,13 @@ if (subgr){
   library(scales)
   ggplot(data = sens, aes(x = CDS, y = mean, fill = cov_type)) +
     geom_bar(stat = "identity", width = 1, position = 'dodge', color="black") +
-    geom_errorbar(aes(ymin=mean-2 * se, ymax=mean+2 * se),
+    geom_errorbar(aes(ymin=mean - 2 * se, ymax=mean + 2 * se),
                   # size=.3,    # Thinner lines
                   width=.2,
                   position=position_dodge(1)) +
     facet_wrap(~p, strip.position = "bottom", scales = "free_x", labeller=label_parsed) +
     theme_pubclean() +
-    theme(text = element_text(family = "Times", size = 18),
+    theme(text = element_text(family = "Times", size = 22),
           plot.title = element_text(hjust = 0.5), panel.spacing = unit(0, "lines"),
           strip.background = element_blank(),
           strip.placement = "outside", legend.title=element_blank()) +
